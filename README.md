@@ -10,7 +10,7 @@ MCP services. Each service addresses one specific gap that LLMs alone cannot clo
 
 | Service | Function | AGI Stage | Status | Repo |
 |---------|----------|-----------|--------|------|
-| **Logos** | Formal verification (Z3/Lean 4), assumption management, goal contracts, counterfactual reasoning | Stage 2–3 | ✅ Deployed | [ThisIsBad/logos] |
+| **Logos** | Formal verification (Z3/Lean 4), assumption management, goal contracts, counterfactual reasoning | Stage 2–3 | ✅ Deployed | [ThisIsBad/logos](https://github.com/ThisIsBad/logos) |
 | **Mneme** | Persistent episodic + semantic memory, verified belief storage | Stage 3–4 | 🔲 Planned | — |
 | **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🔲 Planned | — |
 | **Episteme** | Metacognition, uncertainty calibration, competence mapping | Stage 3 | 🔲 Planned | — |
