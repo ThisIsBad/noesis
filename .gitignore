@@ -1,0 +1,14 @@
+# Claude local instructions — never commit
+CLAUDE.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
