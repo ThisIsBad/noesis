@@ -15,16 +15,29 @@ MCP services. Each service addresses one specific gap that LLMs alone cannot clo
 | **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🔲 Planned | — |
 | **Episteme** | Metacognition, uncertainty calibration, competence mapping | Stage 3 | 🔲 Planned | — |
 | **Kosmos** | Causal world model, Do-calculus, interventional reasoning | Stage 3–4 | 🔲 Planned | — |
+| **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 3 | 🔲 Planned (vorgezogen) | — |
 | **Empiria** | Experience accumulation, lesson extraction, pattern mining | Stage 4 | 🔲 Planned | — |
 | **Techne** | Verified skill library, strategy reuse across sessions | Stage 4 | 🔲 Planned | — |
-| **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 4 | 🔲 Planned | — |
+
+### Querschnitts-Komponenten
+
+| Komponente | Funktion | Status |
+|------------|----------|--------|
+| **noesis-schemas** | Geteilte Verträge (ProofCertificate, GoalContract, …) als JSON Schema → Pydantic + Serde | 🔲 Geplant (Prio 0) |
+| **noesis-eval** | Reproduzierbares Benchmark-Harness (ARC-AGI, ALFWorld, WebArena, ECE, Drift) | 🔲 Geplant (Prio 0) |
+| **Kairos** | Cross-Service-Tracing & Observability (OpenTelemetry) | 🔲 Geplant |
 
 ## Architecture
 
 Each service is an **independent repository** deployed as an MCP HTTP service
-(e.g. on Railway). Claude orchestrates them — no direct service-to-service calls.
-Logos acts as the optional **verification bus**: any service can request a formal
-proof or policy check from Logos before committing to a state change.
+(e.g. on Railway). Claude orchestrates state-mutating calls.
+
+Logos acts as a **read-only verification sidecar**: services may call
+`certify_claim`, `z3_check`, `verify_argument` etc. directly to avoid
+4× Token-Roundtrips through Claude. State mutations remain Claude-orchestriert.
+
+Default-Sprache ist Python; Rust ist erlaubt für latenz-kritische Services
+(aktuell Praxis, Telos) — siehe [Polyglot-Strategie](docs/ROADMAP.md#polyglot-strategie).
 
 ```
 Claude
