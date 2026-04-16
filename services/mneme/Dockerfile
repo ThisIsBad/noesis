@@ -1,6 +1,9 @@
 FROM python:3.11-slim
 WORKDIR /app
 
+# Build tools needed by chromadb/hnswlib native extensions
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
+
 # ── Shared schemas ────────────────────────────────────────────────────────────
 # Build context MUST be the repo root.
 # In Railway: Settings → Build → Root Directory = (empty), Dockerfile Path = services/mneme/Dockerfile
@@ -13,7 +16,9 @@ RUN pip install /schemas
 # ── Service ───────────────────────────────────────────────────────────────────
 COPY services/mneme/pyproject.toml .
 COPY services/mneme/src/ src/
-RUN pip install .
+# Strip the file:// URL from noesis-schemas dep — it's already installed above.
+# The file:// reference is only needed for local editable installs.
+RUN sed -i 's|noesis-schemas @ file://[^"]*|noesis-schemas|g' pyproject.toml && pip install .
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 RUN mkdir -p /data
