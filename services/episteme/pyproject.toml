@@ -19,6 +19,9 @@ build-backend = "hatchling.build"
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/episteme"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

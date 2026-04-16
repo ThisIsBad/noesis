@@ -12,8 +12,8 @@ RUN pip install /schemas
 
 # ── Service ───────────────────────────────────────────────────────────────────
 COPY services/mneme/pyproject.toml .
-RUN pip install .
 COPY services/mneme/src/ src/
+RUN pip install .
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 RUN mkdir -p /data
