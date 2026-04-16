@@ -2,7 +2,7 @@
 name = "episteme"
 version = "0.1.0"
 description = "Metacognition and uncertainty calibration for the Noesis AGI stack"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "noesis-schemas @ file://../../../schemas",
     "fastapi>=0.111",

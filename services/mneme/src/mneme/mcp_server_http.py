@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -5,7 +7,12 @@ from noesis_schemas import MemoryType, ProofCertificate
 from .core import MnemeCore
 
 app = FastAPI(title="Mneme", description="Persistent memory for the Noesis AGI stack")
-_core = MnemeCore()
+
+_data_dir = os.getenv("MNEME_DATA_DIR", "/data")
+_core = MnemeCore(
+    db_path=os.path.join(_data_dir, "mneme.db"),
+    chroma_path=os.path.join(_data_dir, "chroma"),
+)
 
 
 class StoreRequest(BaseModel):
