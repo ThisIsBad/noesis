@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Persistent episodic and semantic memory for the Noesis AGI stack"
 requires-python = ">=3.11"
 dependencies = [
-    "noesis-schemas @ file://../../../schemas",
+    "noesis-schemas @ file://../../schemas",
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "chromadb>=0.5",
@@ -22,7 +22,7 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../../../schemas/src"]
+pythonpath = ["src", "../../schemas/src"]
 
 [tool.coverage.run]
 source = ["mneme.core"]

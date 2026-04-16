@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Experience accumulation and lesson extraction for the Noesis AGI stack"
 requires-python = ">=3.11"
 dependencies = [
-    "noesis-schemas @ file://../../../schemas",
+    "noesis-schemas @ file://../../schemas",
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "chromadb>=0.5",
