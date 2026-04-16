@@ -1,0 +1,1 @@
+web: python -m empiria.mcp_server_http

@@ -1,0 +1,27 @@
+[project]
+name = "kairos"
+version = "0.1.0"
+description = "Cross-service observability and tracing for the Noesis AGI stack"
+requires-python = ">=3.12"
+dependencies = [
+    "noesis-schemas @ file://../schemas",
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "opentelemetry-api>=1.24",
+    "opentelemetry-sdk>=1.24",
+    "opentelemetry-exporter-otlp>=1.24",
+    "pydantic>=2.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

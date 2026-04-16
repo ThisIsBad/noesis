@@ -1,0 +1,6 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "python -m praxis.mcp_server_http"
+healthcheckPath = "/health"

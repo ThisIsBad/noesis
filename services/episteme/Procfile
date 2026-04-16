@@ -1,0 +1,1 @@
+web: python -m episteme.mcp_server_http

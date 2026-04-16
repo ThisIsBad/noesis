@@ -1,0 +1,1 @@
+web: python -m kosmos.mcp_server_http

@@ -1,0 +1,1 @@
+web: python -m mneme.mcp_server_http

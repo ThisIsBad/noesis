@@ -2,65 +2,87 @@
 
 > A coordinated ecosystem of MCP services closing the gap between LLMs and AGI.
 
-Noesis is not a single service — it is a **hub** that maps the cognitive
-architecture needed for general intelligence onto independently deployable
-MCP services. Each service addresses one specific gap that LLMs alone cannot close.
+Noesis is a **monorepo** that maps the cognitive architecture needed for general
+intelligence onto independently deployable MCP services. Each service addresses
+one specific gap that LLMs alone cannot close.
+
+## Repository Layout
+
+```
+noesis/
+├── schemas/          # Shared data contracts (Pydantic) — install first
+├── eval/             # Reproducible benchmark harness
+├── kairos/           # Cross-service observability & tracing
+└── services/
+    ├── mneme/        # Persistent memory
+    ├── praxis/       # Hierarchical planning
+    ├── telos/        # Goal stability monitoring
+    ├── episteme/     # Metacognition & calibration
+    ├── kosmos/       # Causal world model
+    ├── empiria/      # Experience accumulation
+    └── techne/       # Verified skill library
+```
+
+> **Logos** lives in its own repo ([ThisIsBad/logos](https://github.com/ThisIsBad/logos))
+> because it was developed independently and is already deployed. All other
+> services live here.
 
 ## Services
 
-| Service | Function | AGI Stage | Status | Repo |
-|---------|----------|-----------|--------|------|
-| **Logos** | Formal verification (Z3/Lean 4), assumption management, goal contracts, counterfactual reasoning | Stage 2–3 | ✅ Deployed | [ThisIsBad/logos](https://github.com/ThisIsBad/logos) |
-| **Mneme** | Persistent episodic + semantic memory, verified belief storage | Stage 3–4 | ✅ Implemented | [ThisIsBad/mneme](https://github.com/ThisIsBad/mneme) |
-| **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🔲 Planned | — |
-| **Episteme** | Metacognition, uncertainty calibration, competence mapping | Stage 3 | 🔲 Planned | — |
-| **Kosmos** | Causal world model, Do-calculus, interventional reasoning | Stage 3–4 | 🔲 Planned | — |
-| **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 3 | 🔲 Planned (vorgezogen) | — |
-| **Empiria** | Experience accumulation, lesson extraction, pattern mining | Stage 4 | 🔲 Planned | — |
-| **Techne** | Verified skill library, strategy reuse across sessions | Stage 4 | 🔲 Planned | — |
+| Service | Function | AGI Stage | Status |
+|---------|----------|-----------|--------|
+| **[Logos](https://github.com/ThisIsBad/logos)** | Formal verification (Z3/Lean 4), assumption management, goal contracts | Stage 2–3 | ✅ Deployed (external) |
+| **Mneme** | Persistent episodic + semantic memory, verified belief storage | Stage 3–4 | 🔲 Planned |
+| **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🔲 Planned |
+| **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 3 | 🔲 Planned (vorgezogen) |
+| **Episteme** | Metacognition, uncertainty calibration, competence mapping | Stage 3 | 🔲 Planned |
+| **Kosmos** | Causal world model, Do-calculus, interventional reasoning | Stage 3–4 | 🔲 Planned |
+| **Empiria** | Experience accumulation, lesson extraction, pattern mining | Stage 4 | 🔲 Planned |
+| **Techne** | Verified skill library, strategy reuse across sessions | Stage 4 | 🔲 Planned |
 
-### Querschnitts-Komponenten
+### Cross-cutting
 
-| Komponente | Funktion | Status |
-|------------|----------|--------|
-| **noesis-schemas** | Geteilte Verträge (ProofCertificate, GoalContract, …) als JSON Schema → Pydantic + Serde | 🔲 Geplant (Prio 0) |
-| **noesis-eval** | Reproduzierbares Benchmark-Harness (ARC-AGI, ALFWorld, WebArena, ECE, Drift) | 🔲 Geplant (Prio 0) |
-| **Kairos** | Cross-Service-Tracing & Observability (OpenTelemetry) | 🔲 Geplant |
+| Component | Function | Status |
+|-----------|----------|--------|
+| **schemas/** | Shared contracts: `ProofCertificate`, `GoalContract`, `Memory`, `Plan`, `Skill`, `Lesson` | ✅ Defined |
+| **eval/** | Reproducible benchmarks: ARC-AGI, ALFWorld, WebArena, ECE, Drift | 🔲 Skeleton |
+| **kairos/** | Cross-service tracing via OpenTelemetry | 🔲 Skeleton |
 
 ## Architecture
 
-Each service is an **independent repository** deployed as an MCP HTTP service
-(e.g. on Railway). Claude orchestrates state-mutating calls.
+Each service is an **independently deployable** FastAPI + MCP HTTP service
+(Railway, Port 8000). Claude orchestrates state-mutating calls — no direct
+service-to-service writes.
 
-Logos acts as a **read-only verification sidecar**: services may call
-`certify_claim`, `z3_check`, `verify_argument` etc. directly to avoid
-4× Token-Roundtrips through Claude. State mutations remain Claude-orchestriert.
+**Exception — Logos read-only sidecar:** Services may call Logos directly for
+idempotent verification (`certify_claim`, `z3_check`, `verify_argument`, etc.)
+to avoid expensive Token-Roundtrips through Claude. State mutations remain
+Claude-orchestrated.
 
-Default-Sprache ist Python; Rust ist erlaubt für latenz-kritische Services
-(aktuell Praxis, Telos) — siehe [Polyglot-Strategie](docs/ROADMAP.md#polyglot-strategie).
+See [docs/architecture.md](docs/architecture.md) for the full architecture and
+[docs/ROADMAP.md](docs/ROADMAP.md) for the stage-by-stage roadmap with
+acceptance criteria.
 
+## Getting Started
+
+```bash
+# 1. Install shared schemas (required by all services)
+pip install -e schemas/
+
+# 2. Install and test a service
+cd services/mneme
+pip install -e .
+python -m pytest -q
+
+# 3. Run locally
+python -m mneme.mcp_server_http
 ```
-Claude
-  ├── Logos    (verify_argument, z3_check, check_policy, ...)
-  ├── Mneme    (store_memory, retrieve_memory, ...)
-  ├── Praxis   (decompose_goal, evaluate_step, backtrack, ...)
-  ├── Episteme (log_prediction, get_calibration, should_escalate, ...)
-  ├── Kosmos   (add_causal_edge, compute_intervention, ...)
-  ├── Empiria  (record_experience, retrieve_lessons, ...)
-  ├── Techne   (store_skill, retrieve_skill, ...)
-  └── Telos    (register_goal, check_action_alignment, ...)
+
+## Preflight Gates (all services)
+
+```bash
+python -m pytest -q
+python -m ruff check src/ tests/
+python -m mypy --strict src/
+python -m pytest --cov=src/<service> --cov-fail-under=85
 ```
-
-## AGI Roadmap
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the full stage-by-stage roadmap
-with acceptance criteria and build priorities.
-
-See [docs/architecture.md](docs/architecture.md) for the technical architecture
-and deployment model.
-
-## Background
-
-The theoretical foundation is documented in the Logos repo at
-`docs/agi_roadmap_v2.md` — a research-anchored, falsifiable roadmap from
-current LLMs to AGI-like cognitive architectures (Claude Opus 4.6, 2026-03-20).

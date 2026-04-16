@@ -1,0 +1,6 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "python -m empiria.mcp_server_http"
+healthcheckPath = "/health"

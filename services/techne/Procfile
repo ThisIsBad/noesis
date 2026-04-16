@@ -1,0 +1,1 @@
+web: python -m techne.mcp_server_http

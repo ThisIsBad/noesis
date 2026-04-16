@@ -1,0 +1,25 @@
+[project]
+name = "telos"
+version = "0.1.0"
+description = "Goal stability monitoring and drift detection for the Noesis AGI stack"
+requires-python = ">=3.12"
+dependencies = [
+    "noesis-schemas @ file://../../../schemas",
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "pydantic>=2.0",
+    "httpx>=0.27",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
