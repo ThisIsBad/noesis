@@ -1,14 +1,22 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# Build context must be the repo root (Railway: Root Directory = /)
+# ── Shared schemas ────────────────────────────────────────────────────────────
+# Build context MUST be the repo root.
+# In Railway: Settings → Build → Root Directory = (empty), Dockerfile Path = services/mneme/Dockerfile
+# Locally:   docker build -f services/mneme/Dockerfile -t mneme .
+#
+# If this COPY fails with "schemas: not found", your build context is wrong.
 COPY schemas/ /schemas
 RUN pip install /schemas
 
+# ── Service ───────────────────────────────────────────────────────────────────
 COPY services/mneme/pyproject.toml .
 RUN pip install .
-
 COPY services/mneme/src/ src/
 
+# ── Runtime ───────────────────────────────────────────────────────────────────
+RUN mkdir -p /data
+ENV MNEME_DATA_DIR=/data
 EXPOSE 8000
-CMD ["python", "-m", "mneme.mcp_server_http"]
+CMD python -m mneme.mcp_server_http
