@@ -18,6 +18,13 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "../../../schemas/src"]
+
+[tool.coverage.run]
+source = ["praxis.core"]
+
+[tool.coverage.report]
+fail_under = 85
 
 [tool.mypy]
 strict = true
