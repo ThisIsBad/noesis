@@ -75,8 +75,48 @@ pip install -e .
 python -m pytest -q
 
 # 3. Run locally
-python -m mneme.mcp_server_http
+MNEME_DATA_DIR=./tmp/mneme python -m mneme.mcp_server_http
+# → MCP endpoint: http://localhost:8000/mcp
+# → Health:       http://localhost:8000/health
 ```
+
+## Deploying on Railway
+
+Every service is an independent Railway service reading from a persistent
+volume. All services share the **same** Railway project.
+
+### One-time setup per service
+
+1. **New Service → GitHub repo → `ThisIsBad/noesis`**
+2. **Settings → Build**
+   - Root Directory: *(leave empty — repo root)*
+   - Dockerfile Path: `services/<name>/Dockerfile`
+   (e.g. `services/mneme/Dockerfile`)
+3. **Settings → Variables** — add:
+   ```
+   MNEME_DATA_DIR=/data
+   PORT=8000
+   ```
+4. **Settings → Volumes** — mount `/data` (persists DB + ChromaDB across deploys)
+
+### Connecting to Claude Code as MCP
+
+After deploy, copy the Railway public URL and add it to your Claude Code
+`~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "mneme": {
+      "type": "http",
+      "url": "https://<your-mneme-url>.railway.app/mcp"
+    }
+  }
+}
+```
+
+Logos is already connected? Same pattern — check its URL in Railway and
+verify it's in your `mcpServers` config.
 
 ## Preflight Gates (all services)
 
