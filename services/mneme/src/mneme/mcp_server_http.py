@@ -4,6 +4,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from noesis_schemas import MemoryType, ProofCertificate
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -103,13 +104,29 @@ def consolidate_memories(similarity_threshold: float = 0.15) -> str:
 
 # ── HTTP app ──────────────────────────────────────────────────────────────────
 
+_SECRET = os.environ.get("MNEME_SECRET", "")
+
+
 async def _health(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "service": "mneme"})
 
 
-app = mcp.streamable_http_app()
+class _BearerAuth(BaseHTTPMiddleware):
+    """Require Bearer token on /sse and /messages when MNEME_SECRET is set."""
+
+    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
+        if request.url.path == "/health" or not _SECRET:
+            return await call_next(request)
+        if request.headers.get("Authorization", "") != f"Bearer {_SECRET}":
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
+        return await call_next(request)
+
+
+app = mcp.sse_app()
 app.routes.insert(0, Route("/health", _health, methods=["GET"]))
+app.add_middleware(_BearerAuth)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
