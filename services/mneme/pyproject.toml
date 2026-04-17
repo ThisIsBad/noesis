@@ -39,5 +39,10 @@ fail_under = 85
 [tool.mypy]
 strict = true
 
+[[tool.mypy.overrides]]
+module = ["chromadb", "chromadb.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
 [tool.ruff.lint]
 select = ["E", "F", "I"]

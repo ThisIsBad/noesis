@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 
 import chromadb
-
 from noesis_schemas import Memory, MemoryType, ProofCertificate
 
 
@@ -69,7 +68,9 @@ class MnemeCore:
         )
         return mem
 
-    def retrieve(self, query: str, k: int = 5, min_confidence: float = 0.0) -> list[Memory]:
+    def retrieve(
+        self, query: str, k: int = 5, min_confidence: float = 0.0
+    ) -> list[Memory]:
         count = self._col.count()
         if count == 0:
             return []
@@ -79,11 +80,11 @@ class MnemeCore:
             n_results=min(max(k * 3, 10), count),
         )
         ids: list[str] = results["ids"][0]
-        metadatas: list[dict] = results["metadatas"][0]  # type: ignore[assignment]
+        metadatas: list[dict[str, object]] = results["metadatas"][0]
 
         filtered_ids = [
             mid for mid, meta in zip(ids, metadatas)
-            if float(meta["confidence"]) >= min_confidence
+            if float(meta["confidence"]) >= min_confidence  # type: ignore[arg-type]
         ][:k]
 
         memories: list[Memory] = []
@@ -149,7 +150,9 @@ class MnemeCore:
                     if not other_row:
                         continue
                     other = Memory.model_validate_json(other_row[0])
-                    to_delete = other_id if mem.confidence >= other.confidence else memory_id
+                    to_delete = (
+                        other_id if mem.confidence >= other.confidence else memory_id
+                    )
                     to_keep = memory_id if to_delete == other_id else other_id
                     self.forget(to_delete, f"consolidated into {to_keep}")
                     deleted.add(to_delete)

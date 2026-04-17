@@ -1,8 +1,8 @@
 import chromadb
 import pytest
+from noesis_schemas import MemoryType, ProofCertificate
 
 from mneme.core import MnemeCore
-from noesis_schemas import MemoryType, ProofCertificate
 
 
 @pytest.fixture
@@ -28,7 +28,9 @@ def test_proven_flag_from_certificate(core):
         verified=True,
         timestamp="2026-04-17T00:00:00+00:00",
     )
-    mem = core.store("Paris is the capital of France", MemoryType.SEMANTIC, certificate=cert)
+    mem = core.store(
+        "Paris is the capital of France", MemoryType.SEMANTIC, certificate=cert
+    )
     assert mem.proven
     assert core.list_proven() == [mem]
 
