@@ -1,0 +1,65 @@
+{
+  "experiment": "compaction_curve",
+  "levels": [
+    {
+      "compacted_count": 3,
+      "compaction_ratio": 0.038961,
+      "difficulty": "EASY",
+      "entailment_checks": 154,
+      "entailments_found": 74,
+      "generated": 100,
+      "max_depth": 1,
+      "num_premises": 3,
+      "num_variables": 3,
+      "timed_out": false,
+      "valid_count": 77,
+      "verification_passed": true,
+      "wall_time_seconds": 0.753873
+    },
+    {
+      "compacted_count": 2,
+      "compaction_ratio": 0.02381,
+      "difficulty": "MEDIUM",
+      "entailment_checks": 168,
+      "entailments_found": 82,
+      "generated": 100,
+      "max_depth": 2,
+      "num_premises": 5,
+      "num_variables": 4,
+      "timed_out": false,
+      "valid_count": 84,
+      "verification_passed": true,
+      "wall_time_seconds": 1.211024
+    },
+    {
+      "compacted_count": 2,
+      "compaction_ratio": 0.022989,
+      "difficulty": "HARD",
+      "entailment_checks": 174,
+      "entailments_found": 85,
+      "generated": 100,
+      "max_depth": 3,
+      "num_premises": 6,
+      "num_variables": 5,
+      "timed_out": false,
+      "valid_count": 87,
+      "verification_passed": true,
+      "wall_time_seconds": 1.766635
+    },
+    {
+      "compacted_count": 2,
+      "compaction_ratio": 0.021277,
+      "difficulty": "EXTREME",
+      "entailment_checks": 188,
+      "entailments_found": 92,
+      "generated": 100,
+      "max_depth": 3,
+      "num_premises": 8,
+      "num_variables": 6,
+      "timed_out": false,
+      "valid_count": 94,
+      "verification_passed": true,
+      "wall_time_seconds": 2.455685
+    }
+  ]
+}

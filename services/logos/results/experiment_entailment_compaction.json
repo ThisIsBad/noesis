@@ -1,0 +1,11 @@
+{
+  "compacted_count": 1,
+  "compaction_ratio": 0.0125,
+  "entailment_checks_performed": 3160,
+  "entailments_found": 79,
+  "experiment": "entailment_compaction",
+  "original_count": 100,
+  "valid_count": 80,
+  "verification_passed": true,
+  "wall_time_seconds": 0.971023
+}

@@ -12,7 +12,13 @@ def test_store_and_retrieve_skill():
 
 def test_verified_flag_from_certificate():
     core = TechneCore()
-    cert = ProofCertificate(claim="strategy is correct", proven=True, method="argument")
+    cert = ProofCertificate(
+        claim_type="propositional",
+        claim="strategy is correct",
+        method="argument",
+        verified=True,
+        timestamp="2026-04-17T00:00:00+00:00",
+    )
     skill = core.store("proven-skill", "A verified strategy", "Do X then Y", certificate=cert)
     assert skill.verified
 

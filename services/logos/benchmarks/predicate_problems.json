@@ -1,0 +1,133 @@
+{
+  "version": "1.0",
+  "description": "Benchmark suite for First-Order Logic (Predicate Logic). Tests the LLM's understanding of quantifiers (∀, ∃), relations, and variable binding.",
+  "problems": [
+    {
+      "id": "FOL-01",
+      "level": "L1",
+      "category": "syllogism_valid",
+      "natural_language": "All humans are mortal. Socrates is a human. Therefore, Socrates is mortal.",
+      "premises": [
+        "∀x (Human(x) → Mortal(x))",
+        "Human(Socrates)"
+      ],
+      "conclusion": "Mortal(Socrates)",
+      "expected_valid": true,
+      "explanation": "Standard universal instantiation (Modus Ponens with ∀)."
+    },
+    {
+      "id": "FOL-02",
+      "level": "L1",
+      "category": "syllogism_invalid",
+      "natural_language": "All humans are mortal. Socrates is mortal. Therefore, Socrates is a human.",
+      "premises": [
+        "∀x (Human(x) → Mortal(x))",
+        "Mortal(Socrates)"
+      ],
+      "conclusion": "Human(Socrates)",
+      "expected_valid": false,
+      "explanation": "Affirming the consequent applied to a universally quantified statement."
+    },
+    {
+      "id": "FOL-03",
+      "level": "L2",
+      "category": "quantifier_swap_valid",
+      "natural_language": "There is someone who loves everyone. Therefore, everyone is loved by someone.",
+      "premises": [
+        "∃y ∀x Loves(y, x)"
+      ],
+      "conclusion": "∀x ∃y Loves(y, x)",
+      "expected_valid": true,
+      "explanation": "If one specific person 'y' loves everyone 'x', then for every person 'x', they are loved by someone (namely, 'y'). Valid quantifier shift."
+    },
+    {
+      "id": "FOL-04",
+      "level": "L2",
+      "category": "quantifier_swap_invalid",
+      "natural_language": "Everyone is loved by someone. Therefore, there is someone who loves everyone.",
+      "premises": [
+        "∀x ∃y Loves(y, x)"
+      ],
+      "conclusion": "∃y ∀x Loves(y, x)",
+      "expected_valid": false,
+      "explanation": "Just because each person has someone who loves them (who could be a different person for each), it doesn't mean there is a single person who loves all people. Invalid quantifier shift."
+    },
+    {
+      "id": "FOL-05",
+      "level": "L2",
+      "category": "de_morgan_quantifiers",
+      "natural_language": "It is not the case that all birds can fly. Therefore, there exists at least one bird that cannot fly.",
+      "premises": [
+        "¬(∀x (Bird(x) → CanFly(x)))"
+      ],
+      "conclusion": "∃x (Bird(x) ∧ ¬CanFly(x))",
+      "expected_valid": true,
+      "explanation": "De Morgan's laws applied to quantifiers. ¬∀x P(x) is equivalent to ∃x ¬P(x). Note that ¬(A → B) is equivalent to (A ∧ ¬B)."
+    },
+    {
+      "id": "FOL-06",
+      "level": "L3",
+      "category": "barber_paradox_structure",
+      "natural_language": "The barber shaves all those, and only those, who do not shave themselves. Therefore, the barber shaves himself.",
+      "premises": [
+        "∀x (Shaves(Barber, x) ↔ ¬Shaves(x, x))"
+      ],
+      "conclusion": "Shaves(Barber, Barber)",
+      "expected_valid": true,
+      "explanation": "Wait, this is the Barber paradox. If we instantiate x with Barber, we get Shaves(Barber, Barber) ↔ ¬Shaves(Barber, Barber). This is a paradox (contradictory premise). From a contradiction, anything follows (ex falso quodlibet). So the conclusion statement is valid in classical logic because the premise is unsatisfiable."
+    },
+    {
+      "id": "FOL-07",
+      "level": "L3",
+      "category": "transitive_relations",
+      "natural_language": "If x is taller than y, and y is taller than z, then x is taller than z. Alice is taller than Bob. Bob is taller than Charlie. Therefore, Alice is taller than Charlie.",
+      "premises": [
+        "∀x ∀y ∀z ((Taller(x, y) ∧ Taller(y, z)) → Taller(x, z))",
+        "Taller(Alice, Bob)",
+        "Taller(Bob, Charlie)"
+      ],
+      "conclusion": "Taller(Alice, Charlie)",
+      "expected_valid": true,
+      "explanation": "Universal instantiation of a transitive property."
+    },
+    {
+      "id": "FOL-08",
+      "level": "L3",
+      "category": "existential_instantiation_trap",
+      "natural_language": "There exists an x such that P(x). There exists a y such that Q(y). Therefore, there exists a z such that P(z) and Q(z).",
+      "premises": [
+        "∃x P(x)",
+        "∃y Q(y)"
+      ],
+      "conclusion": "∃z (P(z) ∧ Q(z))",
+      "expected_valid": false,
+      "explanation": "Just because something is P and something is Q, it does not mean there is a single thing that is both P and Q."
+    },
+    {
+      "id": "FOL-09",
+      "level": "L3",
+      "category": "multiple_quantifiers_implication",
+      "natural_language": "For every x, if there exists a y such that x Loves y, then x is Happy. John Loves Mary. Therefore, John is Happy.",
+      "premises": [
+        "∀x ((∃y Loves(x, y)) → Happy(x))",
+        "Loves(John, Mary)"
+      ],
+      "conclusion": "Happy(John)",
+      "expected_valid": true,
+      "explanation": "Since Loves(John, Mary) is true, ∃y Loves(John, y) is true. By universal instantiation on x=John, Happy(John) is true."
+    },
+    {
+      "id": "FOL-10",
+      "level": "L3",
+      "category": "scope_ambiguity_trap",
+      "natural_language": "If everyone takes the exam, then everyone will pass. Every student takes the exam. Therefore, every student will pass.",
+      "premises": [
+        "(∀x TakesExam(x)) → (∀y WillPass(y))",
+        "∀z (Student(z) → TakesExam(z))"
+      ],
+      "conclusion": "∀w (Student(w) → WillPass(w))",
+      "expected_valid": false,
+      "explanation": "The first premise says IF absolutely everyone takes the exam, then absolutely everyone passes. The second says only students take the exam. This doesn't mean *everyone* took the exam (non-students might not). So the antecedent (∀x TakesExam(x)) is not satisfied, meaning we can't conclude anything."
+    }
+  ]
+}

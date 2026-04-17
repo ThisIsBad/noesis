@@ -3,11 +3,11 @@ import os
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
+from noesis_schemas import MemoryType, ProofCertificate
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from noesis_schemas import MemoryType, ProofCertificate
 from .core import MnemeCore
 
 _data_dir = os.getenv("MNEME_DATA_DIR", "/data")
