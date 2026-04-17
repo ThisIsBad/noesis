@@ -1,0 +1,158 @@
+{
+  "certificate_count": 500,
+  "checkpoints": [
+    {
+      "at_count": 50,
+      "elapsed_seconds": 0.058794,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 50
+        },
+        "by_method": {
+          "z3_propositional": 50
+        },
+        "invalidated": 0,
+        "total": 50,
+        "valid": 50
+      }
+    },
+    {
+      "at_count": 100,
+      "elapsed_seconds": 0.111288,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 100
+        },
+        "by_method": {
+          "z3_propositional": 100
+        },
+        "invalidated": 0,
+        "total": 100,
+        "valid": 100
+      }
+    },
+    {
+      "at_count": 150,
+      "elapsed_seconds": 0.162542,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 150
+        },
+        "by_method": {
+          "z3_propositional": 150
+        },
+        "invalidated": 0,
+        "total": 150,
+        "valid": 150
+      }
+    },
+    {
+      "at_count": 200,
+      "elapsed_seconds": 0.217376,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 200
+        },
+        "by_method": {
+          "z3_propositional": 200
+        },
+        "invalidated": 0,
+        "total": 200,
+        "valid": 200
+      }
+    },
+    {
+      "at_count": 250,
+      "elapsed_seconds": 0.271043,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 250
+        },
+        "by_method": {
+          "z3_propositional": 250
+        },
+        "invalidated": 0,
+        "total": 250,
+        "valid": 250
+      }
+    },
+    {
+      "at_count": 300,
+      "elapsed_seconds": 0.323525,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 300
+        },
+        "by_method": {
+          "z3_propositional": 300
+        },
+        "invalidated": 0,
+        "total": 300,
+        "valid": 300
+      }
+    },
+    {
+      "at_count": 350,
+      "elapsed_seconds": 0.379013,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 350
+        },
+        "by_method": {
+          "z3_propositional": 350
+        },
+        "invalidated": 0,
+        "total": 350,
+        "valid": 350
+      }
+    },
+    {
+      "at_count": 400,
+      "elapsed_seconds": 0.439019,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 400
+        },
+        "by_method": {
+          "z3_propositional": 400
+        },
+        "invalidated": 0,
+        "total": 400,
+        "valid": 400
+      }
+    },
+    {
+      "at_count": 450,
+      "elapsed_seconds": 0.497552,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 450
+        },
+        "by_method": {
+          "z3_propositional": 450
+        },
+        "invalidated": 0,
+        "total": 450,
+        "valid": 450
+      }
+    },
+    {
+      "at_count": 500,
+      "elapsed_seconds": 0.552694,
+      "stats": {
+        "by_claim_type": {
+          "propositional": 500
+        },
+        "by_method": {
+          "z3_propositional": 500
+        },
+        "invalidated": 0,
+        "total": 500,
+        "valid": 500
+      }
+    }
+  ],
+  "experiment": "memory_consistency_scale",
+  "unique_count": 500,
+  "wall_time_seconds": 0.55284
+}

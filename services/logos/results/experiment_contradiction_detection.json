@@ -1,0 +1,9 @@
+{
+  "detected_contradictions": 5,
+  "experiment": "memory_consistency_contradictions",
+  "explanations_with_paths": 5,
+  "false_negatives": 0,
+  "false_positives": 0,
+  "injected_contradictions": 5,
+  "total_beliefs": 25
+}

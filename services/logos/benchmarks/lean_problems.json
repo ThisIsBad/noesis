@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "description": "Benchmark suite for mathematical theorem proving using Lean 4. Contains basic number theory and algebraic identities.",
+  "problems": [
+    {
+      "id": "LEAN-01",
+      "category": "algebra",
+      "natural_language": "Prove that for any natural number n, n + 0 = n.",
+      "lean_header": "theorem add_zero (n : Nat) : n + 0 = n := by",
+      "expected_difficulty": "easy",
+      "explanation": "Trivial equality, usually solved by `rfl` (reflexivity) or `simp`."
+    },
+    {
+      "id": "LEAN-02",
+      "category": "algebra",
+      "natural_language": "Prove that addition is commutative for the specific case of adding 1 to 0.",
+      "lean_header": "theorem zero_add_one : 0 + 1 = 1 + 0 := by",
+      "expected_difficulty": "easy",
+      "explanation": "Can be solved by `rfl` since both sides compute to 1."
+    },
+    {
+      "id": "LEAN-03",
+      "category": "logic",
+      "natural_language": "Prove that if P is true and P implies Q, then Q is true (Modus Ponens).",
+      "lean_header": "theorem modus_ponens (P Q : Prop) (hp : P) (hpq : P → Q) : Q := by",
+      "expected_difficulty": "easy",
+      "explanation": "Classic application of a hypothesis. Solved by `exact hpq hp` or `apply hpq; exact hp`."
+    },
+    {
+      "id": "LEAN-04",
+      "category": "logic",
+      "natural_language": "Prove the commutative property of logical AND.",
+      "lean_header": "theorem my_and_comm (P Q : Prop) (h : P ∧ Q) : Q ∧ P := by",
+      "expected_difficulty": "medium",
+      "explanation": "Requires deconstructing the conjunction and proving the reverse. Solved using `cases` or `constructor` or `exact ⟨h.right, h.left⟩`."
+    },
+    {
+      "id": "LEAN-05",
+      "category": "number_theory",
+      "natural_language": "Prove that if a natural number is odd, then it's not even. Wait, let's keep it simple: prove that doing n + (m + k) is the same as (n + m) + k.",
+      "lean_header": "theorem add_assoc_nat (n m k : Nat) : n + (m + k) = (n + m) + k := by",
+      "expected_difficulty": "medium",
+      "explanation": "Can be solved with `rw [Nat.add_assoc]` or `simp [Nat.add_assoc]` or `omega`."
+    },
+    {
+      "id": "LEAN-06",
+      "category": "number_theory",
+      "natural_language": "Prove that 2 * n = n + n for any natural number.",
+      "lean_header": "theorem two_mul (n : Nat) : 2 * n = n + n := by",
+      "expected_difficulty": "hard",
+      "explanation": "Requires understanding of the definition of multiplication or use of `omega` / arithmetic rewriting."
+    }
+  ]
+}

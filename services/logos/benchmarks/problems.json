@@ -1,0 +1,356 @@
+{
+  "metadata": {
+    "version": "0.1.0",
+    "description": "Benchmark suite for testing LLM logical reasoning against a deterministic verifier.",
+    "levels": {
+      "1": "Simple single-step inferences",
+      "2": "Multi-step deduction chains",
+      "3": "Proof by contradiction, complex nesting",
+      "adversarial": "Designed to exploit common LLM reasoning failures"
+    }
+  },
+  "problems": [
+    {
+      "id": "L1-01",
+      "level": 1,
+      "category": "modus_ponens",
+      "natural_language": "If it is raining, then the ground is wet. It is raining. Therefore, the ground is wet.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "atom", "label": "P"}
+      ],
+      "conclusion": {"type": "atom", "label": "Q"},
+      "expected_valid": true,
+      "explanation": "Classic Modus Ponens: P → Q, P ⊢ Q"
+    },
+    {
+      "id": "L1-02",
+      "level": 1,
+      "category": "modus_tollens",
+      "natural_language": "If it is raining, then the ground is wet. The ground is not wet. Therefore, it is not raining.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "not", "operand": "Q"}
+      ],
+      "conclusion": {"type": "not", "operand": "P"},
+      "expected_valid": true,
+      "explanation": "Modus Tollens: P → Q, ¬Q ⊢ ¬P"
+    },
+    {
+      "id": "L1-03",
+      "level": 1,
+      "category": "affirming_consequent",
+      "natural_language": "If it is raining, then the ground is wet. The ground is wet. Therefore, it is raining.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "atom", "label": "Q"}
+      ],
+      "conclusion": {"type": "atom", "label": "P"},
+      "expected_valid": false,
+      "explanation": "Affirming the Consequent (FALLACY): P → Q, Q ⊬ P. The ground can be wet for other reasons (sprinkler)."
+    },
+    {
+      "id": "L1-04",
+      "level": 1,
+      "category": "denying_antecedent",
+      "natural_language": "If it is sunny, then I will go for a walk. It is not sunny. Therefore, I will not go for a walk.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "not", "operand": "P"}
+      ],
+      "conclusion": {"type": "not", "operand": "Q"},
+      "expected_valid": false,
+      "explanation": "Denying the Antecedent (FALLACY): P → Q, ¬P ⊬ ¬Q. I might walk even if it's not sunny."
+    },
+    {
+      "id": "L1-05",
+      "level": 1,
+      "category": "disjunctive_syllogism",
+      "natural_language": "Either the butler or the gardener did it. The butler did not do it. Therefore, the gardener did it.",
+      "premises": [
+        {"type": "or", "left": "P", "right": "Q"},
+        {"type": "not", "operand": "P"}
+      ],
+      "conclusion": {"type": "atom", "label": "Q"},
+      "expected_valid": true,
+      "explanation": "Disjunctive Syllogism: P ∨ Q, ¬P ⊢ Q"
+    },
+    {
+      "id": "L1-06",
+      "level": 1,
+      "category": "conjunction_intro",
+      "natural_language": "It is raining. It is cold. Therefore, it is raining and cold.",
+      "premises": [
+        {"type": "atom", "label": "P"},
+        {"type": "atom", "label": "Q"}
+      ],
+      "conclusion": {"type": "and", "left": "P", "right": "Q"},
+      "expected_valid": true,
+      "explanation": "Conjunction Introduction: P, Q ⊢ P ∧ Q"
+    },
+    {
+      "id": "L1-07",
+      "level": 1,
+      "category": "conjunction_elim",
+      "natural_language": "It is raining and cold. Therefore, it is raining.",
+      "premises": [
+        {"type": "and", "left": "P", "right": "Q"}
+      ],
+      "conclusion": {"type": "atom", "label": "P"},
+      "expected_valid": true,
+      "explanation": "Conjunction Elimination (Simplification): P ∧ Q ⊢ P"
+    },
+    {
+      "id": "L1-08",
+      "level": 1,
+      "category": "contraposition",
+      "natural_language": "If it is raining, then the ground is wet. Therefore, if the ground is not wet, then it is not raining.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"}
+      ],
+      "conclusion": {"type": "implies", "left": {"type": "not", "operand": "Q"}, "right": {"type": "not", "operand": "P"}},
+      "expected_valid": true,
+      "explanation": "Contraposition: P → Q ⊢ ¬Q → ¬P"
+    },
+    {
+      "id": "L1-09",
+      "level": 1,
+      "category": "double_negation",
+      "natural_language": "It is not the case that it is not raining. Therefore, it is raining.",
+      "premises": [
+        {"type": "not", "operand": {"type": "not", "operand": "P"}}
+      ],
+      "conclusion": {"type": "atom", "label": "P"},
+      "expected_valid": true,
+      "explanation": "Double Negation Elimination: ¬¬P ⊢ P"
+    },
+    {
+      "id": "L1-10",
+      "level": 1,
+      "category": "disjunction_intro",
+      "natural_language": "It is raining. Therefore, it is raining or snowing.",
+      "premises": [
+        {"type": "atom", "label": "P"}
+      ],
+      "conclusion": {"type": "or", "left": "P", "right": "Q"},
+      "expected_valid": true,
+      "explanation": "Disjunction Introduction (Addition): P ⊢ P ∨ Q"
+    },
+    {
+      "id": "L2-01",
+      "level": 2,
+      "category": "hypothetical_syllogism",
+      "natural_language": "If it rains, the ground is wet. If the ground is wet, the game is cancelled. Therefore, if it rains, the game is cancelled.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "implies", "left": "Q", "right": "R"}
+      ],
+      "conclusion": {"type": "implies", "left": "P", "right": "R"},
+      "expected_valid": true,
+      "explanation": "Hypothetical Syllogism (transitivity): P → Q, Q → R ⊢ P → R"
+    },
+    {
+      "id": "L2-02",
+      "level": 2,
+      "category": "chain_3",
+      "natural_language": "If A then B. If B then C. If C then D. A is true. Therefore, D is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "C", "right": "D"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "D"},
+      "expected_valid": true,
+      "explanation": "3-step implication chain: A→B, B→C, C→D, A ⊢ D"
+    },
+    {
+      "id": "L2-03",
+      "level": 2,
+      "category": "constructive_dilemma",
+      "natural_language": "If it rains, I take an umbrella. If it's sunny, I wear sunglasses. It will rain or be sunny. Therefore, I take an umbrella or wear sunglasses.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "implies", "left": "R", "right": "S"},
+        {"type": "or", "left": "P", "right": "R"}
+      ],
+      "conclusion": {"type": "or", "left": "Q", "right": "S"},
+      "expected_valid": true,
+      "explanation": "Constructive Dilemma: (P→Q), (R→S), (P∨R) ⊢ (Q∨S)"
+    },
+    {
+      "id": "L2-04",
+      "level": 2,
+      "category": "complex_tollens",
+      "natural_language": "If A and B, then C. Not C. Therefore, not A or not B.",
+      "premises": [
+        {"type": "implies", "left": {"type": "and", "left": "A", "right": "B"}, "right": "C"},
+        {"type": "not", "operand": "C"}
+      ],
+      "conclusion": {"type": "or", "left": {"type": "not", "operand": "A"}, "right": {"type": "not", "operand": "B"}},
+      "expected_valid": true,
+      "explanation": "Complex Modus Tollens with De Morgan: (A∧B)→C, ¬C ⊢ ¬A∨¬B"
+    },
+    {
+      "id": "L2-05",
+      "level": 2,
+      "category": "biconditional",
+      "natural_language": "A if and only if B. A is true. Therefore, B is true.",
+      "premises": [
+        {"type": "iff", "left": "A", "right": "B"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "B"},
+      "expected_valid": true,
+      "explanation": "Biconditional Elimination: A ↔ B, A ⊢ B"
+    },
+    {
+      "id": "L2-06",
+      "level": 2,
+      "category": "invalid_chain",
+      "natural_language": "If A then B. If C then B. A is true. Therefore, C is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "C", "right": "B"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "C"},
+      "expected_valid": false,
+      "explanation": "INVALID: Sharing a consequent does not create a chain. A→B, C→B, A ⊬ C"
+    },
+    {
+      "id": "L3-01",
+      "level": 3,
+      "category": "reductio",
+      "natural_language": "If we assume that P is true, we can derive both Q and not-Q. Therefore, P must be false.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "implies", "left": "P", "right": {"type": "not", "operand": "Q"}}
+      ],
+      "conclusion": {"type": "not", "operand": "P"},
+      "expected_valid": true,
+      "explanation": "Reductio ad Absurdum: P→Q, P→¬Q ⊢ ¬P (assuming P leads to contradiction)"
+    },
+    {
+      "id": "L3-02",
+      "level": 3,
+      "category": "de_morgan",
+      "natural_language": "It is not the case that both A and B are true. Therefore, A is false or B is false.",
+      "premises": [
+        {"type": "not", "operand": {"type": "and", "left": "A", "right": "B"}}
+      ],
+      "conclusion": {"type": "or", "left": {"type": "not", "operand": "A"}, "right": {"type": "not", "operand": "B"}},
+      "expected_valid": true,
+      "explanation": "De Morgan's Law: ¬(A ∧ B) ⊢ ¬A ∨ ¬B"
+    },
+    {
+      "id": "L3-03",
+      "level": 3,
+      "category": "de_morgan_2",
+      "natural_language": "Neither A nor B is true. Therefore, A is false and B is false.",
+      "premises": [
+        {"type": "not", "operand": {"type": "or", "left": "A", "right": "B"}}
+      ],
+      "conclusion": {"type": "and", "left": {"type": "not", "operand": "A"}, "right": {"type": "not", "operand": "B"}},
+      "expected_valid": true,
+      "explanation": "De Morgan's Law: ¬(A ∨ B) ⊢ ¬A ∧ ¬B"
+    },
+    {
+      "id": "L3-04",
+      "level": 3,
+      "category": "nested_conditional",
+      "natural_language": "If A then (if B then C). A is true. B is true. Therefore, C is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": {"type": "implies", "left": "B", "right": "C"}},
+        {"type": "atom", "label": "A"},
+        {"type": "atom", "label": "B"}
+      ],
+      "conclusion": {"type": "atom", "label": "C"},
+      "expected_valid": true,
+      "explanation": "Nested conditional elimination: A→(B→C), A, B ⊢ C"
+    },
+    {
+      "id": "L3-05",
+      "level": 3,
+      "category": "complex_invalid",
+      "natural_language": "If A or B then C. C is true. Therefore, A is true.",
+      "premises": [
+        {"type": "implies", "left": {"type": "or", "left": "A", "right": "B"}, "right": "C"},
+        {"type": "atom", "label": "C"}
+      ],
+      "conclusion": {"type": "atom", "label": "A"},
+      "expected_valid": false,
+      "explanation": "INVALID: (A∨B)→C, C ⊬ A. This is affirming the consequent on a disjunctive antecedent."
+    },
+    {
+      "id": "ADV-01",
+      "level": "adversarial",
+      "category": "irrelevant_premise",
+      "natural_language": "If it rains, the ground is wet. The sky is blue. It is raining. Therefore, the ground is wet.",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "atom", "label": "R"},
+        {"type": "atom", "label": "P"}
+      ],
+      "conclusion": {"type": "atom", "label": "Q"},
+      "expected_valid": true,
+      "explanation": "VALID despite irrelevant premise R. The extra information is a distractor."
+    },
+    {
+      "id": "ADV-02",
+      "level": "adversarial",
+      "category": "negation_confusion",
+      "natural_language": "If it does NOT rain, the picnic will happen. It is raining. Therefore, the picnic will not happen.",
+      "premises": [
+        {"type": "implies", "left": {"type": "not", "operand": "P"}, "right": "Q"},
+        {"type": "atom", "label": "P"}
+      ],
+      "conclusion": {"type": "not", "operand": "Q"},
+      "expected_valid": false,
+      "explanation": "INVALID: (¬P→Q), P ⊬ ¬Q. The picnic might happen for other reasons. Classic LLM trap: the negation in the antecedent misleads."
+    },
+    {
+      "id": "ADV-03",
+      "level": "adversarial",
+      "category": "converse_error",
+      "natural_language": "All dogs are mammals. Rex is a mammal. Therefore, Rex is a dog.",
+      "premises": [
+        {"type": "implies", "left": "D", "right": "M"},
+        {"type": "atom", "label": "M"}
+      ],
+      "conclusion": {"type": "atom", "label": "D"},
+      "expected_valid": false,
+      "explanation": "INVALID: Affirming the consequent in natural language. Rex could be a cat. LLMs often get this wrong because the conclusion 'sounds right'."
+    },
+    {
+      "id": "ADV-04",
+      "level": "adversarial",
+      "category": "vacuous_truth",
+      "natural_language": "If unicorns exist, then 2+2=5. Unicorns do not exist. What can we conclude?",
+      "premises": [
+        {"type": "implies", "left": "P", "right": "Q"},
+        {"type": "not", "operand": "P"}
+      ],
+      "conclusion": {"type": "atom", "label": "Q"},
+      "expected_valid": false,
+      "explanation": "INVALID: Denying the Antecedent. The implication is vacuously true (false antecedent), but that doesn't tell us anything about Q. LLMs struggle with vacuous truth."
+    },
+    {
+      "id": "ADV-05",
+      "level": "adversarial",
+      "category": "long_distractor_chain",
+      "natural_language": "If A then B. If B then C. If C then D. If D then E. If X then Y. A is true. Therefore, E and Y are both true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "C", "right": "D"},
+        {"type": "implies", "left": "D", "right": "E"},
+        {"type": "implies", "left": "X", "right": "Y"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "and", "left": "E", "right": "Y"},
+      "expected_valid": false,
+      "explanation": "INVALID: The chain A→B→C→D→E is valid, so E follows. But X→Y with no assertion of X does NOT give us Y. The long valid chain is a distractor."
+    }
+  ]
+}

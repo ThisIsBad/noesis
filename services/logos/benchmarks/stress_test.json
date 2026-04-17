@@ -1,0 +1,243 @@
+{
+  "metadata": {
+    "version": "0.2.0",
+    "description": "Level 4 stress-test problems designed to find LLM reasoning limits.",
+    "design_principles": [
+      "Long chains that exhaust working memory",
+      "Hidden contradictions among many premises",
+      "Problems requiring model counting (exactly N of M true)",
+      "Misleading natural language with correct formal structure",
+      "Self-referential and paradoxical structures"
+    ]
+  },
+  "problems": [
+    {
+      "id": "L4-01",
+      "level": 4,
+      "category": "long_chain_valid",
+      "natural_language": "If A then B. If B then C. If C then D. If D then E. If E then F. If F then G. If G then H. A is true. Therefore, H is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "C", "right": "D"},
+        {"type": "implies", "left": "D", "right": "E"},
+        {"type": "implies", "left": "E", "right": "F"},
+        {"type": "implies", "left": "F", "right": "G"},
+        {"type": "implies", "left": "G", "right": "H"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "H"},
+      "expected_valid": true,
+      "explanation": "7-step chain. Valid but tests if the LLM can track all steps without getting lost."
+    },
+    {
+      "id": "L4-02",
+      "level": 4,
+      "category": "long_chain_broken",
+      "natural_language": "If A then B. If B then C. If C then D. If E then F. If F then G. If G then H. A is true. Therefore, H is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "C", "right": "D"},
+        {"type": "implies", "left": "E", "right": "F"},
+        {"type": "implies", "left": "F", "right": "G"},
+        {"type": "implies", "left": "G", "right": "H"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "H"},
+      "expected_valid": false,
+      "explanation": "INVALID: The chain is BROKEN between D and E (no D→E). The LLM must notice the missing link in a long sequence."
+    },
+    {
+      "id": "L4-03",
+      "level": 4,
+      "category": "hidden_contradiction",
+      "natural_language": "If A then B. If B then C. If C then not A. A is true. Therefore, B is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "C", "right": {"type": "not", "operand": "A"}},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "B"},
+      "expected_valid": true,
+      "explanation": "VALID (but tricky): A→B→C→¬A creates a contradiction with premise A, but B still follows from A→B and A. The contradiction doesn't invalidate B; it just means the premises are inconsistent (from inconsistent premises, anything follows — ex falso quodlibet)."
+    },
+    {
+      "id": "L4-04",
+      "level": 4,
+      "category": "ex_falso",
+      "natural_language": "P is true. P is false. Therefore, the moon is made of cheese.",
+      "premises": [
+        {"type": "atom", "label": "P"},
+        {"type": "not", "operand": "P"}
+      ],
+      "conclusion": {"type": "atom", "label": "Q"},
+      "expected_valid": true,
+      "explanation": "VALID (Ex Falso Quodlibet / Principle of Explosion): From contradictory premises, ANYTHING follows. This deeply counterintuitive result trips up most LLMs."
+    },
+    {
+      "id": "L4-05",
+      "level": 4,
+      "category": "many_premises_one_relevant",
+      "natural_language": "If A then B. If C then D. If E then F. If G then H. If I then J. If K then L. If M then N. C is true. D is true. E is true. G is true. Therefore, F is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "C", "right": "D"},
+        {"type": "implies", "left": "E", "right": "F"},
+        {"type": "implies", "left": "G", "right": "H"},
+        {"type": "implies", "left": "I", "right": "J"},
+        {"type": "implies", "left": "K", "right": "L"},
+        {"type": "implies", "left": "M", "right": "N"},
+        {"type": "atom", "label": "C"},
+        {"type": "atom", "label": "D"},
+        {"type": "atom", "label": "E"},
+        {"type": "atom", "label": "G"}
+      ],
+      "conclusion": {"type": "atom", "label": "F"},
+      "expected_valid": true,
+      "explanation": "VALID: Only E→F and E are relevant. All other premises are noise. Tests ability to find the signal among 11 premises."
+    },
+    {
+      "id": "L4-06",
+      "level": 4,
+      "category": "subtle_scope_error",
+      "natural_language": "If A then B or C. Not B. Not C. Therefore, not A.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": {"type": "or", "left": "B", "right": "C"}},
+        {"type": "not", "operand": "B"},
+        {"type": "not", "operand": "C"}
+      ],
+      "conclusion": {"type": "not", "operand": "A"},
+      "expected_valid": true,
+      "explanation": "VALID: A→(B∨C), ¬B, ¬C. Since ¬B∧¬C → ¬(B∨C) by De Morgan. Then by Modus Tollens on A→(B∨C): ¬A."
+    },
+    {
+      "id": "L4-07",
+      "level": 4,
+      "category": "double_conditional_trap",
+      "natural_language": "If A then B. If not A then B. Therefore, B is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": {"type": "not", "operand": "A"}, "right": "B"}
+      ],
+      "conclusion": {"type": "atom", "label": "B"},
+      "expected_valid": true,
+      "explanation": "VALID (Proof by Cases / Constructive Dilemma): A is either true or false. If true, B follows from premise 1. If false, B follows from premise 2. Either way, B must be true."
+    },
+    {
+      "id": "L4-08",
+      "level": 4,
+      "category": "mutual_exclusion",
+      "natural_language": "A or B (or both). If A then not B. If B then not A. A is true. Therefore, not B.",
+      "premises": [
+        {"type": "or", "left": "A", "right": "B"},
+        {"type": "implies", "left": "A", "right": {"type": "not", "operand": "B"}},
+        {"type": "implies", "left": "B", "right": {"type": "not", "operand": "A"}},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "not", "operand": "B"},
+      "expected_valid": true,
+      "explanation": "VALID: A and B are mutually exclusive (A→¬B, B→¬A). Given A, by A→¬B we get ¬B."
+    },
+    {
+      "id": "L4-09",
+      "level": 4,
+      "category": "xor_trap",
+      "natural_language": "Either A or B, but not both. Not A. Therefore, B and not A.",
+      "premises": [
+        {"type": "or", "left": {"type": "and", "left": "A", "right": {"type": "not", "operand": "B"}}, "right": {"type": "and", "left": {"type": "not", "operand": "A"}, "right": "B"}},
+        {"type": "not", "operand": "A"}
+      ],
+      "conclusion": {"type": "and", "left": "B", "right": {"type": "not", "operand": "A"}},
+      "expected_valid": true,
+      "explanation": "VALID: XOR(A,B) = (A∧¬B)∨(¬A∧B). With ¬A, the first disjunct is impossible, so ¬A∧B holds."
+    },
+    {
+      "id": "L4-10",
+      "level": 4,
+      "category": "reverse_chain_trap",
+      "natural_language": "If A then B. If B then C. If C then D. D is true. Therefore, A is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "C", "right": "D"},
+        {"type": "atom", "label": "D"}
+      ],
+      "conclusion": {"type": "atom", "label": "A"},
+      "expected_valid": false,
+      "explanation": "INVALID: Affirming the Consequent on a chain. A→B→C→D and D does NOT mean A. D could be true for other reasons."
+    },
+    {
+      "id": "L4-11",
+      "level": 4,
+      "category": "biconditional_chain",
+      "natural_language": "A if and only if B. B if and only if C. A is true. Therefore, C is true.",
+      "premises": [
+        {"type": "iff", "left": "A", "right": "B"},
+        {"type": "iff", "left": "B", "right": "C"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "C"},
+      "expected_valid": true,
+      "explanation": "VALID: A↔B with A gives B. B↔C with B gives C. Biconditional chains work both ways."
+    },
+    {
+      "id": "L4-12",
+      "level": 4,
+      "category": "negation_overload",
+      "natural_language": "If not (not A and not B), then C. Not A is false. Therefore, C is true.",
+      "premises": [
+        {"type": "implies", "left": {"type": "not", "operand": {"type": "and", "left": {"type": "not", "operand": "A"}, "right": {"type": "not", "operand": "B"}}}, "right": "C"},
+        {"type": "not", "operand": {"type": "not", "operand": "A"}}
+      ],
+      "conclusion": {"type": "atom", "label": "C"},
+      "expected_valid": true,
+      "explanation": "VALID: ¬¬A simplifies to A. ¬(¬A∧¬B) is A∨B by De Morgan. Since A is true, A∨B is true, so C follows."
+    },
+    {
+      "id": "L4-13",
+      "level": 4,
+      "category": "almost_valid_chain",
+      "natural_language": "If A then B. If B then C. If D then C. A is true. Therefore, D is true.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "D", "right": "C"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "atom", "label": "D"},
+      "expected_valid": false,
+      "explanation": "INVALID: A→B→C is valid, so C is true. But D→C is NOT the same as C→D. Knowing C doesn't give us D."
+    },
+    {
+      "id": "L4-14",
+      "level": 4,
+      "category": "modus_tollens_chain",
+      "natural_language": "If A then B. If B then C. If C then D. Not D. Therefore, not A.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "C"},
+        {"type": "implies", "left": "C", "right": "D"},
+        {"type": "not", "operand": "D"}
+      ],
+      "conclusion": {"type": "not", "operand": "A"},
+      "expected_valid": true,
+      "explanation": "VALID: Chained Modus Tollens. ¬D → ¬C (from C→D). ¬C → ¬B (from B→C). ¬B → ¬A (from A→B)."
+    },
+    {
+      "id": "L4-15",
+      "level": 4,
+      "category": "symmetric_confusion",
+      "natural_language": "If A then B. If B then A. A is true. Therefore, A if and only if B.",
+      "premises": [
+        {"type": "implies", "left": "A", "right": "B"},
+        {"type": "implies", "left": "B", "right": "A"},
+        {"type": "atom", "label": "A"}
+      ],
+      "conclusion": {"type": "iff", "left": "A", "right": "B"},
+      "expected_valid": true,
+      "explanation": "VALID: A→B and B→A together give A↔B. The premise A is actually redundant here (the biconditional holds regardless)."
+    }
+  ]
+}
