@@ -14,6 +14,7 @@ noesis/
 ├── eval/             # Reproducible benchmark harness
 ├── kairos/           # Cross-service observability & tracing
 └── services/
+    ├── logos/        # Formal verification (Z3/Lean 4)
     ├── mneme/        # Persistent memory
     ├── praxis/       # Hierarchical planning
     ├── telos/        # Goal stability monitoring
@@ -23,15 +24,17 @@ noesis/
     └── techne/       # Verified skill library
 ```
 
-> **Logos** lives in its own repo ([ThisIsBad/logos](https://github.com/ThisIsBad/logos))
-> because it was developed independently and is already deployed. All other
-> services live here.
+> **Logos** was absorbed from its former standalone repo
+> ([ThisIsBad/logos](https://github.com/ThisIsBad/logos)) into `services/logos/`
+> to eliminate schema drift on `ProofCertificate`/`ConfidenceLevel` and unify
+> deployment. See [services/logos/RAILWAY_MIGRATION.md](services/logos/RAILWAY_MIGRATION.md)
+> for the migration path.
 
 ## Services
 
 | Service | Function | AGI Stage | Status |
 |---------|----------|-----------|--------|
-| **[Logos](https://github.com/ThisIsBad/logos)** | Formal verification (Z3/Lean 4), assumption management, goal contracts | Stage 2–3 | ✅ Deployed (external) |
+| **Logos** | Formal verification (Z3/Lean 4), assumption management, goal contracts | Stage 2–3 | ✅ Absorbed into `services/logos/` |
 | **Mneme** | Persistent episodic + semantic memory, verified belief storage | Stage 3–4 | 🔲 Planned |
 | **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🔲 Planned |
 | **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 3 | 🔲 Planned (vorgezogen) |

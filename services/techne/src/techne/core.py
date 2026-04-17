@@ -19,7 +19,7 @@ class TechneCore:
             name=name,
             description=description,
             strategy=strategy,
-            verified=certificate.proven if certificate else False,
+            verified=certificate.verified if certificate else False,
             certificate=certificate,
             domain=domain,
         )

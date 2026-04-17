@@ -49,7 +49,7 @@ class MnemeCore:
             memory_type=memory_type,
             confidence=confidence,
             certificate=certificate,
-            proven=certificate.proven if certificate else False,
+            proven=certificate.verified if certificate else False,
             tags=tags or [],
             source=source,
         )
