@@ -4,10 +4,10 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from noesis_schemas import MemoryType, ProofCertificate
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .core import MnemeCore
 
@@ -111,15 +111,26 @@ async def _health(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "service": "mneme"})
 
 
-class _BearerAuth(BaseHTTPMiddleware):
-    """Require Bearer token on /sse and /messages when MNEME_SECRET is set."""
+class _BearerAuth:
+    """Pure-ASGI Bearer-token gate. BaseHTTPMiddleware buffers responses
+    and breaks SSE streams, so we wrap the app at the ASGI layer instead.
+    No-op when MNEME_SECRET is unset or the path is /health."""
 
-    async def dispatch(self, request: Request, call_next):  # type: ignore[no-untyped-def]
-        if request.url.path == "/health" or not _SECRET:
-            return await call_next(request)
-        if request.headers.get("Authorization", "") != f"Bearer {_SECRET}":
-            return JSONResponse({"error": "Unauthorized"}, status_code=401)
-        return await call_next(request)
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not _SECRET or scope.get("path") == "/health":
+            await self.app(scope, receive, send)
+            return
+        headers = dict(scope.get("headers") or [])
+        expected = f"Bearer {_SECRET}".encode()
+        if headers.get(b"authorization") != expected:
+            await JSONResponse({"error": "Unauthorized"}, status_code=401)(
+                scope, receive, send
+            )
+            return
+        await self.app(scope, receive, send)
 
 
 app = mcp.sse_app()
