@@ -38,9 +38,21 @@ fail_under = 85
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["chromadb", "chromadb.*"]
+module = [
+    "chromadb",
+    "chromadb.*",
+    "mcp",
+    "mcp.*",
+    "starlette",
+    "starlette.*",
+    "uvicorn",
+]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["mneme.mcp_server_http"]
+disable_error_code = ["untyped-decorator", "no-any-return"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
