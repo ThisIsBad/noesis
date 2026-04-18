@@ -1,5 +1,6 @@
 from noesis_schemas import (
     ProofCertificate,
+    ClaimKind,
     ConfidenceLevel,
     ConfidenceRecord,
     EscalationDecision,
@@ -54,6 +55,17 @@ def test_memory_proven_flag():
     )
     assert mem.proven
     assert mem.memory_type == MemoryType.SEMANTIC
+    assert mem.claim_kind is None
+
+
+def test_memory_claim_kind_routing_hint():
+    mem = Memory(
+        content="compute_time < 100",
+        memory_type=MemoryType.SEMANTIC,
+        claim_kind=ClaimKind.QUANTITATIVE,
+    )
+    assert mem.claim_kind is ClaimKind.QUANTITATIVE
+    assert not mem.proven
 
 
 def test_plan_with_steps():

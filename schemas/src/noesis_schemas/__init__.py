@@ -7,7 +7,7 @@ from .confidence import (
     confidence_from_float,
 )
 from .contracts import GoalConstraint, GoalContract
-from .memory import Memory, MemoryType
+from .memory import ClaimKind, Memory, MemoryType
 from .planning import Plan, PlanStep, StepStatus
 from .learning import Lesson, Skill
 from .episteme import Prediction, CalibrationReport
@@ -22,6 +22,7 @@ __all__ = [
     "confidence_from_float",
     "GoalConstraint",
     "GoalContract",
+    "ClaimKind",
     "Memory",
     "MemoryType",
     "Plan",

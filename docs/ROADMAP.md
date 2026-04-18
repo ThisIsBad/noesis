@@ -252,19 +252,57 @@ Bei 8 Services ist Debugging ohne Tracing blind.
 | **0** | noesis-schemas | Schema-Drift | Querschnitt | Niedrig |
 | **0** | noesis-eval | Falsifizierbarkeit | Querschnitt | Mittel |
 | **1** | Mneme | Persistenz | 1 | Mittel |
-| **2** | Praxis | Planning | 1 | Mittel–Hoch |
-| **3** | Telos | Goal-Drift (vorgezogen!) | 1 | Mittel |
-| **4** | Episteme | Kalibrierung | 2 | Niedrig |
-| **5** | Kairos | Observability | Querschnitt | Mittel |
+| **2** | Kairos | Observability | Querschnitt | Mittel |
+| **3** | Praxis | Planning | 1 | Mittel–Hoch |
+| **4** | Telos | Goal-Drift (vorgezogen!) | 1 | Mittel |
+| **5** | Episteme | Kalibrierung | 2 | Niedrig |
 | **6** | Kosmos | Kausalität | 2 | Hoch |
 | **7** | Empiria | Lernen | 3 | Niedrig |
 | **8** | Techne | Skills | 3 | Mittel |
 
 **Änderungen ggü. v1:**
-- Telos von Prio 7 auf Prio 3 (Goal-Drift entsteht ab Tag 1 mit Praxis)
+- Telos von Prio 7 auf Prio 4 (Goal-Drift entsteht ab Tag 1 mit Praxis)
 - Episteme vor Empiria/Techne (Kalibrierung ist Voraussetzung für Lesson-Quality)
 - Schemas + Eval als Prio 0 (sonst Tech-Debt-Spirale)
-- Kairos eingeführt für Cross-Service-Debugging
+- Kairos von Prio 5 auf Prio 2: Structured Logging muss stehen, bevor Praxis/Telos
+  Daten erzeugen, die Episteme später für Calibration braucht. Retrofitten von
+  Observability nach 4 Services ist teurer als Prebuild.
+
+## Build-Strategie: Skeleton-First
+
+Die obige Prio-Tabelle ist **nicht linear abzuarbeiten**. Die kognitiven Services
+haben zyklische Abhängigkeiten:
+
+- Logos kann nicht selbst-kalibrieren ohne Outcome-Daten aus Episteme/Telos/Praxis.
+- Mnemes Belief-Graduation (`certificate` setzen) braucht einen laufenden Logos.
+- Praxis kann keine Lessons ziehen ohne Empiria, die wiederum auf
+  Episteme-Kalibrierung angewiesen ist.
+
+**Konsequenz:** Alle neun Services bekommen von Tag 1 eine Stub-Implementierung
+mit vollständigem MCP-Interface, minimaler Logik. Die Prio-Reihenfolge oben
+beschreibt nur, **wo zuerst Production-Quality investiert wird** — nicht, wann
+ein Service überhaupt existieren darf.
+
+**Beispiele für Stubs:**
+- Mneme: ChromaDB-Store, Retrieval, aber ohne Consolidation-Tuning.
+- Logos: existiert bereits (✅) — keine Stub-Phase nötig.
+- Episteme: loggt Predictions/Outcomes in SQLite, liefert hardcoded
+  `ConfidenceLevel.UNKNOWN` zurück bis genug Daten da sind.
+- Telos: registriert Goals, `check_action_alignment` gibt pauschal `aligned=true`
+  zurück bis echte Drift-Metriken implementiert sind.
+- Kosmos/Empiria/Techne: leere MCP-Endpoints, die `NotImplementedError`-Payloads
+  zurückgeben, aber die Schema-Verträge aus `noesis-schemas` respektieren.
+
+**Vorteile:**
+- End-to-End-Datenfluss wird früh sichtbar (Claude → Telos → Praxis → Logos → Mneme).
+- Integrations-Probleme (SSE-Setup, Schema-Drift, mTLS) tauchen früh auf.
+- Feedback-Loops sammeln Daten, während Services crude sind — Episteme baut
+  Baseline-Kalibrierung aus Stub-Outputs, bevor die richtige Logik live geht.
+- Kein "Service-Insel"-Problem, bei dem ein fertiger Service monatelang auf
+  einen Caller wartet.
+
+**Regel:** Prio 0–2 in Production-Quality. Prio 3+ als Stub mit vollständigem
+Interface, Production-Reife inkrementell nach Prio-Reihenfolge.
 
 ---
 
@@ -350,3 +388,4 @@ Pro Service (siehe `architecture.md`):
 |-------|----------|
 | 2026-04-14 | Noesis Hub angelegt, Roadmap aus Logos-Repo überführt |
 | 2026-04-16 | Per-Service Acceptance Criteria; Telos vorgezogen (Prio 3); Episteme vor Empiria; Schemas/Eval/Kairos als Querschnitts-Komponenten; Polyglot-Strategie (Rust für Praxis/Telos/Logos-Hot-Path); Logos-Sidecar für read-only Verifikation; WebArena-Schwelle realistischer gestaffelt |
+| 2026-04-18 | Kairos auf Prio 2 vorgezogen (Observability muss vor Feedback-Datenproduzenten stehen); Skeleton-First-Strategie explizit (alle Services ab Tag 1 als Stub mit vollständigem MCP-Interface, Production-Reife nach Prio-Reihenfolge); `ClaimKind` in `noesis-schemas.Memory` als Routing-Hint für Logos-Graduation |

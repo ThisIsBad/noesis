@@ -12,6 +12,20 @@ class MemoryType(str, Enum):
     SEMANTIC = "semantic"   # what is known/believed
 
 
+class ClaimKind(str, Enum):
+    """Routing hint for Logos verification.
+
+    Distinct from ProofCertificate.claim_type (which records how Logos
+    verified a claim). ClaimKind tells Mneme which Logos tool to invoke
+    when attempting to graduate a hypothesis: propositional -> verify_argument,
+    quantitative -> z3_check, mixed -> orchestrate_proof / check_beliefs.
+    """
+
+    PROPOSITIONAL = "propositional"
+    QUANTITATIVE = "quantitative"
+    MIXED = "mixed"
+
+
 class Memory(BaseModel):
     memory_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     content: str
@@ -21,5 +35,6 @@ class Memory(BaseModel):
     accessed_at: Optional[datetime] = None
     certificate: Optional[ProofCertificate] = None
     proven: bool = False
+    claim_kind: Optional[ClaimKind] = None
     tags: list[str] = Field(default_factory=list)
     source: Optional[str] = None
