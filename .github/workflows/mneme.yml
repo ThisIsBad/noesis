@@ -6,11 +6,13 @@ on:
     paths:
       - "services/mneme/**"
       - "schemas/**"
+      - "kairos/**"
       - ".github/workflows/mneme.yml"
   pull_request:
     paths:
       - "services/mneme/**"
       - "schemas/**"
+      - "kairos/**"
       - ".github/workflows/mneme.yml"
 
 defaults:
@@ -34,10 +36,15 @@ jobs:
           cache: pip
           cache-dependency-path: |
             schemas/pyproject.toml
+            kairos/pyproject.toml
             services/mneme/pyproject.toml
 
       - name: Install schemas
         working-directory: schemas
+        run: pip install -e .
+
+      - name: Install kairos
+        working-directory: kairos
         run: pip install -e .
 
       - name: Install mneme + dev deps
@@ -64,10 +71,15 @@ jobs:
           cache: pip
           cache-dependency-path: |
             schemas/pyproject.toml
+            kairos/pyproject.toml
             services/mneme/pyproject.toml
 
       - name: Install schemas
         working-directory: schemas
+        run: pip install -e .
+
+      - name: Install kairos
+        working-directory: kairos
         run: pip install -e .
 
       - name: Install mneme

@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -
 COPY schemas/ /schemas
 RUN pip install /schemas
 
+# ── Kairos tracing client ─────────────────────────────────────────────────────
+COPY kairos/ /kairos
+RUN pip install /kairos
+
 # ── Service ───────────────────────────────────────────────────────────────────
 COPY services/mneme/pyproject.toml .
 COPY services/mneme/src/ src/
