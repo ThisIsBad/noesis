@@ -5,6 +5,7 @@ description = "Persistent episodic and semantic memory for the Noesis AGI stack"
 requires-python = ">=3.11"
 dependencies = [
     "noesis-schemas",
+    "kairos",
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "chromadb>=0.5",
@@ -25,7 +26,7 @@ packages = ["src/mneme"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../../schemas/src"]
+pythonpath = ["src", "../../schemas/src", "../../kairos/src"]
 
 [tool.coverage.run]
 source = ["mneme.core"]
