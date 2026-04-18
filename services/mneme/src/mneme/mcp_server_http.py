@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import sys
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
@@ -11,11 +13,29 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .core import MnemeCore
 
-_data_dir = os.getenv("MNEME_DATA_DIR", "/data")
-_core = MnemeCore(
-    db_path=os.path.join(_data_dir, "mneme.db"),
-    chroma_path=os.path.join(_data_dir, "chroma"),
+logging.basicConfig(
+    level=os.getenv("MNEME_LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s | %(message)s",
+    stream=sys.stdout,
 )
+log = logging.getLogger("mneme")
+
+_data_dir = os.getenv("MNEME_DATA_DIR", "/data")
+_secret_set = bool(os.getenv("MNEME_SECRET"))
+log.info(
+    "mneme boot: data_dir=%s port=%s secret_set=%s",
+    _data_dir, os.getenv("PORT", "8000"), _secret_set,
+)
+try:
+    os.makedirs(_data_dir, exist_ok=True)
+    _core = MnemeCore(
+        db_path=os.path.join(_data_dir, "mneme.db"),
+        chroma_path=os.path.join(_data_dir, "chroma"),
+    )
+    log.info("mneme core ready: db=%s/mneme.db", _data_dir)
+except Exception:
+    log.exception("mneme core init failed at %s", _data_dir)
+    raise
 
 mcp = FastMCP("mneme", instructions=(
     "Persistent episodic and semantic memory for the Noesis AGI stack. "
