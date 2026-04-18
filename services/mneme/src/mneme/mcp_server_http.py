@@ -56,7 +56,10 @@ _transport_security = TransportSecuritySettings(
     allowed_origins=[f"https://{h}" for h in _allowed_hosts]
     + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
 )
-log.info("mneme transport_security: allowed_hosts=%s", _transport_security.allowed_hosts)
+log.info(
+    "mneme transport_security: allowed_hosts=%s",
+    _transport_security.allowed_hosts,
+)
 
 mcp = FastMCP(
     "mneme",
