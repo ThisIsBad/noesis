@@ -5,6 +5,7 @@ import sys
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from noesis_schemas import MemoryType, ProofCertificate
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -37,11 +38,34 @@ except Exception:
     log.exception("mneme core init failed at %s", _data_dir)
     raise
 
-mcp = FastMCP("mneme", instructions=(
-    "Persistent episodic and semantic memory for the Noesis AGI stack. "
-    "Use store_memory to save facts or events, retrieve_memory to search them, "
-    "list_proven_beliefs to inspect Logos-verified knowledge."
-))
+# FastMCP enables DNS-rebinding protection by default and only allows
+# localhost Host headers. Behind Railway's edge the public host is e.g.
+# mneme-production-c227.up.railway.app, which gets rejected with 421.
+# MNEME_ALLOWED_HOSTS is a comma-separated list of extra allowed Hosts;
+# defaults keep localhost working for local dev.
+_allowed_hosts = [
+    h.strip()
+    for h in os.getenv("MNEME_ALLOWED_HOSTS", "").split(",")
+    if h.strip()
+]
+_transport_security = TransportSecuritySettings(
+    enable_dns_rebinding_protection=bool(_allowed_hosts),
+    allowed_hosts=_allowed_hosts
+    + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
+    allowed_origins=[f"https://{h}" for h in _allowed_hosts]
+    + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
+)
+log.info("mneme transport_security: allowed_hosts=%s", _transport_security.allowed_hosts)
+
+mcp = FastMCP(
+    "mneme",
+    instructions=(
+        "Persistent episodic and semantic memory for the Noesis AGI stack. "
+        "Use store_memory to save facts or events, retrieve_memory to search them, "
+        "list_proven_beliefs to inspect Logos-verified knowledge."
+    ),
+    transport_security=_transport_security,
+)
 
 
 @mcp.tool()
