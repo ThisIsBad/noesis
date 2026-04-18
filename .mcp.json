@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "mneme": {
-      "type": "http",
-      "url": "https://mneme-production-c227.up.railway.app/mcp"
+      "type": "sse",
+      "url": "https://mneme-production-c227.up.railway.app/sse"
     }
   }
 }
