@@ -1,5 +1,6 @@
+from noesis_schemas import GoalConstraint, GoalContract
+
 from telos.core import TelosCore
-from noesis_schemas import GoalContract, GoalConstraint
 
 
 def test_register_and_list_active():
