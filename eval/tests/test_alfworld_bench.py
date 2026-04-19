@@ -12,6 +12,7 @@ from noesis_eval.alfworld_bench import (
     ScriptedPlanner,
     Task,
     build_default_suite,
+    build_stage3_suite,
     run_episode,
     run_suite,
 )
@@ -181,3 +182,50 @@ def test_custom_task_round_trip():
     result = run_episode(MockAlfworldEnv(task), planner)
     assert result.success is True
     assert result.steps_taken == 1
+
+
+# ── Stage-3 acceptance suite (50 injected step-failures) ─────────────────────
+
+
+def test_stage3_suite_has_50_tasks_with_unique_ids_and_injections():
+    suite = build_stage3_suite()
+    assert len(suite) == 50
+    assert len({t.task_id for t in suite}) == 50
+    # The ROADMAP target is "50 injected step-failures", so every task
+    # must carry exactly one injection.
+    assert all(t.inject_failure_at is not None for t in suite)
+
+
+def test_stage3_suite_plan_depth_within_acceptance_bound():
+    """Stage-3 bound: plan depth <= 8 across the whole suite."""
+    suite = build_stage3_suite()
+    assert max(len(t.canonical_plan) for t in suite) <= 8
+
+
+def test_stage3_suite_meets_acceptance_targets():
+    """Reference planner with perfect knowledge should comfortably clear
+    the Stage-3 bars (success rate >= 50%, backtrack-recovery >= 50%).
+    Hitting the bars at 50 tasks guards against regressions in the env
+    + runner contract; Praxis will have to meet them on its own merits
+    when the real planner lands."""
+    suite = build_stage3_suite()
+    plans = {t.goal: list(t.canonical_plan) for t in suite}
+    recovery = {
+        t.goal: [t.recovery_actions[0], *t.canonical_plan[1:]]
+        for t in suite
+        if t.recovery_actions
+    }
+    planner = ScriptedPlanner(plans=plans, recovery=recovery)
+    metrics = run_suite(suite, planner)
+
+    summary = metrics.summary()
+    assert summary["episodes"] == 50
+    # With 45 recoverable + 5 unrecoverable, reference planner scores
+    # 45/50 success and 45/50 recovery — well above the 50% floor.
+    assert summary["success_rate"] >= 0.50
+    assert summary["backtrack_recovery_rate"] >= 0.50
+    assert summary["max_plan_depth"] <= 8
+
+    # Sanity-check the failure accounting: every task injects once, so
+    # the sum across episodes should equal the suite size.
+    assert sum(e.failures_seen for e in metrics.episodes) == 50
