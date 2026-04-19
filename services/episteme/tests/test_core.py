@@ -3,7 +3,9 @@ from episteme.core import EpistemeCore
 
 def test_log_and_resolve_prediction():
     core = EpistemeCore()
-    pred = core.log_prediction("It will rain tomorrow", confidence=0.8, domain="weather")
+    pred = core.log_prediction(
+        "It will rain tomorrow", confidence=0.8, domain="weather"
+    )
     assert pred.correct is None
     resolved = core.log_outcome(pred.prediction_id, correct=True)
     assert resolved.correct is True
