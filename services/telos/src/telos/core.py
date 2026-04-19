@@ -1,10 +1,16 @@
 from datetime import datetime
 from typing import Optional
+
 from noesis_schemas import GoalContract
 
 
 class AlignmentResult:
-    def __init__(self, aligned: bool, drift_score: float, reason: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        aligned: bool,
+        drift_score: float,
+        reason: Optional[str] = None,
+    ) -> None:
         self.aligned = aligned
         self.drift_score = drift_score
         self.reason = reason
@@ -24,13 +30,16 @@ class TelosCore:
         if not active:
             return AlignmentResult(aligned=True, drift_score=0.0)
 
-        # Stub: keyword-conflict heuristic. Production: Logos z3_check per postcondition.
+        # Stub: keyword-conflict heuristic.
+        # Production: Logos z3_check per postcondition.
+        action_lower = action_description.lower()
         conflicts = [
             g for g in active
             if any(
-                pc.description.lower() in action_description.lower()
+                pc.description.lower() in action_lower
                 for pc in g.postconditions
-                if "not" in pc.description.lower() or "prevent" in pc.description.lower()
+                if "not" in pc.description.lower()
+                or "prevent" in pc.description.lower()
             )
         ]
         drift = len(conflicts) / len(active)
