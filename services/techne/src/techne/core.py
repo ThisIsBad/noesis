@@ -1,5 +1,6 @@
 from typing import Optional
-from noesis_schemas import Skill, ProofCertificate
+
+from noesis_schemas import ProofCertificate, Skill
 
 
 class TechneCore:
@@ -26,18 +27,27 @@ class TechneCore:
         self._skills[skill.skill_id] = skill
         return skill
 
-    def retrieve(self, query: str, k: int = 5, verified_only: bool = False) -> list[Skill]:
+    def retrieve(
+        self,
+        query: str,
+        k: int = 5,
+        verified_only: bool = False,
+    ) -> list[Skill]:
         # Stub: substring match. Production: ChromaDB k-nearest.
+        needle = query.lower()
         results = [
-            s for s in self._skills.values()
-            if query.lower() in s.description.lower() or query.lower() in s.name.lower()
-            and (not verified_only or s.verified)
+            skill for skill in self._skills.values()
+            if needle in skill.description.lower() or needle in skill.name.lower()
+            and (not verified_only or skill.verified)
         ]
-        return sorted(results, key=lambda s: s.success_rate, reverse=True)[:k]
+        return sorted(results, key=lambda skill: skill.success_rate, reverse=True)[:k]
 
     def record_use(self, skill_id: str, success: bool) -> Skill:
         skill = self._skills[skill_id]
         total = skill.use_count + 1
-        skill.success_rate = (skill.success_rate * skill.use_count + (1.0 if success else 0.0)) / total
+        delta = 1.0 if success else 0.0
+        skill.success_rate = (
+            skill.success_rate * skill.use_count + delta
+        ) / total
         skill.use_count = total
         return skill
