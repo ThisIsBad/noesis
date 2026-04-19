@@ -13,6 +13,7 @@ Acceptance targets (from docs/ROADMAP.md, Praxis Stage 3):
 """
 from .env import MockAlfworldEnv, Task, build_default_suite, build_stage3_suite
 from .metrics import BenchmarkMetrics, EpisodeResult
+from .praxis_planner import PraxisCorePlanner
 from .runner import Planner, ScriptedPlanner, run_episode, run_suite
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "EpisodeResult",
     "MockAlfworldEnv",
     "Planner",
+    "PraxisCorePlanner",
     "ScriptedPlanner",
     "Task",
     "build_default_suite",
