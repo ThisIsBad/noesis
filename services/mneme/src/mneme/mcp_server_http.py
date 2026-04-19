@@ -152,7 +152,7 @@ def list_proven_beliefs() -> str:
 
 
 @mcp.tool()
-def consolidate_memories(similarity_threshold: float = 0.15) -> str:
+def consolidate_memories(similarity_threshold: float = 0.5) -> str:
     """Merge near-duplicate memories, keeping the higher-confidence copy.
 
     Args:
