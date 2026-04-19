@@ -11,7 +11,7 @@ Acceptance targets (from docs/ROADMAP.md, Praxis Stage 3):
     - Backtrack-recovery >= 50% on 50 injected step-failures
     - Plan depth <= 8 without tool hallucination
 """
-from .env import MockAlfworldEnv, Task, build_default_suite
+from .env import MockAlfworldEnv, Task, build_default_suite, build_stage3_suite
 from .metrics import BenchmarkMetrics, EpisodeResult
 from .runner import Planner, ScriptedPlanner, run_episode, run_suite
 
@@ -23,6 +23,7 @@ __all__ = [
     "ScriptedPlanner",
     "Task",
     "build_default_suite",
+    "build_stage3_suite",
     "run_episode",
     "run_suite",
 ]
