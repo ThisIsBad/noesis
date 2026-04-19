@@ -6,11 +6,15 @@ on:
     paths:
       - "eval/**"
       - "schemas/**"
+      - "kairos/**"
+      - "services/praxis/**"
       - ".github/workflows/eval.yml"
   pull_request:
     paths:
       - "eval/**"
       - "schemas/**"
+      - "kairos/**"
+      - "services/praxis/**"
       - ".github/workflows/eval.yml"
 
 defaults:
@@ -40,6 +44,14 @@ jobs:
         working-directory: schemas
         run: pip install -e .
 
+      - name: Install kairos
+        working-directory: kairos
+        run: pip install -e .
+
+      - name: Install praxis (PraxisCorePlanner adapter test)
+        working-directory: services/praxis
+        run: pip install -e .
+
       - name: Install eval
         run: pip install -e .
 
@@ -63,6 +75,14 @@ jobs:
 
       - name: Install schemas
         working-directory: schemas
+        run: pip install -e .
+
+      - name: Install kairos
+        working-directory: kairos
+        run: pip install -e .
+
+      - name: Install praxis
+        working-directory: services/praxis
         run: pip install -e .
 
       - name: Install eval
