@@ -1,5 +1,6 @@
-from techne.core import TechneCore
 from noesis_schemas import ProofCertificate
+
+from techne.core import TechneCore
 
 
 def test_store_and_retrieve_skill():
@@ -19,7 +20,12 @@ def test_verified_flag_from_certificate():
         verified=True,
         timestamp="2026-04-17T00:00:00+00:00",
     )
-    skill = core.store("proven-skill", "A verified strategy", "Do X then Y", certificate=cert)
+    skill = core.store(
+        "proven-skill",
+        "A verified strategy",
+        "Do X then Y",
+        certificate=cert,
+    )
     assert skill.verified
 
 
