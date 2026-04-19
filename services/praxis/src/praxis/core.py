@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 
 import networkx as nx
-
 from noesis_schemas import Plan, PlanStep, StepStatus
 
 # Scoring weights
@@ -12,7 +11,11 @@ _W_TOOL = 0.4
 _FAIL_PENALTY = 0.3
 
 
-def _score(risk_score: float, tool_call: Optional[str], previously_failed: bool = False) -> float:
+def _score(
+    risk_score: float,
+    tool_call: Optional[str],
+    previously_failed: bool = False,
+) -> float:
     base = (1.0 - risk_score) * _W_RISK + (_W_TOOL if tool_call else _W_TOOL * 0.5)
     return max(0.0, base - (_FAIL_PENALTY if previously_failed else 0.0))
 
@@ -59,7 +62,8 @@ class PraxisCore:
 
     def _load_trees(self) -> None:
         """Reconstruct in-memory graphs from SQLite on startup."""
-        for plan_id, goal in self._conn.execute("SELECT plan_id, goal FROM plans").fetchall():
+        cursor = self._conn.execute("SELECT plan_id, goal FROM plans")
+        for plan_id, goal in cursor.fetchall():
             g: nx.DiGraph = nx.DiGraph()
             g.add_node(plan_id, type="root", goal=goal)
             rows = self._conn.execute(
@@ -67,7 +71,11 @@ class PraxisCore:
                 "status, outcome, risk_score, score FROM steps WHERE plan_id=?",
                 (plan_id,),
             ).fetchall()
-            for step_id, parent_step_id, desc, tool_call, status, outcome, risk_score, score in rows:
+            for row in rows:
+                (
+                    step_id, parent_step_id, desc, tool_call,
+                    status, outcome, risk_score, score,
+                ) = row
                 g.add_node(
                     step_id,
                     description=desc,
@@ -130,7 +138,11 @@ class PraxisCore:
             raise KeyError(f"parent_step_id {parent!r} not found in plan {plan_id!r}")
 
         node_score = _score(risk_score, tool_call)
-        step = PlanStep(description=description, tool_call=tool_call, risk_score=risk_score)
+        step = PlanStep(
+            description=description,
+            tool_call=tool_call,
+            risk_score=risk_score,
+        )
 
         self._conn.execute(
             "INSERT INTO steps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -186,7 +198,10 @@ class PraxisCore:
         eligible for retry with different inputs.
         """
         g = self._trees[plan_id]
-        failed = [n for n, d in g.nodes(data=True) if d.get("status") == StepStatus.FAILED]
+        failed = [
+            n for n, d in g.nodes(data=True)
+            if d.get("status") == StepStatus.FAILED
+        ]
         alternatives: list[str] = []
 
         for node in failed:
@@ -269,7 +284,11 @@ class PraxisCore:
         Production: POST to Logos /tools/verify_argument with the plan as premise.
         """
         g = self._trees[plan_id]
-        step_nodes = [(d["risk_score"], d["description"]) for n, d in g.nodes(data=True) if n != plan_id]
+        step_nodes = [
+            (d["risk_score"], d["description"])
+            for n, d in g.nodes(data=True)
+            if n != plan_id
+        ]
         if not step_nodes:
             return False, "Plan has no steps"
         high_risk = [desc for risk, desc in step_nodes if risk >= 0.8]

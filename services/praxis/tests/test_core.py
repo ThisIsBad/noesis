@@ -1,7 +1,7 @@
 import pytest
+from noesis_schemas import StepStatus
 
 from praxis.core import PraxisCore
-from noesis_schemas import StepStatus
 
 
 @pytest.fixture
@@ -63,8 +63,12 @@ def test_add_step_unknown_parent_raises(core):
 def test_best_path_picks_lower_risk(core):
     """Two alternative first steps; best_path should pick the lower-risk one."""
     plan = core.decompose("Solve problem")
-    safe = core.add_step(plan.plan_id, "Safe approach", tool_call="tool_a", risk_score=0.1)
-    _risky = core.add_step(plan.plan_id, "Risky approach", tool_call="tool_b", risk_score=0.7)
+    safe = core.add_step(
+        plan.plan_id, "Safe approach", tool_call="tool_a", risk_score=0.1,
+    )
+    core.add_step(
+        plan.plan_id, "Risky approach", tool_call="tool_b", risk_score=0.7,
+    )
     paths = core.best_path(plan.plan_id, k=1)
     assert paths[0][0].step_id == safe.step_id
 
@@ -134,7 +138,7 @@ def test_backtrack_no_siblings_returns_empty(core):
 def test_get_next_step_first_pending(core):
     plan = core.decompose("Sequential")
     s1 = core.add_step(plan.plan_id, "Step 1")
-    s2 = core.add_step(plan.plan_id, "Step 2", parent_step_id=s1.step_id)
+    core.add_step(plan.plan_id, "Step 2", parent_step_id=s1.step_id)
     nxt = core.get_next_step(plan.plan_id)
     assert nxt is not None
     assert nxt.step_id == s1.step_id
