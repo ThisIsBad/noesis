@@ -1,6 +1,7 @@
 import os
-import pytest
+
 import httpx
+import pytest
 
 
 def service_url(name: str) -> str:
