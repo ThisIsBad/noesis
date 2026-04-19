@@ -19,14 +19,27 @@ packages = ["src/noesis_eval"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../schemas/src"]
+pythonpath = ["src", "../schemas/src", "../services/mneme/src"]
+addopts = "-m 'not slow'"
 markers = [
     "integration: requires deployed services",
     "unit: no external dependencies",
+    "slow: long-running benchmark; opt in via '-m slow' or '-m \"slow or not slow\"'",
 ]
-
-[tool.mypy]
-strict = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.mypy]
+strict = true
+mypy_path = "src:../schemas/src:../services/mneme/src"
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["chromadb", "chromadb.*", "pydantic", "pydantic.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["noesis_schemas", "noesis_schemas.*", "mneme", "mneme.*"]
+follow_imports = "skip"
