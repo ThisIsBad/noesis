@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Reproducible benchmark harness for the Noesis AGI stack"
 requires-python = ">=3.11"
 dependencies = [
-    "noesis-schemas @ file://../schemas",
+    "noesis-schemas",
     "httpx>=0.27",
     "pytest>=8.0",
     "pydantic>=2.0",
@@ -14,12 +14,19 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/noesis_eval"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "../schemas/src"]
 markers = [
     "integration: requires deployed services",
     "unit: no external dependencies",
 ]
+
+[tool.mypy]
+strict = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
