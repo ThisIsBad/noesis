@@ -5,6 +5,7 @@ description = "Persistent episodic and semantic memory for the Noesis AGI stack"
 requires-python = ">=3.11"
 dependencies = [
     "noesis-schemas",
+    "kairos",
     "fastapi>=0.111",
     "uvicorn>=0.30",
     "chromadb>=0.5",
@@ -25,7 +26,7 @@ packages = ["src/mneme"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../../schemas/src"]
+pythonpath = ["src", "../../schemas/src", "../../kairos/src"]
 
 [tool.coverage.run]
 source = ["mneme.core"]
@@ -37,9 +38,21 @@ fail_under = 85
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["chromadb", "chromadb.*"]
+module = [
+    "chromadb",
+    "chromadb.*",
+    "mcp",
+    "mcp.*",
+    "starlette",
+    "starlette.*",
+    "uvicorn",
+]
 ignore_missing_imports = true
 follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["mneme.mcp_server_http"]
+disable_error_code = ["untyped-decorator", "no-any-return"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

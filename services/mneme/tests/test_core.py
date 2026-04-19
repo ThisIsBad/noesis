@@ -7,9 +7,12 @@ from mneme.core import MnemeCore
 
 @pytest.fixture
 def core(tmp_path):
+    # PersistentClient on tmp_path isolates the Chroma store per test.
+    # EphemeralClient() uses a process-wide in-memory store — two fixtures
+    # in the same session share it and pollute each other's assertions.
     return MnemeCore(
         db_path=str(tmp_path / "test.db"),
-        _chroma_client=chromadb.EphemeralClient(),
+        _chroma_client=chromadb.PersistentClient(path=str(tmp_path / "chroma")),
     )
 
 
@@ -63,7 +66,7 @@ def test_list_proven_empty(core):
 
 
 def test_persistence_across_instances(tmp_path):
-    client = chromadb.EphemeralClient()
+    client = chromadb.PersistentClient(path=str(tmp_path / "chroma"))
     db = str(tmp_path / "persist.db")
     c1 = MnemeCore(db_path=db, _chroma_client=client)
     mem = c1.store("persistent fact", MemoryType.SEMANTIC, confidence=0.8)

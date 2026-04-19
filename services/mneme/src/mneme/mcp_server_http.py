@@ -13,6 +13,7 @@ from starlette.routing import Route
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .core import MnemeCore
+from .tracing import get_tracer
 
 logging.basicConfig(
     level=os.getenv("MNEME_LOG_LEVEL", "INFO"),
@@ -55,7 +56,10 @@ _transport_security = TransportSecuritySettings(
     allowed_origins=[f"https://{h}" for h in _allowed_hosts]
     + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
 )
-log.info("mneme transport_security: allowed_hosts=%s", _transport_security.allowed_hosts)
+log.info(
+    "mneme transport_security: allowed_hosts=%s",
+    _transport_security.allowed_hosts,
+)
 
 mcp = FastMCP(
     "mneme",
@@ -87,19 +91,26 @@ def store_memory(
         source: Where this memory came from.
         certificate_json: JSON-serialised ProofCertificate from Logos (optional).
     """
-    cert: Optional[ProofCertificate] = None
-    if certificate_json:
-        cert = ProofCertificate.model_validate_json(certificate_json)
+    with get_tracer().span(
+        "store_memory",
+        metadata={
+            "memory_type": memory_type,
+            "has_certificate": str(bool(certificate_json)),
+        },
+    ):
+        cert: Optional[ProofCertificate] = None
+        if certificate_json:
+            cert = ProofCertificate.model_validate_json(certificate_json)
 
-    mem = _core.store(
-        content=content,
-        memory_type=MemoryType(memory_type),
-        confidence=confidence,
-        certificate=cert,
-        tags=tags or [],
-        source=source,
-    )
-    return mem.model_dump_json()
+        mem = _core.store(
+            content=content,
+            memory_type=MemoryType(memory_type),
+            confidence=confidence,
+            certificate=cert,
+            tags=tags or [],
+            source=source,
+        )
+        return mem.model_dump_json()
 
 
 @mcp.tool()
@@ -111,8 +122,12 @@ def retrieve_memory(query: str, k: int = 5, min_confidence: float = 0.0) -> str:
         k: Maximum number of results.
         min_confidence: Only return memories at or above this confidence.
     """
-    results = _core.retrieve(query, k=k, min_confidence=min_confidence)
-    return json.dumps([m.model_dump() for m in results], default=str)
+    with get_tracer().span(
+        "retrieve_memory",
+        metadata={"k": str(k), "min_confidence": f"{min_confidence:.2f}"},
+    ):
+        results = _core.retrieve(query, k=k, min_confidence=min_confidence)
+        return json.dumps([m.model_dump() for m in results], default=str)
 
 
 @mcp.tool()
@@ -123,27 +138,33 @@ def forget_memory(memory_id: str, reason: str) -> str:
         memory_id: ID returned by store_memory.
         reason: Why this memory is being removed (stored in audit log).
     """
-    ok = _core.forget(memory_id, reason)
-    return json.dumps({"forgotten": ok, "memory_id": memory_id})
+    with get_tracer().span("forget_memory", metadata={"memory_id": memory_id}):
+        ok = _core.forget(memory_id, reason)
+        return json.dumps({"forgotten": ok, "memory_id": memory_id})
 
 
 @mcp.tool()
 def list_proven_beliefs() -> str:
     """List all memories backed by a Logos ProofCertificate (proven=True)."""
-    beliefs = _core.list_proven()
-    return json.dumps([b.model_dump() for b in beliefs], default=str)
+    with get_tracer().span("list_proven_beliefs"):
+        beliefs = _core.list_proven()
+        return json.dumps([b.model_dump() for b in beliefs], default=str)
 
 
 @mcp.tool()
-def consolidate_memories(similarity_threshold: float = 0.15) -> str:
+def consolidate_memories(similarity_threshold: float = 0.5) -> str:
     """Merge near-duplicate memories, keeping the higher-confidence copy.
 
     Args:
         similarity_threshold: Cosine distance below which two memories are
             considered duplicates (0.0–1.0; lower = stricter).
     """
-    merged = _core.consolidate(similarity_threshold=similarity_threshold)
-    return json.dumps({"merged": merged})
+    with get_tracer().span(
+        "consolidate_memories",
+        metadata={"similarity_threshold": f"{similarity_threshold:.2f}"},
+    ):
+        merged = _core.consolidate(similarity_threshold=similarity_threshold)
+        return json.dumps({"merged": merged})
 
 
 # ── HTTP app ──────────────────────────────────────────────────────────────────
