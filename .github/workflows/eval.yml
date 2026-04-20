@@ -96,3 +96,49 @@ jobs:
 
       - name: mypy
         run: python -m mypy --strict src/
+
+  integration:
+    name: Integration (deployed services)
+    runs-on: ubuntu-latest
+    # Skip on fork PRs — they can't see repo secrets.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            schemas/pyproject.toml
+            eval/pyproject.toml
+
+      - name: Install schemas
+        working-directory: schemas
+        run: pip install -e .
+
+      - name: Install eval
+        working-directory: eval
+        run: pip install -e .
+
+      - name: pytest integration
+        working-directory: eval
+        env:
+          NOESIS_MNEME_URL: ${{ secrets.NOESIS_MNEME_URL }}
+          NOESIS_MNEME_SECRET: ${{ secrets.NOESIS_MNEME_SECRET }}
+          NOESIS_TELOS_URL: ${{ secrets.NOESIS_TELOS_URL }}
+          NOESIS_TELOS_SECRET: ${{ secrets.NOESIS_TELOS_SECRET }}
+          NOESIS_PRAXIS_URL: ${{ secrets.NOESIS_PRAXIS_URL }}
+          NOESIS_PRAXIS_SECRET: ${{ secrets.NOESIS_PRAXIS_SECRET }}
+          NOESIS_LOGOS_URL: ${{ secrets.NOESIS_LOGOS_URL }}
+          NOESIS_LOGOS_SECRET: ${{ secrets.NOESIS_LOGOS_SECRET }}
+          NOESIS_EPISTEME_URL: ${{ secrets.NOESIS_EPISTEME_URL }}
+          NOESIS_EPISTEME_SECRET: ${{ secrets.NOESIS_EPISTEME_SECRET }}
+          NOESIS_EMPIRIA_URL: ${{ secrets.NOESIS_EMPIRIA_URL }}
+          NOESIS_EMPIRIA_SECRET: ${{ secrets.NOESIS_EMPIRIA_SECRET }}
+          NOESIS_TECHNE_URL: ${{ secrets.NOESIS_TECHNE_URL }}
+          NOESIS_TECHNE_SECRET: ${{ secrets.NOESIS_TECHNE_SECRET }}
+          NOESIS_KOSMOS_URL: ${{ secrets.NOESIS_KOSMOS_URL }}
+          NOESIS_KOSMOS_SECRET: ${{ secrets.NOESIS_KOSMOS_SECRET }}
+        run: python -m pytest -m integration -v
