@@ -1,8 +1,6 @@
 [build]
-builder = "NIXPACKS"
+builder = "dockerfile"
 
 [deploy]
 startCommand = "python -m logos.mcp_server_http"
-healthcheckPath = "/"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
+healthcheckPath = "/health"
