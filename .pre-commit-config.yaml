@@ -1,0 +1,24 @@
+# Pre-commit mirrors the ruff gate from every per-service CI workflow so lint
+# fails locally before push instead of on PR CI. Mypy intentionally omitted —
+# it needs each service's venv + schemas/kairos installed, which is too
+# heavyweight for a pre-commit pass.
+#
+# Opt-in per dev: `pip install pre-commit && pre-commit install`.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
