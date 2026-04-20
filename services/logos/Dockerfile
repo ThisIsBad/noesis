@@ -1,11 +1,15 @@
 FROM python:3.11-slim
 WORKDIR /app
 
-# ── Kairos tracing client ─────────────────────────────────────────────────────
+# ── Shared schemas ────────────────────────────────────────────────────────────
 # Build context MUST be the repo root (same as mneme/telos/praxis).
 # In Railway: Settings → Build → Root Directory = (empty),
 #             Dockerfile Path = services/logos/Dockerfile
 # Locally:   docker build -f services/logos/Dockerfile -t logos .
+COPY schemas/ /schemas
+RUN pip install /schemas
+
+# ── Kairos tracing client ─────────────────────────────────────────────────────
 COPY kairos/ /kairos
 RUN pip install /kairos
 
