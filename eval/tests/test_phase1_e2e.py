@@ -50,7 +50,9 @@ pytestmark = pytest.mark.integration
 
 # ── Per-service smoke tests ───────────────────────────────────────────────────
 
-async def test_mneme_store_and_retrieve(mneme_url: str, mneme_secret: str) -> None:
+async def test_mneme_store_and_retrieve(
+    mneme_url: str, mneme_secret: str, mneme_cleanup: list[str]
+) -> None:
     marker = f"sky-{uuid.uuid4().hex[:8]}"
     async with mcp_session(mneme_url, mneme_secret) as session:
         stored = await session.call_tool(
@@ -63,6 +65,7 @@ async def test_mneme_store_and_retrieve(mneme_url: str, mneme_secret: str) -> No
             },
         )
         assert stored.isError is False, mcp_call_text(stored)
+        mneme_cleanup.append(json.loads(mcp_call_text(stored))["memory_id"])
 
         retrieved = await session.call_tool(
             "retrieve_memory",
@@ -128,6 +131,7 @@ async def test_durchstich_telos_praxis_mneme(
     praxis_secret: str,
     mneme_url: str,
     mneme_secret: str,
+    mneme_cleanup: list[str],
 ) -> None:
     """Register a goal, plan against it, record the outcome in memory.
 
@@ -194,6 +198,7 @@ async def test_durchstich_telos_praxis_mneme(
             },
         )
         assert store.isError is False, mcp_call_text(store)
+        mneme_cleanup.append(json.loads(mcp_call_text(store))["memory_id"])
 
         retrieved = await mneme.call_tool(
             "retrieve_memory",

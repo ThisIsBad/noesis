@@ -17,7 +17,10 @@ A local ``eval/.env.e2e`` file is auto-loaded if present. See
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -31,6 +34,18 @@ except ImportError:  # pragma: no cover — optional dep
 _ENV_PATH = Path(__file__).resolve().parents[1] / ".env.e2e"
 if load_dotenv is not None and _ENV_PATH.exists():
     load_dotenv(_ENV_PATH, override=False)
+
+
+@asynccontextmanager
+async def _mcp_session(url: str, secret: str = "") -> AsyncIterator[Any]:
+    from mcp import ClientSession
+    from mcp.client.sse import sse_client
+
+    headers = {"Authorization": f"Bearer {secret}"} if secret else None
+    async with sse_client(f"{url}/sse", headers=headers) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            yield session
 
 
 SERVICES = (
@@ -140,3 +155,28 @@ def kosmos_secret() -> str:
 @pytest.fixture
 def http() -> httpx.Client:
     return httpx.Client(timeout=30.0)
+
+
+# ── Cleanup helpers ───────────────────────────────────────────────────────────
+
+@pytest.fixture
+async def mneme_cleanup(mneme_url: str, mneme_secret: str) -> AsyncIterator[list[str]]:
+    """Tests append memory_ids to the yielded list; teardown forgets them all.
+
+    Keeps the deployed Mneme store from accumulating per-run e2e records. The
+    fixture depends on ``mneme_url`` so it skips alongside the test when
+    ``NOESIS_MNEME_URL`` is unset — no forget calls are attempted.
+    """
+    memory_ids: list[str] = []
+    yield memory_ids
+    if not memory_ids:
+        return
+    async with _mcp_session(mneme_url, mneme_secret) as session:
+        for mid in memory_ids:
+            try:
+                await session.call_tool(
+                    "forget_memory",
+                    {"memory_id": mid, "reason": "e2e cleanup"},
+                )
+            except Exception:  # pragma: no cover — best-effort teardown
+                pass
