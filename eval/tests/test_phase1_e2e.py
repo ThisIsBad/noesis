@@ -271,7 +271,7 @@ async def test_episteme_log_predict_outcome_calibration(
             await session.call_tool("get_calibration", {"domain": "e2e"}),
             CalibrationReport,
         )
-        assert report.n >= 1, report
+        assert report.sample_size >= 1, report
 
 
 async def test_episteme_should_escalate(
