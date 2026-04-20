@@ -5,7 +5,7 @@ The stdio server (mcp_server.py) remains unchanged for local use.
 
 Environment variables:
     PORT               TCP port to listen on (default: 8000)
-    LOGICBRAIN_SECRET  Bearer token required on every request.
+    LOGOS_SECRET       Bearer token required on every request.
                        If unset, the server accepts all connections.
                        Set this in Railway → Variables.
 """
@@ -28,7 +28,7 @@ except ImportError as exc:  # pragma: no cover
 
 from logos.mcp_server import create_server
 
-_SECRET = os.environ.get("LOGICBRAIN_SECRET", "")
+_SECRET = os.environ.get("LOGOS_SECRET", "")
 
 
 def _authorized(request: Request) -> bool:
