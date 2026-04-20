@@ -16,9 +16,10 @@ A local ``eval/.env.e2e`` file is auto-loaded if present. See
 """
 from __future__ import annotations
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -36,16 +37,52 @@ if load_dotenv is not None and _ENV_PATH.exists():
     load_dotenv(_ENV_PATH, override=False)
 
 
+# Railway edge returns 502/503/504 while a service container is cold-starting
+# (first request after an idle spin-down). The MCP SDK surfaces that as an
+# httpx.HTTPStatusError from the SSE handshake — before any RPC runs — so a
+# one-shot retry on the handshake is enough. Don't retry inside the yield:
+# those failures are test logic, not cold-start.
+_RETRY_STATUS = {502, 503, 504}
+_RETRY_EXCEPTIONS: tuple[type[BaseException], ...] = (
+    httpx.ConnectError,
+    httpx.ReadError,
+    httpx.RemoteProtocolError,
+)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code in _RETRY_STATUS
+    return isinstance(exc, _RETRY_EXCEPTIONS)
+
+
 @asynccontextmanager
 async def _mcp_session(url: str, secret: str = "") -> AsyncIterator[Any]:
     from mcp import ClientSession
     from mcp.client.sse import sse_client
 
     headers = {"Authorization": f"Bearer {secret}"} if secret else None
-    async with sse_client(f"{url}/sse", headers=headers) as (read, write):
-        async with ClientSession(read, write) as session:
-            await session.initialize()
-            yield session
+    backoff = 2.0
+    async with AsyncExitStack() as outer:
+        session: Any = None
+        for attempt in range(3):
+            inner = AsyncExitStack()
+            try:
+                read, write = await inner.enter_async_context(
+                    sse_client(f"{url}/sse", headers=headers)
+                )
+                session = await inner.enter_async_context(ClientSession(read, write))
+                await session.initialize()
+            except BaseException as exc:
+                await inner.aclose()
+                if attempt < 2 and _is_retryable(exc):
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
+                    continue
+                raise
+            outer.push_async_callback(inner.aclose)
+            break
+        yield session
 
 
 SERVICES = (
