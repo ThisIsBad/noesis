@@ -19,7 +19,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-import httpx
 import pytest
 
 
@@ -209,26 +208,25 @@ async def test_durchstich_telos_praxis_mneme(
         assert goal_id in body, body
 
 
-# ── Optional REST-side wiring (Empiria) ───────────────────────────────────────
+# ── Empiria ───────────────────────────────────────────────────────────────────
 
-def test_empiria_record_experience(
-    empiria_url: str, empiria_secret: str, http: httpx.Client
+async def test_empiria_record_experience(
+    empiria_url: str, empiria_secret: str
 ) -> None:
-    """Empiria currently ships as FastAPI (REST). Exercised separately so
-    the MCP suite above stays clean. Remove once Empiria is on FastMCP."""
-    headers = {"Authorization": f"Bearer {empiria_secret}"} if empiria_secret else {}
-    payload = {
-        "context": "e2e test context",
-        "action_taken": "call record_experience",
-        "outcome": "lesson recorded",
-        "success": True,
-        "lesson_text": f"E2E {uuid.uuid4().hex[:8]}: harness works",
-        "confidence": 0.7,
-        "domain": "e2e",
-    }
-    resp = http.post(
-        f"{empiria_url}/tools/record_experience", json=payload, headers=headers
-    )
-    assert resp.status_code == 200, resp.text
-    body = resp.json()
-    assert body.get("lesson_text", "").startswith("E2E"), body
+    marker = uuid.uuid4().hex[:8]
+    async with mcp_session(empiria_url, empiria_secret) as session:
+        result = await session.call_tool(
+            "record_experience",
+            {
+                "context": "e2e test context",
+                "action_taken": "call record_experience",
+                "outcome": "lesson recorded",
+                "success": True,
+                "lesson_text": f"E2E {marker}: harness works",
+                "confidence": 0.7,
+                "domain": "e2e",
+            },
+        )
+        assert result.isError is False, mcp_call_text(result)
+        body = json.loads(mcp_call_text(result))
+        assert body.get("lesson_text", "").startswith("E2E"), body
