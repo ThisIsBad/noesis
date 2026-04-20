@@ -102,6 +102,9 @@ jobs:
     runs-on: ubuntu-latest
     # Skip on fork PRs — they can't see repo secrets.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -123,6 +126,7 @@ jobs:
         run: pip install -e .
 
       - name: pytest integration
+        id: integration
         working-directory: eval
         env:
           NOESIS_MNEME_URL: ${{ secrets.NOESIS_MNEME_URL }}
@@ -141,4 +145,29 @@ jobs:
           NOESIS_TECHNE_SECRET: ${{ secrets.NOESIS_TECHNE_SECRET }}
           NOESIS_KOSMOS_URL: ${{ secrets.NOESIS_KOSMOS_URL }}
           NOESIS_KOSMOS_SECRET: ${{ secrets.NOESIS_KOSMOS_SECRET }}
-        run: python -m pytest -m integration -v
+        run: |
+          set -o pipefail
+          python -m pytest -m integration -v 2>&1 | tee pytest-output.txt
+
+      - name: Post pytest output on failure
+        if: failure() && github.event_name == 'pull_request' && steps.integration.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const full = fs.readFileSync('eval/pytest-output.txt', 'utf8');
+            // GitHub comment cap is 65_536 chars; keep a safety margin
+            // and prefer the tail, which is where pytest's FAILED section lives.
+            const MAX = 60000;
+            const body = full.length > MAX
+              ? '…(truncated — showing last ' + MAX + ' chars)…\n\n' + full.slice(-MAX)
+              : full;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## Integration CI failure — `pytest -m integration -v`\n\n'
+                + '<details><summary>pytest output</summary>\n\n```\n'
+                + body
+                + '\n```\n</details>',
+            });
