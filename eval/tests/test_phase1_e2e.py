@@ -212,13 +212,8 @@ async def test_logos_z3_check(logos_url: str, logos_secret: str) -> None:
                 },
             )
         )
-        # Response shape varies across Logos revisions; we require only that
-        # the check reports satisfiability and that the SAT witness hits x=4.
-        status = body.get("status") or body.get("result")
-        assert status in {"sat", "SAT", "satisfiable"}, body
-        model = body.get("model") or body.get("assignments") or {}
-        if model:
-            assert str(model.get("x")) == "4", model
+        assert body.get("satisfiable") is True, body
+        assert str(body.get("model", {}).get("x")) == "4", body
 
 
 async def test_logos_certify_claim(logos_url: str, logos_secret: str) -> None:
@@ -227,15 +222,13 @@ async def test_logos_certify_claim(logos_url: str, logos_secret: str) -> None:
         raw = parse_json(
             await session.call_tool(
                 "certify_claim",
-                {"argument": "Assume x > 0. Therefore x + 1 > 0."},
+                {"argument": "P -> Q, P |- Q"},
             )
         )
-        # The cert may be wrapped in an envelope ({"certificate": {...}}) or
-        # returned flat — accept both.
-        cert_dict = raw.get("certificate", raw)
-        cert = ProofCertificate.model_validate(cert_dict)
-        assert cert.verified in (True, False)  # must at least populate the field
-        assert cert.method
+        # The serialised cert is returned as a JSON string in certificate_json.
+        cert = ProofCertificate.model_validate(json.loads(raw["certificate_json"]))
+        assert cert.verified is True
+        assert cert.method == "z3_propositional"
 
 
 # ── Episteme ──────────────────────────────────────────────────────────────────
