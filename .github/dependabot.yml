@@ -1,0 +1,102 @@
+version: 2
+
+# One pip entry per directory with a pyproject.toml. Grouped weekly so each
+# directory opens at most one dependency-bump PR per week instead of N per
+# package. Production + dev dependencies share the group so a batch update
+# doesn't fragment.
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/schemas"
+    schedule:
+      interval: weekly
+    groups:
+      schemas:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/kairos"
+    schedule:
+      interval: weekly
+    groups:
+      kairos:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/eval"
+    schedule:
+      interval: weekly
+    groups:
+      eval:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/mneme"
+    schedule:
+      interval: weekly
+    groups:
+      mneme:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/telos"
+    schedule:
+      interval: weekly
+    groups:
+      telos:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/praxis"
+    schedule:
+      interval: weekly
+    groups:
+      praxis:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/logos"
+    schedule:
+      interval: weekly
+    groups:
+      logos:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/episteme"
+    schedule:
+      interval: weekly
+    groups:
+      episteme:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/empiria"
+    schedule:
+      interval: weekly
+    groups:
+      empiria:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/techne"
+    schedule:
+      interval: weekly
+    groups:
+      techne:
+        patterns: ["*"]
+
+  - package-ecosystem: pip
+    directory: "/services/kosmos"
+    schedule:
+      interval: weekly
+    groups:
+      kosmos:
+        patterns: ["*"]
