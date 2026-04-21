@@ -10,7 +10,12 @@ from .contracts import GoalConstraint, GoalContract
 from .memory import ClaimKind, Memory, MemoryType
 from .planning import Plan, PlanStep, StepStatus
 from .learning import Lesson, Skill
-from .episteme import Prediction, CalibrationReport
+from .episteme import (
+    CalibrationReport,
+    CompetenceMap,
+    DomainCompetence,
+    Prediction,
+)
 from .tracing import TraceSpan
 
 __all__ = [
@@ -32,5 +37,7 @@ __all__ = [
     "Skill",
     "Prediction",
     "CalibrationReport",
+    "CompetenceMap",
+    "DomainCompetence",
     "TraceSpan",
 ]

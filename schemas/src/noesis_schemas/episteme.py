@@ -22,3 +22,20 @@ class CalibrationReport(BaseModel):
     bias: float      # positive = overconfident
     sharpness: float
     computed_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class DomainCompetence(BaseModel):
+    domain: str
+    sample_size: int
+    accuracy: float
+    avg_confidence: float
+    confidence_gap: float   # avg_confidence - accuracy; >0 = overconfident
+    brier_score: float
+
+
+class CompetenceMap(BaseModel):
+    total_predictions: int
+    domains: list[DomainCompetence]
+    weaknesses: list[str]   # domain names ranked by |confidence_gap| desc
+    strengths: list[str]    # domain names with small gap + high accuracy
+    computed_at: datetime = Field(default_factory=datetime.utcnow)

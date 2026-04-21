@@ -1,7 +1,12 @@
 from datetime import datetime
 from typing import Optional
 
-from noesis_schemas import CalibrationReport, Prediction
+from noesis_schemas import (
+    CalibrationReport,
+    CompetenceMap,
+    DomainCompetence,
+    Prediction,
+)
 
 
 class EpistemeCore:
@@ -71,3 +76,57 @@ class EpistemeCore:
         # Escalate on low confidence OR when the history shows systematic
         # overconfidence in this domain (bias > 0.2) at high confidence.
         return confidence < 0.5 or (report.bias > 0.2 and confidence > 0.7)
+
+    def get_competence_map(
+        self,
+        min_samples: int = 10,
+        weakness_threshold: float = 0.15,
+    ) -> CompetenceMap:
+        resolved = [
+            p for p in self._predictions.values()
+            if p.correct is not None and p.domain is not None
+        ]
+        by_domain: dict[str, list[Prediction]] = {}
+        for p in resolved:
+            assert p.domain is not None  # narrowed above
+            by_domain.setdefault(p.domain, []).append(p)
+
+        domain_stats: list[DomainCompetence] = []
+        for domain, preds in by_domain.items():
+            n = len(preds)
+            accuracy = sum(1 for p in preds if p.correct) / n
+            avg_conf = sum(p.confidence for p in preds) / n
+            brier = sum(
+                (p.confidence - (1.0 if p.correct else 0.0)) ** 2 for p in preds
+            ) / n
+            domain_stats.append(
+                DomainCompetence(
+                    domain=domain,
+                    sample_size=n,
+                    accuracy=accuracy,
+                    avg_confidence=avg_conf,
+                    confidence_gap=avg_conf - accuracy,
+                    brier_score=brier,
+                )
+            )
+
+        # Only domains with enough signal are eligible for labels.
+        eligible = [d for d in domain_stats if d.sample_size >= min_samples]
+        weaknesses = [
+            d.domain for d in sorted(
+                eligible, key=lambda d: abs(d.confidence_gap), reverse=True
+            )
+            if abs(d.confidence_gap) >= weakness_threshold
+        ]
+        strengths = [
+            d.domain for d in sorted(
+                eligible, key=lambda d: d.accuracy, reverse=True
+            )
+            if abs(d.confidence_gap) < weakness_threshold and d.accuracy >= 0.7
+        ]
+        return CompetenceMap(
+            total_predictions=len(resolved),
+            domains=sorted(domain_stats, key=lambda d: d.domain),
+            weaknesses=weaknesses,
+            strengths=strengths,
+        )
