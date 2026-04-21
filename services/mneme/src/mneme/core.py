@@ -43,58 +43,106 @@ class MnemeCore:
         tags: Optional[list[str]] = None,
         source: Optional[str] = None,
     ) -> Memory:
-        mem = Memory(
-            content=content,
-            memory_type=memory_type,
-            confidence=confidence,
-            certificate=certificate,
-            proven=certificate.verified if certificate else False,
-            tags=tags or [],
-            source=source,
-        )
-        self._conn.execute(
-            "INSERT INTO memories (memory_id, data_json, proven) VALUES (?, ?, ?)",
-            (mem.memory_id, mem.model_dump_json(), int(mem.proven)),
-        )
-        self._conn.commit()
-        self._col.add(
-            ids=[mem.memory_id],
-            documents=[content],
-            metadatas=[{
+        return self.store_batch([(
+            content, memory_type, confidence, certificate, tags, source,
+        )])[0]
+
+    def store_batch(
+        self,
+        items: list[
+            tuple[
+                str,
+                MemoryType,
+                float,
+                Optional[ProofCertificate],
+                Optional[list[str]],
+                Optional[str],
+            ]
+        ],
+    ) -> list[Memory]:
+        """Batch-store memories in one SQLite transaction + one Chroma add.
+
+        Each item is a tuple ``(content, memory_type, confidence,
+        certificate, tags, source)`` matching `store`'s signature. The
+        default embedder amortises tokenisation and ONNX inference
+        across the batch, which is dramatically cheaper than calling
+        `store` in a loop.
+        """
+        if not items:
+            return []
+        memories: list[Memory] = []
+        rows: list[tuple[str, str, int]] = []
+        ids: list[str] = []
+        documents: list[str] = []
+        metadatas: list[dict[str, object]] = []
+        for content, memory_type, confidence, certificate, tags, source in items:
+            mem = Memory(
+                content=content,
+                memory_type=memory_type,
+                confidence=confidence,
+                certificate=certificate,
+                proven=certificate.verified if certificate else False,
+                tags=tags or [],
+                source=source,
+            )
+            memories.append(mem)
+            rows.append((mem.memory_id, mem.model_dump_json(), int(mem.proven)))
+            ids.append(mem.memory_id)
+            documents.append(content)
+            metadatas.append({
                 "confidence": confidence,
                 "proven": int(mem.proven),
                 "memory_type": memory_type.value,
-            }],
+            })
+        self._conn.executemany(
+            "INSERT INTO memories (memory_id, data_json, proven) VALUES (?, ?, ?)",
+            rows,
         )
-        return mem
+        self._conn.commit()
+        self._col.add(ids=ids, documents=documents, metadatas=metadatas)
+        return memories
 
     def retrieve(
         self, query: str, k: int = 5, min_confidence: float = 0.0
     ) -> list[Memory]:
+        return self.retrieve_batch([query], k=k, min_confidence=min_confidence)[0]
+
+    def retrieve_batch(
+        self,
+        queries: list[str],
+        k: int = 5,
+        min_confidence: float = 0.0,
+    ) -> list[list[Memory]]:
+        """Batch version of `retrieve`: one ChromaDB round-trip for all queries.
+
+        Far cheaper than calling `retrieve` in a loop — the default embedder
+        amortises tokenisation and ONNX inference across the batch. Returns
+        results aligned with the input `queries` list.
+        """
+        if not queries:
+            return []
         count = self._col.count()
         if count == 0:
-            return []
-        # Over-fetch so confidence filtering doesn't cut us short
+            return [[] for _ in queries]
         results = self._col.query(
-            query_texts=[query],
+            query_texts=queries,
             n_results=min(max(k * 3, 10), count),
         )
-        ids: list[str] = results["ids"][0]
-        metadatas: list[dict[str, object]] = results["metadatas"][0]
-
-        filtered_ids = [
-            mid for mid, meta in zip(ids, metadatas)
-            if float(meta["confidence"]) >= min_confidence  # type: ignore[arg-type]
-        ][:k]
-
-        memories: list[Memory] = []
-        for mid in filtered_ids:
-            row = self._conn.execute(
-                "SELECT data_json FROM memories WHERE memory_id=?", (mid,)
-            ).fetchone()
-            if row:
-                memories.append(Memory.model_validate_json(row[0]))
-        return memories
+        out: list[list[Memory]] = []
+        for ids, metadatas in zip(results["ids"], results["metadatas"]):
+            filtered_ids = [
+                mid for mid, meta in zip(ids, metadatas)
+                if float(meta["confidence"]) >= min_confidence
+            ][:k]
+            memories: list[Memory] = []
+            for mid in filtered_ids:
+                row = self._conn.execute(
+                    "SELECT data_json FROM memories WHERE memory_id=?", (mid,)
+                ).fetchone()
+                if row:
+                    memories.append(Memory.model_validate_json(row[0]))
+            out.append(memories)
+        return out
 
     def forget(self, memory_id: str, reason: str) -> bool:
         row = self._conn.execute(
