@@ -1,15 +1,14 @@
 """Unit tests for the A/B scaffold.
 
-Pins three contracts so the follow-up PR that wires in claude-agent-sdk
-only has one moving piece (the MCPAgent implementation):
+Pins two contracts the CLI and MCPAgent layers build on:
 
 1. The turn-by-turn runner reproduces the success/recovery signal the
    plan-upfront ``alfworld_bench`` runner already measures — an Oracle
    clears the Stage-3 bars, a NullAgent scores zero.
 2. ``SuiteResults.diff`` correctly counts wins/losses/delta between two
    agents on the same task suite.
-3. ``MCPAgent.act`` fails loudly with NotImplementedError so no-one
-   accidentally runs an "A/B" where one side is a silent stub.
+
+MCPAgent-specific tests live in ``test_mcp_agent.py``.
 """
 from __future__ import annotations
 
@@ -17,7 +16,6 @@ import pytest
 
 from noesis_eval.ab import (
     EpisodeResult,
-    MCPAgent,
     NullAgent,
     OracleAgent,
     SuiteResults,
@@ -78,12 +76,6 @@ def test_null_agent_fails_every_task() -> None:
     result = run_episode(MockAlfworldEnv(task), agent)
     assert result.success is False
     assert result.final_reward <= 0
-
-
-def test_mcp_agent_raises_until_sdk_wiring_lands() -> None:
-    agent = MCPAgent()
-    with pytest.raises(NotImplementedError, match="claude-agent-sdk"):
-        agent.act("goal", "obs", [])
 
 
 # ── Suite-level A/B ──────────────────────────────────────────────────────────
