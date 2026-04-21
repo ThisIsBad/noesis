@@ -37,7 +37,7 @@ class TechneCore:
         needle = query.lower()
         results = [
             skill for skill in self._skills.values()
-            if needle in skill.description.lower() or needle in skill.name.lower()
+            if (needle in skill.description.lower() or needle in skill.name.lower())
             and (not verified_only or skill.verified)
         ]
         return sorted(results, key=lambda skill: skill.success_rate, reverse=True)[:k]
