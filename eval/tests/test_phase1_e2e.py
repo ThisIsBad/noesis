@@ -591,10 +591,16 @@ async def test_durchstich_five_hop_telos_praxis_logos_mneme_empiria(
             )
         )
         assert raw_cert.get("verified") is True, raw_cert
-        certificate_json = raw_cert["certificate_json"]
-        cert = ProofCertificate.model_validate(json.loads(certificate_json))
+        cert = ProofCertificate.model_validate(
+            json.loads(raw_cert["certificate_json"])
+        )
         assert cert.verified is True
         assert cert.method == "z3_propositional"
+        # Round-trip the cert through Pydantic to guarantee a flat string
+        # on the wire — passing the raw Logos response through can trip
+        # MCP's arg-marshalling into auto-parsing the JSON-looking string
+        # back into a dict (see PR #46's Integration CI failure).
+        certificate_json = cert.model_dump_json()
 
     # Hop 4: Mneme — store memory with the Logos certificate attached.
     async with mcp_session(mneme_url, mneme_secret) as mneme:
