@@ -122,6 +122,37 @@ def should_escalate(confidence: float, domain: str | None = None) -> str:
         )
 
 
+@mcp.tool()
+def get_competence_map(
+    min_samples: int = 10,
+    weakness_threshold: float = 0.15,
+) -> str:
+    """Return per-domain competence stats plus ranked strengths and weaknesses.
+
+    Aggregates resolved predictions by domain and reports accuracy, average
+    confidence, confidence gap (avg_confidence - accuracy; positive means
+    overconfident), and Brier score per domain. Domains whose absolute
+    confidence gap exceeds ``weakness_threshold`` are listed as weaknesses
+    (ranked by |gap|). Domains with small gap and high accuracy are listed
+    as strengths. Only domains with at least ``min_samples`` resolved
+    predictions are eligible for either label.
+
+    Args:
+        min_samples: Minimum resolved-prediction count for a domain to be
+            eligible as a strength or weakness. Defaults to 10.
+        weakness_threshold: Absolute confidence-gap threshold for labelling
+            a domain as a weakness. Defaults to 0.15.
+    """
+    metadata = {
+        "min_samples": str(min_samples),
+        "weakness_threshold": str(weakness_threshold),
+    }
+    with get_tracer().span("get_competence_map", metadata=metadata):
+        return _core.get_competence_map(
+            min_samples, weakness_threshold
+        ).model_dump_json()
+
+
 # ── HTTP app ──────────────────────────────────────────────────────────────────
 
 _SECRET = os.environ.get("EPISTEME_SECRET", "")
