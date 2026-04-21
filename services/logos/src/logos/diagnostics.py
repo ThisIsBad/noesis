@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 
 class ErrorType(Enum):
@@ -64,22 +64,22 @@ class Diagnostic:
     schema_version: str = "1"
     """Schema version for forward-compatibility checks."""
 
-    expected: Optional[str] = None
+    expected: str | None = None
     """What was expected (e.g., expected type)."""
 
-    actual: Optional[str] = None
+    actual: str | None = None
     """What was actually found (e.g., actual type)."""
 
-    location: Optional[str] = None
+    location: str | None = None
     """Location of the error (e.g., line:column)."""
 
-    context: Optional[str] = None
+    context: str | None = None
     """Additional context (e.g., surrounding code)."""
 
     suggestions: list[str] = field(default_factory=list)
     """Suggested fixes or alternatives."""
 
-    raw_output: Optional[str] = None
+    raw_output: str | None = None
     """The raw error output for debugging."""
 
     def __str__(self) -> str:
@@ -175,7 +175,7 @@ class LeanDiagnosticParser:
     }
 
     @classmethod
-    def parse(cls, error_output: str, tactic: Optional[str] = None) -> Diagnostic:
+    def parse(cls, error_output: str, tactic: str | None = None) -> Diagnostic:
         """Parse Lean error output into a structured Diagnostic.
         
         Parameters
@@ -238,7 +238,7 @@ class LeanDiagnosticParser:
         return "Unknown error"
 
     @classmethod
-    def _extract_types(cls, output: str) -> tuple[Optional[str], Optional[str]]:
+    def _extract_types(cls, output: str) -> tuple[str | None, str | None]:
         """Extract expected and actual types from type mismatch errors."""
         # Pattern: "has type X but is expected to have type Y"
         match = re.search(
@@ -259,7 +259,7 @@ class LeanDiagnosticParser:
         return None, None
 
     @classmethod
-    def _extract_location(cls, output: str) -> Optional[str]:
+    def _extract_location(cls, output: str) -> str | None:
         """Extract error location (file:line:column)."""
         match = re.search(r'(\S+\.lean):(\d+):(\d+)', output)
         if match:
@@ -270,7 +270,7 @@ class LeanDiagnosticParser:
     def _generate_suggestions(
         cls,
         output: str,
-        tactic: Optional[str],
+        tactic: str | None,
         error_type: ErrorType
     ) -> list[str]:
         """Generate suggestions based on the error."""
@@ -331,8 +331,8 @@ class Z3DiagnosticParser:
     def parse_unsat(
         cls,
         constraints: list[str],
-        unsat_core: Optional[list[str]] = None,
-        model_before: Optional[dict[str, Any]] = None,
+        unsat_core: list[str] | None = None,
+        model_before: dict[str, Any] | None = None,
     ) -> Diagnostic:
         """Create diagnostic for unsatisfiable constraints.
         

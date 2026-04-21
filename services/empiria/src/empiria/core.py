@@ -1,5 +1,3 @@
-from typing import Optional
-
 from noesis_schemas import Lesson
 
 
@@ -16,7 +14,7 @@ class EmpiriaCore:
         success: bool,
         lesson_text: str,
         confidence: float = 0.5,
-        domain: Optional[str] = None,
+        domain: str | None = None,
     ) -> Lesson:
         lesson = Lesson(
             context=context,
@@ -34,7 +32,7 @@ class EmpiriaCore:
         self,
         context: str,
         k: int = 5,
-        domain: Optional[str] = None,
+        domain: str | None = None,
     ) -> list[Lesson]:
         # Stub: substring match. Production: ChromaDB k-nearest on context embedding.
         needle = context.lower()
@@ -48,7 +46,7 @@ class EmpiriaCore:
         return results[:k]
 
     def successful_patterns(
-        self, domain: Optional[str] = None
+        self, domain: str | None = None
     ) -> list[Lesson]:
         return [
             lesson

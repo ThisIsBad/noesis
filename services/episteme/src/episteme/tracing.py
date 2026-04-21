@@ -9,12 +9,11 @@ without changing call sites when tracing is off.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from kairos.client import KairosClient
 
 _SERVICE_NAME = "episteme"
-_client: Optional[KairosClient] = None
+_client: KairosClient | None = None
 
 
 def _env_truthy(name: str, default: str = "1") -> bool:
