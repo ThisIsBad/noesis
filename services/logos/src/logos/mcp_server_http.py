@@ -128,7 +128,7 @@ def certify_claim(argument: str) -> str:
 def certificate_store(
     action: str,
     certificate: dict[str, Any] | None = None,
-    certificate_json: str | None = None,
+    certificate_json: str = "",
     tags: dict[str, str] | None = None,
     store_id: str | None = None,
     claim_pattern: str | None = None,
@@ -140,11 +140,18 @@ def certificate_store(
     reason: str | None = None,
     premises: list[str] | None = None,
 ) -> str:
-    """Manage proof memory: store/get/query/invalidate/stats/compact/query_consistent."""
+    """Manage proof memory: store/get/query/invalidate/stats/compact/query_consistent.
+
+    ``certificate_json`` is typed as plain ``str`` (empty = omitted) rather
+    than ``str | None`` because FastMCP's ``pre_parse_json`` auto-decodes
+    JSON-looking strings whenever the declared annotation is not *exactly*
+    ``str``, which would defeat the downstream ``_require_non_empty_str``
+    check by turning the payload into a dict.
+    """
     payload = _pack(
         action=action,
         certificate=certificate,
-        certificate_json=certificate_json,
+        certificate_json=certificate_json or None,
         tags=tags,
         store_id=store_id,
         claim_pattern=claim_pattern,
@@ -275,10 +282,15 @@ def orchestrate_proof(
     description: str | None = None,
     expression: str | None = None,
     composition_rule: str | None = None,
-    certificate_json: str | None = None,
+    certificate_json: str = "",
     reason: str | None = None,
 ) -> str:
-    """Manage a compositional proof tree across sub-claims."""
+    """Manage a compositional proof tree across sub-claims.
+
+    ``certificate_json`` is typed as plain ``str`` (empty = omitted) rather
+    than ``str | None``; see ``certificate_store`` for the FastMCP
+    pre-parsing rationale.
+    """
     return _dispatch(
         "orchestrate_proof",
         _raw_orchestrate_proof,
@@ -290,7 +302,7 @@ def orchestrate_proof(
             description=description,
             expression=expression,
             composition_rule=composition_rule,
-            certificate_json=certificate_json,
+            certificate_json=certificate_json or None,
             reason=reason,
         ),
     )

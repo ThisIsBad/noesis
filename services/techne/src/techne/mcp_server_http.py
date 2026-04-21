@@ -68,7 +68,7 @@ def store_skill(
     name: str,
     description: str,
     strategy: str,
-    certificate_json: str | None = None,
+    certificate_json: str = "",
     domain: str | None = None,
 ) -> str:
     """Register a reusable skill, optionally backed by a proof certificate.
@@ -77,9 +77,14 @@ def store_skill(
         name: Short identifier for the skill.
         description: Natural-language description of when to use it.
         strategy: Concrete strategy text the caller will execute.
-        certificate_json: Optional serialized Logos ``ProofCertificate``.
-            When present and ``verified`` is true, the stored skill is
-            marked as verified.
+        certificate_json: Serialized Logos ``ProofCertificate``. Pass an
+            empty string (the default) to store a skill without a
+            certificate. When present and ``verified`` is true, the stored
+            skill is marked as verified. NOTE: this must stay typed as
+            plain ``str`` — not ``str | None`` — because FastMCP's
+            ``pre_parse_json`` auto-decodes JSON-looking strings whenever
+            the declared annotation is not *exactly* ``str``, which would
+            turn a real cert into a dict before Pydantic validation.
         domain: Optional domain tag for scoped retrieval.
     """
     with get_tracer().span("store_skill"):

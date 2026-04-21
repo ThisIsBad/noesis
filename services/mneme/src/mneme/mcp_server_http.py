@@ -78,7 +78,7 @@ def store_memory(
     confidence: float = 0.5,
     tags: list[str] | None = None,
     source: str | None = None,
-    certificate_json: str | None = None,
+    certificate_json: str = "",
 ) -> str:
     """Store a memory.
 
@@ -88,7 +88,14 @@ def store_memory(
         confidence: 0.0–1.0 belief strength.
         tags: Optional labels for filtering.
         source: Where this memory came from.
-        certificate_json: JSON-serialised ProofCertificate from Logos (optional).
+        certificate_json: JSON-serialised ProofCertificate from Logos. Pass
+            an empty string (the default) to store a memory without a
+            certificate. NOTE: this must stay typed as plain ``str`` — not
+            ``str | None`` — because FastMCP's ``pre_parse_json`` auto-decodes
+            JSON-looking strings whenever the declared annotation is not
+            *exactly* ``str`` (it's a Claude Desktop accommodation), which
+            would turn our serialised cert into a ``dict`` before Pydantic
+            validation and reject it as "Input should be a valid string".
     """
     with get_tracer().span(
         "store_memory",
