@@ -42,6 +42,7 @@ def test_run_oracle_writes_one_jsonl_line_per_episode(
     expected = {
         "agent", "task_id", "success", "steps_taken",
         "failures_seen", "failures_recovered", "final_reward",
+        "seed",
     }
     assert fields == expected
 
@@ -134,12 +135,14 @@ def test_diff_reports_wins_losses_and_delta(
 
     out = capsys.readouterr().out
     assert "treatment (oracle) vs baseline (null)" in out
-    assert "shared episodes: 3" in out
+    assert "shared tasks:      3" in out
     assert "wins:   1" in out
     assert "losses: 0" in out
     assert "delta:" in out
     # treatment 2/3 - baseline 1/3 = +1/3 ≈ 0.333
     assert "+0.333" in out
+    assert "p-value:" in out
+    assert "95% CI" in out
 
 
 def test_diff_surfaces_only_one_side_task_ids(

@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import IO, Callable, Iterable, Iterator
 
@@ -57,15 +58,31 @@ AGENT_FACTORIES: dict[str, Callable[[list[Task]], Agent]] = {
 
 
 def _run(
-    agent: Agent, suite: Iterable[Task], sink: IO[str]
+    agent: Agent, suite: Iterable[Task], sink: IO[str], samples: int = 1
 ) -> SuiteResults:
-    """Stream episode results as JSONL while aggregating into SuiteResults."""
+    """Stream episode results as JSONL while aggregating into SuiteResults.
+
+    With ``samples > 1`` each task is replayed that many times and each
+    replay gets a distinct ``seed`` (0…samples-1). This matters for
+    LLM-driven agents where every roll differs; deterministic agents
+    (Oracle, Null) will emit identical records, which is still useful
+    for smoke-testing the multi-sample path.
+    """
+    if samples < 1:
+        raise SystemExit(f"--samples must be >= 1, got {samples}")
     results = SuiteResults(agent=agent.name)
-    for task in suite:
-        ep = run_episode(MockAlfworldEnv(task), agent)
-        results.record(ep)
-        sink.write(json.dumps(ep.to_dict()) + "\n")
-        sink.flush()
+    task_list = list(suite)
+    for seed in range(samples):
+        for task in task_list:
+            ep = run_episode(MockAlfworldEnv(task), agent)
+            if seed != 0:
+                # ``run_episode`` doesn't know about sampling; stamp
+                # the seed post-hoc so the JSONL record still reflects
+                # which replay this is.
+                ep = replace(ep, seed=seed)
+            results.record(ep)
+            sink.write(json.dumps(ep.to_dict()) + "\n")
+            sink.flush()
     return results
 
 
@@ -101,12 +118,17 @@ def _load_suite_results(path: Path) -> SuiteResults:
 
 
 def _format_delta(delta: SuiteDelta) -> str:
+    sig_marker = " *" if delta.significant_at_05 else ""
     lines = [
         f"treatment ({delta.treatment}) vs baseline ({delta.baseline})",
-        f"  shared episodes: {delta.shared_episodes}",
+        f"  shared tasks:      {delta.shared_tasks}"
+        f"  (treatment={delta.n_treatment_episodes} episodes, "
+        f"baseline={delta.n_baseline_episodes})",
         f"  treatment success: {delta.treatment_success_rate:.3f}",
         f"  baseline success:  {delta.baseline_success_rate:.3f}",
-        f"  delta:             {delta.delta:+.3f}",
+        f"  delta:             {delta.delta:+.3f}"
+        f"  (95% CI [{delta.ci95_low:+.3f}, {delta.ci95_high:+.3f}])",
+        f"  p-value:           {delta.p_value:.4f}{sig_marker}",
         f"  wins:   {delta.wins}",
         f"  losses: {delta.losses}",
     ]
@@ -134,12 +156,13 @@ def _cmd_run(args: argparse.Namespace) -> int:
         )
     agent = AGENT_FACTORIES[args.agent](suite)
 
+    samples: int = args.samples
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         with args.output.open("w", encoding="utf-8") as f:
-            results = _run(agent, suite, f)
+            results = _run(agent, suite, f, samples=samples)
     else:
-        results = _run(agent, suite, sys.stdout)
+        results = _run(agent, suite, sys.stdout, samples=samples)
 
     summary = results.summary()
     print(
@@ -181,6 +204,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         help="write JSONL here; default stdout",
+    )
+    run_p.add_argument(
+        "--samples",
+        type=int,
+        default=1,
+        help=(
+            "replay each task N times (default: 1). Each replay gets a "
+            "distinct seed in the JSONL record so downstream diff can "
+            "compute per-task success rates."
+        ),
     )
     run_p.set_defaults(func=_cmd_run)
 
