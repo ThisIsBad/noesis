@@ -235,6 +235,77 @@ async def test_praxis_decompose_and_commit(
         assert committed.step_id == step.step_id
 
 
+async def test_praxis_backtrack_surfaces_pending_sibling_after_failure(
+    praxis_url: str, praxis_secret: str
+) -> None:
+    """Stage 3 replanning probe: after a step fails, ``backtrack`` must
+    surface a pending sibling as an alternative candidate.
+
+    This is the minimum-viable wiring test for the "Replanning after
+    failure ≥ 50%" acceptance criterion in the ROADMAP — it doesn't score
+    the policy, it just proves the end-to-end mechanism is connected
+    through the MCP surface on the deployed service.
+    """
+    async with mcp_session(praxis_url, praxis_secret) as session:
+        plan = parse_model(
+            await session.call_tool(
+                "decompose_goal", {"goal": "e2e: backtrack probe"}
+            ),
+            Plan,
+        )
+
+        # Two alternative first steps, both children of the plan root
+        # (parent_step_id omitted ⇒ root child per praxis.core contract).
+        risky = parse_model(
+            await session.call_tool(
+                "evaluate_step",
+                {
+                    "plan_id": plan.plan_id,
+                    "description": "risky first approach",
+                    "risk_score": 0.9,
+                },
+            ),
+            PlanStep,
+        )
+        safe = parse_model(
+            await session.call_tool(
+                "evaluate_step",
+                {
+                    "plan_id": plan.plan_id,
+                    "description": "safe fallback approach",
+                    "risk_score": 0.1,
+                },
+            ),
+            PlanStep,
+        )
+        assert risky.step_id != safe.step_id
+
+        # Fail the risky branch.
+        failed = parse_model(
+            await session.call_tool(
+                "commit_step",
+                {
+                    "plan_id": plan.plan_id,
+                    "step_id": risky.step_id,
+                    "outcome": "timed out",
+                    "success": False,
+                },
+            ),
+            PlanStep,
+        )
+        assert failed.status.value == "failed"
+
+        # backtrack must return the pending sibling as an alternative.
+        alts_body = parse_json(
+            await session.call_tool("backtrack", {"plan_id": plan.plan_id})
+        )
+        alt_ids = {a["step_id"] for a in alts_body.get("alternatives", [])}
+        assert safe.step_id in alt_ids, (
+            f"expected pending sibling {safe.step_id} in backtrack alternatives, "
+            f"got {alts_body}"
+        )
+
+
 # ── Logos ─────────────────────────────────────────────────────────────────────
 
 async def test_logos_z3_check(logos_url: str, logos_secret: str) -> None:
