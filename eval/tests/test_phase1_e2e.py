@@ -34,18 +34,35 @@ from pydantic import BaseModel
 # httpx.HTTPStatusError from the SSE handshake — before any RPC runs — so a
 # one-shot retry on the handshake is enough. Don't retry inside the yield:
 # those failures are test logic, not cold-start.
+#
+# ``sse_client`` runs the handshake inside an anyio TaskGroup, so the real
+# failure arrives wrapped in a BaseExceptionGroup. We walk the group tree
+# to find a retryable leaf — otherwise the previous top-level isinstance
+# check never matches and every cold-start kills the whole CI run.
 _RETRY_STATUS = {502, 503, 504}
 _RETRY_EXCEPTIONS: tuple[type[BaseException], ...] = (
     httpx.ConnectError,
+    httpx.ConnectTimeout,
     httpx.ReadError,
+    httpx.ReadTimeout,
     httpx.RemoteProtocolError,
 )
 
 
-def _is_retryable(exc: BaseException) -> bool:
+def _is_retryable_leaf(exc: BaseException) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in _RETRY_STATUS
     return isinstance(exc, _RETRY_EXCEPTIONS)
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """True if ``exc`` (or any nested exception in an ExceptionGroup) is
+    a transient Railway/network failure worth retrying."""
+    if _is_retryable_leaf(exc):
+        return True
+    if isinstance(exc, BaseExceptionGroup):
+        return any(_is_retryable(e) for e in exc.exceptions)
+    return False
 
 
 @asynccontextmanager
