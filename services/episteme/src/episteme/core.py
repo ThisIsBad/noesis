@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from noesis_schemas import (
     CalibrationReport,
@@ -17,7 +16,7 @@ class EpistemeCore:
         self,
         claim: str,
         confidence: float,
-        domain: Optional[str] = None,
+        domain: str | None = None,
     ) -> Prediction:
         pred = Prediction(claim=claim, confidence=confidence, domain=domain)
         self._predictions[pred.prediction_id] = pred
@@ -29,7 +28,7 @@ class EpistemeCore:
         pred.resolved_at = datetime.utcnow()
         return pred
 
-    def get_calibration(self, domain: Optional[str] = None) -> CalibrationReport:
+    def get_calibration(self, domain: str | None = None) -> CalibrationReport:
         resolved = [
             p for p in self._predictions.values()
             if p.correct is not None and (domain is None or p.domain == domain)
@@ -70,7 +69,7 @@ class EpistemeCore:
         )
 
     def should_escalate(
-        self, confidence: float, domain: Optional[str] = None
+        self, confidence: float, domain: str | None = None
     ) -> bool:
         report = self.get_calibration(domain)
         # Escalate on low confidence OR when the history shows systematic

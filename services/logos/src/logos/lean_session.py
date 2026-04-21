@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from logos.diagnostics import Diagnostic
@@ -54,14 +54,14 @@ class TacticResult:
     proof_so_far: str
     """The complete proof text so far."""
 
-    error_message: Optional[str] = None
+    error_message: str | None = None
     """Error message if the tactic failed."""
 
-    diagnostic: Optional["Diagnostic"] = None
+    diagnostic: "Diagnostic | None" = None
     """Structured diagnostic information (error type, suggestions, etc.)."""
 
     @property
-    def error_type(self) -> Optional[str]:
+    def error_type(self) -> str | None:
         """Shortcut to diagnostic.error_type.value."""
         if self.diagnostic:
             return self.diagnostic.error_type.value
@@ -99,7 +99,7 @@ class LeanSession:
     >>> assert session.is_complete
     """
 
-    lean_path: Optional[str] = None
+    lean_path: str | None = None
     timeout: int = 60
 
     # Internal state
@@ -261,7 +261,7 @@ class LeanSession:
         self._is_complete = False
         self._initialized = False
 
-    def _check_state(self, current_tactic: Optional[str] = None) -> TacticResult:
+    def _check_state(self, current_tactic: str | None = None) -> TacticResult:
         """Run Lean on the current proof and parse the output."""
         proof_text = self.proof
 
@@ -321,7 +321,7 @@ class LeanSession:
         self,
         output: str,
         proof_text: str,
-        current_tactic: Optional[str] = None
+        current_tactic: str | None = None
     ) -> TacticResult:
         """Parse Lean compiler output to extract goals and errors."""
         output_lower = output.lower()

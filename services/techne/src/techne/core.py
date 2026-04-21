@@ -1,5 +1,3 @@
-from typing import Optional
-
 from noesis_schemas import ProofCertificate, Skill
 
 
@@ -13,8 +11,8 @@ class TechneCore:
         name: str,
         description: str,
         strategy: str,
-        certificate: Optional[ProofCertificate] = None,
-        domain: Optional[str] = None,
+        certificate: ProofCertificate | None = None,
+        domain: str | None = None,
     ) -> Skill:
         skill = Skill(
             name=name,

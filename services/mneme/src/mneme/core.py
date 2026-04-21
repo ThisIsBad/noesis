@@ -1,6 +1,5 @@
 import sqlite3
 from datetime import datetime
-from typing import Optional
 
 import chromadb
 from noesis_schemas import Memory, MemoryType, ProofCertificate
@@ -12,7 +11,7 @@ class MnemeCore:
         db_path: str = "mneme.db",
         chroma_path: str = "mneme_chroma",
         *,
-        _chroma_client: Optional[chromadb.ClientAPI] = None,
+        _chroma_client: chromadb.ClientAPI | None = None,
     ) -> None:
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._setup_schema()
@@ -39,9 +38,9 @@ class MnemeCore:
         content: str,
         memory_type: MemoryType,
         confidence: float = 0.5,
-        certificate: Optional[ProofCertificate] = None,
-        tags: Optional[list[str]] = None,
-        source: Optional[str] = None,
+        certificate: ProofCertificate | None = None,
+        tags: list[str] | None = None,
+        source: str | None = None,
     ) -> Memory:
         return self.store_batch([(
             content, memory_type, confidence, certificate, tags, source,
@@ -54,9 +53,9 @@ class MnemeCore:
                 str,
                 MemoryType,
                 float,
-                Optional[ProofCertificate],
-                Optional[list[str]],
-                Optional[str],
+                ProofCertificate | None,
+                list[str] | None,
+                str | None,
             ]
         ],
     ) -> list[Memory]:

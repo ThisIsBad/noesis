@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 
 class KosmosCore:
@@ -28,7 +28,7 @@ class KosmosCore:
     def query_causes(self, effect: str) -> list[str]:
         return [cause for cause, effects in self._graph.items() if effect in effects]
 
-    def counterfactual(self, cause: str, effect: str) -> Optional[float]:
+    def counterfactual(self, cause: str, effect: str) -> float | None:
         """Returns causal path strength from cause to effect, or None if no path."""
         if cause not in self._graph:
             return None
