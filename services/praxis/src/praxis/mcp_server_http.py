@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import sys
-from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
@@ -72,7 +71,7 @@ mcp = FastMCP(
 
 
 @mcp.tool()
-def decompose_goal(goal: str, parent_plan_id: Optional[str] = None) -> str:
+def decompose_goal(goal: str, parent_plan_id: str | None = None) -> str:
     """Open a new plan for a goal.
 
     Args:
@@ -97,9 +96,9 @@ def decompose_goal(goal: str, parent_plan_id: Optional[str] = None) -> str:
 def evaluate_step(
     plan_id: str,
     description: str,
-    tool_call: Optional[str] = None,
+    tool_call: str | None = None,
     risk_score: float = 0.0,
-    parent_step_id: Optional[str] = None,
+    parent_step_id: str | None = None,
 ) -> str:
     """Propose a candidate step; stored with a Tree-of-Thoughts score.
 
