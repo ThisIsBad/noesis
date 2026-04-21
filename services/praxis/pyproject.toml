@@ -30,6 +30,9 @@ packages = ["src/praxis"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "../../schemas/src", "../../kairos/src"]
+markers = [
+    "acceptance: ROADMAP acceptance-criterion benchmark",
+]
 
 [tool.coverage.run]
 source = ["praxis.core"]
