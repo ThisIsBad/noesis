@@ -21,7 +21,7 @@ from __future__ import annotations
 import ast
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import z3
 
@@ -38,23 +38,23 @@ class CheckResult:
     status: str
     """One of 'sat', 'unsat', or 'unknown'."""
 
-    satisfiable: Optional[bool]
+    satisfiable: bool | None
     """True if sat, False if unsat, None if unknown."""
 
-    model: Optional[dict[str, Any]] = None
+    model: dict[str, Any] | None = None
     """Variable assignments if satisfiable."""
 
-    unsat_core: Optional[list[str]] = None
+    unsat_core: list[str] | None = None
     """Named constraints in the unsat core (if tracking enabled)."""
 
-    reason: Optional[str] = None
+    reason: str | None = None
     """Reason for unknown result, if applicable."""
 
-    diagnostic: Optional["Diagnostic"] = None
+    diagnostic: "Diagnostic | None" = None
     """Structured diagnostic information for unsat/unknown/errors."""
 
     @property
-    def error_type(self) -> Optional[str]:
+    def error_type(self) -> str | None:
         """Shortcut to diagnostic.error_type.value."""
         if self.diagnostic:
             return self.diagnostic.error_type.value
@@ -113,7 +113,7 @@ class Z3Session:
         self,
         name: str,
         sort: str,
-        size: Optional[int] = None
+        size: int | None = None
     ) -> None:
         """Declare a variable with the given name and sort.
         
@@ -160,7 +160,7 @@ class Z3Session:
     def assert_constraint(
         self,
         constraint: str,
-        name: Optional[str] = None
+        name: str | None = None
     ) -> None:
         """Assert a constraint in the current scope.
         
@@ -363,7 +363,7 @@ class Z3Session:
 
         return f"Implies({self._rewrite_implication(left)}, {self._rewrite_implication(right)})"
 
-    def _find_top_level_implication(self, expr: str) -> Optional[int]:
+    def _find_top_level_implication(self, expr: str) -> int | None:
         """Find right-most top-level implication operator (`->` or `=>`)."""
         depth = 0
         i = len(expr) - 2

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from noesis_schemas import GoalContract
 
@@ -9,7 +8,7 @@ class AlignmentResult:
         self,
         aligned: bool,
         drift_score: float,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> None:
         self.aligned = aligned
         self.drift_score = drift_score

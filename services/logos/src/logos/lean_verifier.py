@@ -9,14 +9,13 @@ import os
 import tempfile
 import subprocess
 from dataclasses import dataclass
-from typing import Optional
 
 @dataclass(frozen=True)
 class LeanVerificationResult:
     """Result of verifying a Lean 4 theorem."""
     valid: bool
     output: str
-    error: Optional[str] = None
+    error: str | None = None
 
 class LeanVerifier:
     """Verifies mathematical proofs using the Lean 4 interactive theorem prover."""

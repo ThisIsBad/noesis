@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 
 # ---------------------------------------------------------------------------
@@ -55,7 +55,7 @@ class LogicalExpression:
 
     connective: Connective
     left: Proposition | LogicalExpression
-    right: Optional[Proposition | LogicalExpression] = None
+    right: Proposition | LogicalExpression | None = None
 
     def __post_init__(self) -> None:
         if self.connective is Connective.NOT:
@@ -128,7 +128,7 @@ class VerificationResult:
     """
 
     valid: bool
-    counterexample: Optional[dict[str, Any]] = None
+    counterexample: dict[str, Any] | None = None
     rule: str = ""
     explanation: str = ""
 

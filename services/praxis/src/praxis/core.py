@@ -1,6 +1,5 @@
 import sqlite3
 from datetime import datetime
-from typing import Optional
 
 import networkx as nx
 from noesis_schemas import Plan, PlanStep, StepStatus
@@ -13,7 +12,7 @@ _FAIL_PENALTY = 0.3
 
 def _score(
     risk_score: float,
-    tool_call: Optional[str],
+    tool_call: str | None,
     previously_failed: bool = False,
 ) -> float:
     base = (1.0 - risk_score) * _W_RISK + (_W_TOOL if tool_call else _W_TOOL * 0.5)
@@ -102,7 +101,7 @@ class PraxisCore:
     # ── Public API ────────────────────────────────────────────────────────────
 
     def decompose(
-        self, goal: str, depth: int = 0, parent_plan_id: Optional[str] = None
+        self, goal: str, depth: int = 0, parent_plan_id: str | None = None
     ) -> Plan:
         plan = Plan(goal=goal, depth=depth, parent_plan_id=parent_plan_id)
         self._conn.execute(
@@ -119,9 +118,9 @@ class PraxisCore:
         self,
         plan_id: str,
         description: str,
-        tool_call: Optional[str] = None,
+        tool_call: str | None = None,
         risk_score: float = 0.0,
-        parent_step_id: Optional[str] = None,
+        parent_step_id: str | None = None,
     ) -> PlanStep:
         """
         Add a candidate step to the plan tree.
@@ -268,7 +267,7 @@ class PraxisCore:
             for ids, _ in complete[:k]
         ]
 
-    def get_next_step(self, plan_id: str) -> Optional[PlanStep]:
+    def get_next_step(self, plan_id: str) -> PlanStep | None:
         """Returns the first PENDING step on the current best path."""
         paths = self.best_path(plan_id, k=1)
         if not paths:
