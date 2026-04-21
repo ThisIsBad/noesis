@@ -506,3 +506,157 @@ async def test_durchstich_telos_praxis_mneme(
         assert any(
             marker in m.content and goal.goal_id in m.content for m in retrieved
         ), retrieved
+
+
+async def test_durchstich_five_hop_telos_praxis_logos_mneme_empiria(
+    telos_url: str,
+    telos_secret: str,
+    praxis_url: str,
+    praxis_secret: str,
+    logos_url: str,
+    logos_secret: str,
+    mneme_url: str,
+    mneme_secret: str,
+    empiria_url: str,
+    empiria_secret: str,
+    mneme_cleanup: list[str],
+) -> None:
+    """Full five-hop Durchstich: Goal → Plan → Verify → Store → Lesson.
+
+    Extends the three-hop chain with Logos certification and Empiria lesson
+    recording, so the whole "think → prove → remember → learn" loop is
+    exercised. Each hop feeds artifacts from the previous one:
+
+    1. Telos registers the goal (``goal_id``).
+    2. Praxis decomposes it into a plan (``plan_id``) and commits one step.
+    3. Logos certifies a trivially provable claim and hands back a
+       serialised ``ProofCertificate``.
+    4. Mneme stores the memory *with* the certificate attached, so the
+       returned record's ``certificate`` field must round-trip as a
+       verified ``ProofCertificate``.
+    5. Empiria records a lesson whose ``context`` mentions the goal and
+       whose ``outcome`` references the stored memory_id.
+
+    The ``marker`` token threads through every service so the final
+    retrieval asserts that the whole chain wired up end to end.
+    """
+    marker = uuid.uuid4().hex[:8]
+    description = f"Durchstich5 {marker}: full loop through all five services"
+    contract = GoalContract(
+        description=description,
+        postconditions=[{"description": "five-hop chain completed"}],
+    )
+
+    # Hop 1: Telos — register goal.
+    async with mcp_session(telos_url, telos_secret) as telos:
+        goal = parse_model(
+            await telos.call_tool(
+                "register_goal", {"contract_json": contract.model_dump_json()}
+            ),
+            GoalContract,
+        )
+
+    # Hop 2: Praxis — decompose and commit one step.
+    async with mcp_session(praxis_url, praxis_secret) as praxis:
+        plan = parse_model(
+            await praxis.call_tool("decompose_goal", {"goal": description}),
+            Plan,
+        )
+        raw_next = parse_json(
+            await praxis.call_tool("get_next_step", {"plan_id": plan.plan_id})
+        )
+        if raw_next.get("step_id") is not None:
+            step = PlanStep.model_validate(raw_next)
+            parse_model(
+                await praxis.call_tool(
+                    "commit_step",
+                    {
+                        "plan_id": plan.plan_id,
+                        "step_id": step.step_id,
+                        "outcome": f"five-hop-{marker} step 1 done",
+                        "success": True,
+                    },
+                ),
+                PlanStep,
+            )
+
+    # Hop 3: Logos — certify a trivially provable claim.
+    # ``P -> Q, P |- Q`` is modus ponens — Logos's z3_propositional method
+    # verifies it in constant time, giving us a real verified certificate
+    # to thread through the chain rather than a fabricated one.
+    async with mcp_session(logos_url, logos_secret) as logos:
+        raw_cert = parse_json(
+            await logos.call_tool(
+                "certify_claim", {"argument": "P -> Q, P |- Q"}
+            )
+        )
+        assert raw_cert.get("verified") is True, raw_cert
+        certificate_json = raw_cert["certificate_json"]
+        cert = ProofCertificate.model_validate(json.loads(certificate_json))
+        assert cert.verified is True
+        assert cert.method == "z3_propositional"
+
+    # Hop 4: Mneme — store memory with the Logos certificate attached.
+    async with mcp_session(mneme_url, mneme_secret) as mneme:
+        stored = parse_model(
+            await mneme.call_tool(
+                "store_memory",
+                {
+                    "content": (
+                        f"Durchstich5 {marker}: goal={goal.goal_id} "
+                        f"plan={plan.plan_id} certified_by=logos"
+                    ),
+                    "memory_type": "episodic",
+                    "confidence": 0.95,
+                    "tags": ["e2e", "durchstich5", marker],
+                    "source": f"telos:{goal.goal_id}",
+                    "certificate_json": certificate_json,
+                },
+            ),
+            Memory,
+        )
+        mneme_cleanup.append(stored.memory_id)
+        # The certificate must survive the round-trip into Mneme so
+        # downstream consumers can trust the memory's provenance.
+        assert stored.certificate is not None
+        assert stored.certificate.verified is True
+        assert stored.certificate.method == "z3_propositional"
+
+    # Hop 5: Empiria — distill a lesson from the whole chain.
+    context = f"Durchstich5 {marker} context: goal={goal.goal_id}"
+    lesson_text = (
+        f"Durchstich5 {marker}: five-hop loop completes when a certified "
+        f"memory is reachable from the originating goal."
+    )
+    async with mcp_session(empiria_url, empiria_secret) as empiria:
+        lesson = parse_model(
+            await empiria.call_tool(
+                "record_experience",
+                {
+                    "context": context,
+                    "action_taken": (
+                        f"plan={plan.plan_id} cert={cert.claim_type} "
+                        f"stored={stored.memory_id}"
+                    ),
+                    "outcome": f"memory {stored.memory_id} retained",
+                    "success": True,
+                    "lesson_text": lesson_text,
+                    "confidence": 0.9,
+                    "domain": "durchstich5",
+                },
+            ),
+            Lesson,
+        )
+        assert lesson.success is True
+        assert lesson.lesson_text == lesson_text
+
+        # Closing retrieval asserts the marker threaded all the way
+        # through — if any hop dropped context, this would miss.
+        found = parse_model_list(
+            await empiria.call_tool(
+                "retrieve_lessons",
+                {"context": context, "k": 3, "domain": "durchstich5"},
+            ),
+            Lesson,
+        )
+        assert any(marker in lsn.lesson_text for lsn in found), found
