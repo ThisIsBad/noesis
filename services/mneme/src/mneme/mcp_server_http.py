@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import sys
-from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
@@ -77,9 +76,9 @@ def store_memory(
     content: str,
     memory_type: str,
     confidence: float = 0.5,
-    tags: Optional[list[str]] = None,
-    source: Optional[str] = None,
-    certificate_json: Optional[str] = None,
+    tags: list[str] | None = None,
+    source: str | None = None,
+    certificate_json: str | None = None,
 ) -> str:
     """Store a memory.
 
@@ -98,7 +97,7 @@ def store_memory(
             "has_certificate": str(bool(certificate_json)),
         },
     ):
-        cert: Optional[ProofCertificate] = None
+        cert: ProofCertificate | None = None
         if certificate_json:
             cert = ProofCertificate.model_validate_json(certificate_json)
 

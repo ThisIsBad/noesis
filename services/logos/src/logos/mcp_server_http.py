@@ -22,7 +22,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
@@ -127,18 +127,18 @@ def certify_claim(argument: str) -> str:
 @mcp.tool()
 def certificate_store(
     action: str,
-    certificate: Optional[dict[str, Any]] = None,
-    certificate_json: Optional[str] = None,
-    tags: Optional[dict[str, str]] = None,
-    store_id: Optional[str] = None,
-    claim_pattern: Optional[str] = None,
-    method: Optional[str] = None,
-    verified: Optional[bool] = None,
-    include_invalidated: Optional[bool] = None,
-    since: Optional[str] = None,
-    limit: Optional[int] = None,
-    reason: Optional[str] = None,
-    premises: Optional[list[str]] = None,
+    certificate: dict[str, Any] | None = None,
+    certificate_json: str | None = None,
+    tags: dict[str, str] | None = None,
+    store_id: str | None = None,
+    claim_pattern: str | None = None,
+    method: str | None = None,
+    verified: bool | None = None,
+    include_invalidated: bool | None = None,
+    since: str | None = None,
+    limit: int | None = None,
+    reason: str | None = None,
+    premises: list[str] | None = None,
 ) -> str:
     """Manage proof memory: store/get/query/invalidate/stats/compact/query_consistent."""
     payload = _pack(
@@ -162,7 +162,7 @@ def certificate_store(
 @mcp.tool()
 def check_assumptions(
     assumptions: list[dict[str, Any]],
-    variables: Optional[dict[str, str]] = None,
+    variables: dict[str, str] | None = None,
 ) -> str:
     """Check whether assumptions are jointly Z3-satisfiable."""
     return _dispatch(
@@ -175,7 +175,7 @@ def check_assumptions(
 @mcp.tool()
 def check_beliefs(
     beliefs: list[dict[str, Any]],
-    variables: Optional[dict[str, str]] = None,
+    variables: dict[str, str] | None = None,
 ) -> str:
     """Detect Z3 contradictions in a set of beliefs."""
     return _dispatch(
@@ -189,7 +189,7 @@ def check_beliefs(
 def check_contract(
     contract: dict[str, Any],
     state_constraints: list[str],
-    variables: Optional[dict[str, str]] = None,
+    variables: dict[str, str] | None = None,
 ) -> str:
     """Verify goal-contract preconditions against Z3 state constraints."""
     return _dispatch(
@@ -234,7 +234,7 @@ def counterfactual_branch(
 def z3_check(
     variables: dict[str, Any],
     constraints: list[str],
-    timeout_ms: Optional[int] = None,
+    timeout_ms: int | None = None,
 ) -> str:
     """Run a direct Z3 satisfiability check."""
     return _dispatch(
@@ -248,9 +248,9 @@ def z3_check(
 def z3_session(
     action: str,
     session_id: str,
-    variables: Optional[dict[str, Any]] = None,
-    constraints: Optional[list[str]] = None,
-    count: Optional[int] = None,
+    variables: dict[str, Any] | None = None,
+    constraints: list[str] | None = None,
+    count: int | None = None,
 ) -> str:
     """Manage a stateful Z3 session (create/declare/assert/check/push/pop/destroy)."""
     return _dispatch(
@@ -270,13 +270,13 @@ def z3_session(
 def orchestrate_proof(
     action: str,
     session_id: str,
-    claim_id: Optional[str] = None,
-    parent_id: Optional[str] = None,
-    description: Optional[str] = None,
-    expression: Optional[str] = None,
-    composition_rule: Optional[str] = None,
-    certificate_json: Optional[str] = None,
-    reason: Optional[str] = None,
+    claim_id: str | None = None,
+    parent_id: str | None = None,
+    description: str | None = None,
+    expression: str | None = None,
+    composition_rule: str | None = None,
+    certificate_json: str | None = None,
+    reason: str | None = None,
 ) -> str:
     """Manage a compositional proof tree across sub-claims."""
     return _dispatch(
@@ -301,11 +301,11 @@ def proof_carrying_action(
     intent: str,
     action: str,
     payload: dict[str, Any],
-    schema_version: Optional[str] = None,
-    preconditions: Optional[list[str]] = None,
-    expected_postconditions: Optional[list[dict[str, Any]]] = None,
-    cert_refs: Optional[dict[str, Any]] = None,
-    metadata: Optional[dict[str, Any]] = None,
+    schema_version: str | None = None,
+    preconditions: list[str] | None = None,
+    expected_postconditions: list[dict[str, Any]] | None = None,
+    cert_refs: dict[str, Any] | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> str:
     """Execute an action envelope, verifying precondition certificates + postconditions."""
     return _dispatch(
