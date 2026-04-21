@@ -516,6 +516,105 @@ async def test_kosmos_causal_chain(
         assert strength is None or strength > 0, cf
 
 
+@retry_on_transient_mcp_error()
+async def test_durchstich_kosmos_counterfactual_consistency(
+    kosmos_url: str, kosmos_secret: str
+) -> None:
+    """Deep probe of the Kosmos causal surface on a three-hop chain.
+
+    Builds ``A →0.8→ B →0.9→ C →0.7→ D`` then asks every Kosmos tool
+    about different slices of the graph and pins that their answers stay
+    consistent with each other:
+
+    1. ``query_causes`` surfaces *only* the direct parent — not
+       transitive ancestors.
+    2. ``counterfactual`` returns the product of edge weights along the
+       path (within float tolerance) for every multi-hop query.
+    3. ``compute_intervention`` enumerates every downstream node with
+       the same multiplicative weights ``counterfactual`` would give.
+    4. An unrelated variable returns ``strength=None`` and is absent
+       from the intervention set.
+
+    If Kosmos swaps the lexical adjacency store for pgmpy (per the core
+    module's TODO) the numbers will change, but the *internal*
+    consistency properties must still hold — that's what this probe
+    pins.  Catches silent surface drift where one tool returns stale or
+    transitive-inflated results while the others stay correct.
+    """
+    marker = uuid.uuid4().hex[:8]
+    a = f"kk_a_{marker}"
+    b = f"kk_b_{marker}"
+    c = f"kk_c_{marker}"
+    d = f"kk_d_{marker}"
+    unrelated = f"kk_x_{marker}"
+    ab, bc, cd = 0.8, 0.9, 0.7
+
+    async with mcp_session(kosmos_url, kosmos_secret) as session:
+        for cause, effect, strength in [(a, b, ab), (b, c, bc), (c, d, cd)]:
+            body = parse_json(
+                await session.call_tool(
+                    "add_causal_edge",
+                    {"cause": cause, "effect": effect, "strength": strength},
+                )
+            )
+            assert "added" in body, body
+
+        # (1) Direct parents only — no transitive ancestors.
+        d_causes = parse_json(
+            await session.call_tool("query_causes", {"effect": d})
+        ).get("causes", [])
+        assert d_causes == [c], (
+            f"query_causes(D) must return only the direct parent C; "
+            f"got {d_causes!r} — transitive inflation would break the "
+            f"Do-calculus contract."
+        )
+        c_causes = parse_json(
+            await session.call_tool("query_causes", {"effect": c})
+        ).get("causes", [])
+        assert c_causes == [b], c_causes
+
+        # (2) Multi-hop counterfactual == product of edge weights.
+        ad_strength = parse_json(
+            await session.call_tool(
+                "counterfactual", {"cause": a, "effect": d}
+            )
+        ).get("strength")
+        assert ad_strength == pytest.approx(ab * bc * cd, rel=1e-6), (
+            f"counterfactual(A, D) expected {ab * bc * cd}, got {ad_strength}"
+        )
+        ac_strength = parse_json(
+            await session.call_tool(
+                "counterfactual", {"cause": a, "effect": c}
+            )
+        ).get("strength")
+        assert ac_strength == pytest.approx(ab * bc, rel=1e-6)
+        bd_strength = parse_json(
+            await session.call_tool(
+                "counterfactual", {"cause": b, "effect": d}
+            )
+        ).get("strength")
+        assert bd_strength == pytest.approx(bc * cd, rel=1e-6)
+
+        # (3) Intervention agrees with counterfactual on every reachable node.
+        intervention = parse_json(
+            await session.call_tool(
+                "compute_intervention", {"variable": a, "value": True}
+            )
+        )
+        assert intervention.get(b) == pytest.approx(ab, rel=1e-6)
+        assert intervention.get(c) == pytest.approx(ab * bc, rel=1e-6)
+        assert intervention.get(d) == pytest.approx(ab * bc * cd, rel=1e-6)
+        assert unrelated not in intervention
+
+        # (4) No path ⇒ strength=None and unreachable from intervention.
+        raw_unrelated = parse_json(
+            await session.call_tool(
+                "counterfactual", {"cause": unrelated, "effect": d}
+            )
+        )
+        assert raw_unrelated.get("strength") is None, raw_unrelated
+
+
 # ── Full Durchstich chain ─────────────────────────────────────────────────────
 
 @retry_on_transient_mcp_error()
