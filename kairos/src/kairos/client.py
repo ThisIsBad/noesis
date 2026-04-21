@@ -17,11 +17,18 @@ import logging
 import time
 import uuid
 from contextvars import ContextVar
-from typing import Iterator, Optional
+from typing import Iterator, Mapping, Optional
 
 import httpx
 
 log = logging.getLogger("kairos.client")
+
+# HTTP headers used for cross-service trace propagation. Downstream
+# services extract these on inbound requests (via ``continue_trace``)
+# so their spans land under the same trace_id and link to the caller's
+# span as parent.
+TRACE_ID_HEADER = "X-Kairos-Trace-Id"
+PARENT_SPAN_HEADER = "X-Kairos-Parent-Span-Id"
 
 _current_trace_id: ContextVar[Optional[str]] = ContextVar(
     "kairos_trace_id", default=None
@@ -39,6 +46,39 @@ def current_trace_id() -> Optional[str]:
 def current_span_id() -> Optional[str]:
     """The span_id active in the calling context, or None."""
     return _current_span_id.get()
+
+
+def inject_headers(headers: Optional[Mapping[str, str]] = None) -> dict[str, str]:
+    """Return a copy of ``headers`` with the current trace context attached.
+
+    Callers about to issue an outbound request should feed the result
+    into their HTTP client so the downstream service can continue the
+    trace. If no trace is active, the headers are returned unchanged.
+    """
+    out: dict[str, str] = dict(headers or {})
+    trace_id = _current_trace_id.get()
+    if trace_id is not None:
+        out[TRACE_ID_HEADER] = trace_id
+        span_id = _current_span_id.get()
+        if span_id is not None:
+            out[PARENT_SPAN_HEADER] = span_id
+    return out
+
+
+def extract_trace_context(
+    headers: Mapping[str, str],
+) -> tuple[Optional[str], Optional[str]]:
+    """Pull ``(trace_id, parent_span_id)`` out of inbound request headers.
+
+    Header lookup is case-insensitive. Returns ``(None, None)`` if no
+    trace context is present. ``parent_span_id`` may be ``None`` even
+    when ``trace_id`` is set (e.g. the caller started a fresh trace
+    without a parent).
+    """
+    lowered = {k.lower(): v for k, v in headers.items()}
+    trace_id = lowered.get(TRACE_ID_HEADER.lower())
+    parent_span_id = lowered.get(PARENT_SPAN_HEADER.lower())
+    return trace_id, parent_span_id
 
 
 class KairosClient:
@@ -70,6 +110,34 @@ class KairosClient:
         if self._http is not None:
             self._http.close()
             self._http = None
+
+    @contextlib.contextmanager
+    def continue_trace(
+        self,
+        trace_id: Optional[str],
+        parent_span_id: Optional[str],
+    ) -> Iterator[None]:
+        """Adopt an inbound ``(trace_id, parent_span_id)`` as the current context.
+
+        Typical use: a service extracts headers from an incoming
+        request, enters ``continue_trace(...)`` for the duration of the
+        handler, and any ``span()`` blocks inside inherit the adopted
+        trace/parent. Passing ``None`` for both is a no-op — the caller
+        probably has nothing to adopt (fresh trace).
+        """
+        trace_token = None
+        span_token = None
+        if trace_id is not None:
+            trace_token = _current_trace_id.set(trace_id)
+            if parent_span_id is not None:
+                span_token = _current_span_id.set(parent_span_id)
+        try:
+            yield
+        finally:
+            if span_token is not None:
+                _current_span_id.reset(span_token)
+            if trace_token is not None:
+                _current_trace_id.reset(trace_token)
 
     @contextlib.contextmanager
     def span(
@@ -123,6 +191,7 @@ class KairosClient:
             "service": self._service,
             "operation": operation,
             "trace_id": trace_id,
+            "span_id": span_id,
             "parent_span_id": parent_span_id,
             "duration_ms": duration_ms,
             "success": success,
@@ -137,4 +206,3 @@ class KairosClient:
                 operation,
                 exc,
             )
-        _ = span_id  # span_id is generated for future propagation headers
