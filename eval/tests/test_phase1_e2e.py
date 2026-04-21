@@ -29,6 +29,8 @@ from noesis_schemas import (
 )
 from pydantic import BaseModel
 
+from tests._retry_helpers import retry_on_transient_mcp_error
+
 # Railway edge returns 502/503/504 while a service container is cold-starting
 # (first request after an idle spin-down). The MCP SDK surfaces that as an
 # httpx.HTTPStatusError from the SSE handshake — before any RPC runs — so a
@@ -444,6 +446,7 @@ async def test_empiria_record_and_retrieve(
 
 # ── Techne ────────────────────────────────────────────────────────────────────
 
+@retry_on_transient_mcp_error()
 async def test_techne_store_and_retrieve_skill(
     techne_url: str, techne_secret: str
 ) -> None:
@@ -484,6 +487,7 @@ async def test_techne_store_and_retrieve_skill(
 
 # ── Kosmos ────────────────────────────────────────────────────────────────────
 
+@retry_on_transient_mcp_error()
 async def test_kosmos_causal_chain(
     kosmos_url: str, kosmos_secret: str
 ) -> None:
@@ -514,6 +518,7 @@ async def test_kosmos_causal_chain(
 
 # ── Full Durchstich chain ─────────────────────────────────────────────────────
 
+@retry_on_transient_mcp_error()
 async def test_durchstich_telos_praxis_mneme(
     telos_url: str,
     telos_secret: str,
@@ -596,6 +601,7 @@ async def test_durchstich_telos_praxis_mneme(
         ), retrieved
 
 
+@retry_on_transient_mcp_error()
 async def test_durchstich_five_hop_telos_praxis_logos_mneme_empiria(
     telos_url: str,
     telos_secret: str,
