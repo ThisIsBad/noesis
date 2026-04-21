@@ -38,3 +38,31 @@ def test_record_use_updates_success_rate():
     updated = core._skills[skill.skill_id]
     assert abs(updated.success_rate - 2/3) < 0.01
     assert updated.use_count == 3
+
+
+def test_retrieve_verified_only_filters_unverified_description_matches():
+    # Regression: operator precedence meant `verified_only=True` was bypassed
+    # whenever the query matched via `description` (the left side of the OR).
+    core = TechneCore()
+    core.store("retry-loop", "Retry failed operations", "loop")
+    assert core.retrieve("retry failed", verified_only=True) == []
+
+
+def test_retrieve_verified_only_keeps_verified_matches():
+    core = TechneCore()
+    cert = ProofCertificate(
+        claim_type="propositional",
+        claim="strategy is correct",
+        method="argument",
+        verified=True,
+        timestamp="2026-04-17T00:00:00+00:00",
+    )
+    core.store(
+        "proven-retry",
+        "Retry failed operations",
+        "loop",
+        certificate=cert,
+    )
+    results = core.retrieve("retry failed", verified_only=True)
+    assert len(results) == 1
+    assert results[0].name == "proven-retry"
