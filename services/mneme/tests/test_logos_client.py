@@ -18,14 +18,27 @@ Pins the contract:
 """
 from __future__ import annotations
 
+import asyncio
 import json
-from collections.abc import AsyncIterator, Mapping
+from collections.abc import AsyncIterator, Coroutine, Mapping
 from contextlib import asynccontextmanager
-from typing import Any
-
-import pytest
+from typing import Any, TypeVar
 
 from mneme.logos_client import LogosClient, _extract_certificate_json
+
+T = TypeVar("T")
+
+
+def _run(coro: Coroutine[Any, Any, T]) -> T:
+    """Run an async coroutine to completion in a fresh event loop.
+
+    The Mneme test deps don't include pytest-asyncio (and we don't
+    want to add it just for one client), so async behaviour is
+    exercised through a trivial sync wrapper that creates and
+    disposes a per-test event loop. ``asyncio.run`` does the right
+    thing here because LogosClient is stateless across calls.
+    """
+    return asyncio.run(coro)
 
 # ── fakes ────────────────────────────────────────────────────────────────────
 
@@ -143,8 +156,7 @@ def test_from_env_strips_trailing_slash_and_keeps_secret() -> None:
 # ── certify_claim happy path ─────────────────────────────────────────────────
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_parses_production_response_shape() -> None:
+def test_certify_claim_parses_production_response_shape() -> None:
     """Drive the client end-to-end against a fake session that
     returns the exact CallToolResult shape Logos emits via FastMCP.
     """
@@ -154,7 +166,7 @@ async def test_certify_claim_parses_production_response_shape() -> None:
         "tok",
         session_factory=_factory_returning(session),
     )
-    cert = await client.certify_claim("rain implies wet")
+    cert = _run(client.certify_claim("rain implies wet"))
     assert cert is not None
     assert cert.verified is True
     assert cert.method == "z3_propositional"
@@ -166,8 +178,7 @@ async def test_certify_claim_parses_production_response_shape() -> None:
     assert session.last_arguments == {"argument": "rain implies wet"}
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_accepts_dict_response_for_test_ergonomics() -> None:
+def test_certify_claim_accepts_dict_response_for_test_ergonomics() -> None:
     """Tests don't always want to construct CallToolResult/TextContent;
     the client also accepts a bare dict that mimics Logos's payload."""
     session = _FakeSession({
@@ -181,13 +192,12 @@ async def test_certify_claim_accepts_dict_response_for_test_ergonomics() -> None
         "https://logos.example",
         session_factory=_factory_returning(session),
     )
-    cert = await client.certify_claim("p implies q")
+    cert = _run(client.certify_claim("p implies q"))
     assert cert is not None
     assert cert.verified is True
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_accepts_bare_json_string_response() -> None:
+def test_certify_claim_accepts_bare_json_string_response() -> None:
     """Same ergonomic shortcut for tests / debugging: a JSON-string
     response decodes to the same dict. Keeps the parser uniform
     across the three legit shapes."""
@@ -196,15 +206,14 @@ async def test_certify_claim_accepts_bare_json_string_response() -> None:
         "https://logos.example",
         session_factory=_factory_returning(session),
     )
-    cert = await client.certify_claim("p implies q")
+    cert = _run(client.certify_claim("p implies q"))
     assert cert is not None
 
 
 # ── certify_claim failure modes (must never raise) ───────────────────────────
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_returns_none_when_session_factory_raises() -> None:
+def test_certify_claim_returns_none_when_session_factory_raises() -> None:
     """Network outage → None + last_error populated. The caller's
     store_memory must keep working; we never propagate the exception."""
 
@@ -220,14 +229,13 @@ async def test_certify_claim_returns_none_when_session_factory_raises() -> None:
         "https://logos.example",
         session_factory=_factory_raising(_HTTPStatusError()),
     )
-    cert = await client.certify_claim("p implies q")
+    cert = _run(client.certify_claim("p implies q"))
     assert cert is None
     assert client.last_error is not None
     assert "HTTPStatusError" in client.last_error
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_returns_none_on_missing_certificate_json() -> None:
+def test_certify_claim_returns_none_on_missing_certificate_json() -> None:
     """Logos response without ``certificate_json`` (e.g. a bare error
     payload) → None + last_error mentioning the bad shape."""
     session = _FakeSession({"status": "error", "message": "bad input"})
@@ -235,12 +243,11 @@ async def test_certify_claim_returns_none_on_missing_certificate_json() -> None:
         "https://logos.example",
         session_factory=_factory_returning(session),
     )
-    assert await client.certify_claim("p implies q") is None
+    assert _run(client.certify_claim("p implies q")) is None
     assert "certificate_json" in (client.last_error or "")
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_returns_none_on_invalid_json_in_certificate() -> None:
+def test_certify_claim_returns_none_on_invalid_json_in_certificate() -> None:
     """``certificate_json`` present but not parseable → None.
     Defends against schema drift between Logos and Mneme's pydantic
     side without raising into the caller."""
@@ -249,12 +256,11 @@ async def test_certify_claim_returns_none_on_invalid_json_in_certificate() -> No
         "https://logos.example",
         session_factory=_factory_returning(session),
     )
-    assert await client.certify_claim("p implies q") is None
+    assert _run(client.certify_claim("p implies q")) is None
     assert "valid JSON" in (client.last_error or "")
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_returns_none_on_schema_mismatch() -> None:
+def test_certify_claim_returns_none_on_schema_mismatch() -> None:
     """Cert JSON parses but doesn't match ProofCertificate schema —
     e.g. Logos started returning a new claim_type Mneme doesn't know.
     None + last_error so the failure is visible without exception."""
@@ -265,12 +271,11 @@ async def test_certify_claim_returns_none_on_schema_mismatch() -> None:
         "https://logos.example",
         session_factory=_factory_returning(session),
     )
-    assert await client.certify_claim("p implies q") is None
+    assert _run(client.certify_claim("p implies q")) is None
     assert "schema validation" in (client.last_error or "")
 
 
-@pytest.mark.asyncio
-async def test_certify_claim_rejects_empty_argument_locally() -> None:
+def test_certify_claim_rejects_empty_argument_locally() -> None:
     """No round trip should happen for a blank argument — Logos would
     just bounce it. Pin this so we don't burn budget on no-ops.
     """
@@ -279,14 +284,13 @@ async def test_certify_claim_rejects_empty_argument_locally() -> None:
         "https://logos.example",
         session_factory=_factory_returning(session),
     )
-    assert await client.certify_claim("   ") is None
+    assert _run(client.certify_claim("   ")) is None
     # Crucial: session was never touched.
     assert session.last_tool_name is None
     assert "empty" in (client.last_error or "").lower()
 
 
-@pytest.mark.asyncio
-async def test_last_error_clears_on_successful_call_after_failure() -> None:
+def test_last_error_clears_on_successful_call_after_failure() -> None:
     """Caller chaining multiple calls should only see ``last_error``
     from the most recent call — otherwise a stale error after a
     later success would mislead any logging that reads ``last_error``.
@@ -297,10 +301,10 @@ async def test_last_error_clears_on_successful_call_after_failure() -> None:
         session_factory=_factory_returning(session),
     )
     # Force a failure first.
-    await client.certify_claim("")
+    _run(client.certify_claim(""))
     assert client.last_error is not None
     # Then a success.
-    cert = await client.certify_claim("p implies q")
+    cert = _run(client.certify_claim("p implies q"))
     assert cert is not None
     assert client.last_error is None
 
