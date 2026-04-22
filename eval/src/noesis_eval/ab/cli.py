@@ -31,6 +31,7 @@ from typing import IO, Callable, Iterable, Iterator
 from noesis_eval.alfworld_bench import (
     Task,
     build_default_suite,
+    build_memory_suite,
     build_stage3_suite,
 )
 from noesis_eval.alfworld_bench.env import MockAlfworldEnv
@@ -43,6 +44,7 @@ from .runner import run_episode
 SUITES = {
     "default": build_default_suite,
     "stage3": build_stage3_suite,
+    "memory": build_memory_suite,
 }
 
 
