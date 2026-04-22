@@ -68,6 +68,12 @@ class MCPAgent:
     on every call, so this class holds no per-task mutable state. That
     matters for suite-level A/B: an agent that remembers the *previous*
     task's observations would muddy the per-task delta.
+
+    ``max_budget_usd`` is a per-``act`` cost cap. The Claude CLI's
+    ``ClaudeAgentOptions.max_budget_usd`` aborts the subprocess once
+    its accounting crosses the threshold — a backstop for runaway
+    tool-use loops. Default None (no cap). Set this when running
+    real A/B sweeps to bound the damage from a misbehaving turn.
     """
 
     def __init__(
@@ -79,6 +85,7 @@ class MCPAgent:
         max_turns: int = DEFAULT_MAX_TURNS,
         system_prompt: str = SYSTEM_PROMPT,
         query_fn: QueryFn | None = None,
+        max_budget_usd: float | None = None,
     ) -> None:
         self.name = name
         self._model = model
@@ -86,6 +93,11 @@ class MCPAgent:
         self._max_turns = max_turns
         self._system_prompt = system_prompt
         self._query_fn: QueryFn = query_fn if query_fn is not None else query
+        if max_budget_usd is not None and max_budget_usd <= 0:
+            raise ValueError(
+                f"max_budget_usd must be positive, got {max_budget_usd}"
+            )
+        self._max_budget_usd = max_budget_usd
 
     def act(
         self, goal: str, observation: str, history: Sequence[ActionOutcome]
@@ -128,6 +140,7 @@ class MCPAgent:
             max_turns=self._max_turns,
             allowed_tools=allowed_tools,
             permission_mode="bypassPermissions",
+            max_budget_usd=self._max_budget_usd,
         )
 
         prompt = _format_prompt(goal, observation, history)
@@ -191,11 +204,40 @@ def noesis_mcp_servers_from_env(
     return servers
 
 
+_BUDGET_ENV_VAR = "NOESIS_AB_MAX_BUDGET_USD"
+"""Env-var override for the per-``act`` cost cap on the SDK agents.
+
+Set to a positive float to put a safety rail under both
+``build_treatment_agent`` and ``build_baseline_agent`` without
+plumbing a CLI flag through the wrapper. Intentionally named with
+the ``NOESIS_`` prefix so it matches the service-URL env envelope
+the rest of the harness follows.
+"""
+
+
+def _max_budget_from_env() -> float | None:
+    raw = os.getenv(_BUDGET_ENV_VAR)
+    if raw is None or not raw.strip():
+        return None
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"{_BUDGET_ENV_VAR}={raw!r} is not a valid float"
+        ) from exc
+    if value <= 0:
+        raise RuntimeError(
+            f"{_BUDGET_ENV_VAR}={raw!r} must be positive"
+        )
+    return value
+
+
 def build_treatment_agent(
     *,
     model: str = "claude-sonnet-4-6",
     max_turns: int = DEFAULT_MAX_TURNS,
     query_fn: QueryFn | None = None,
+    max_budget_usd: float | None = None,
 ) -> MCPAgent:
     """MCPAgent with every reachable Noesis service wired in.
 
@@ -203,6 +245,10 @@ def build_treatment_agent(
     the 'treatment' side of the A/B without any Noesis tools would be
     the same experiment as baseline, which is almost certainly a
     misconfiguration, not an intention.
+
+    If ``max_budget_usd`` is None, falls back to the
+    ``NOESIS_AB_MAX_BUDGET_USD`` env var so CI and the wrapper can
+    set a cap without threading a CLI flag.
     """
     servers = noesis_mcp_servers_from_env()
     if not servers:
@@ -218,6 +264,10 @@ def build_treatment_agent(
         mcp_servers=servers,
         max_turns=max_turns,
         query_fn=query_fn,
+        max_budget_usd=(
+            max_budget_usd if max_budget_usd is not None
+            else _max_budget_from_env()
+        ),
     )
 
 
@@ -226,9 +276,13 @@ def build_baseline_agent(
     model: str = "claude-sonnet-4-6",
     max_turns: int = DEFAULT_MAX_TURNS,
     query_fn: QueryFn | None = None,
+    max_budget_usd: float | None = None,
 ) -> MCPAgent:
     """MCPAgent with no Noesis servers — same model / prompt, no memory
     / planning / goal tooling. The baseline side of the canonical A/B.
+
+    Same env-var fallback for ``max_budget_usd`` as the treatment
+    factory so both sides share a budget rail by default.
     """
     return MCPAgent(
         name="mcp-baseline",
@@ -236,6 +290,10 @@ def build_baseline_agent(
         mcp_servers={},
         max_turns=max_turns,
         query_fn=query_fn,
+        max_budget_usd=(
+            max_budget_usd if max_budget_usd is not None
+            else _max_budget_from_env()
+        ),
     )
 
 

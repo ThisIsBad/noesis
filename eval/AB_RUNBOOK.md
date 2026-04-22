@@ -51,6 +51,13 @@ python -m noesis_eval.ab ab \
 * `--samples 3` replays each task three times per side — enough to
   shrink the per-task confidence interval without 10× cost. Use 5+
   once you want narrower CIs.
+* **Cost safety rail (recommended):** set
+  `NOESIS_AB_MAX_BUDGET_USD=X` in the shell/env before running —
+  both `mcp-treatment` and `mcp-baseline` pick it up and pass it to
+  the Claude CLI, which aborts any single `act` call that crosses
+  the threshold. Cheap insurance against a runaway tool loop.
+  Typical value: `0.25` (per-turn cap; a full stage3 × 3-sample run
+  can still total $20–40 in the aggregate).
 * `--suite stage3` is the 50-task suite. Use `--suite default` (5
   tasks) for a smoke run.
 * `--out-dir` defaults to `ab-runs/`. Stamping it with a UTC

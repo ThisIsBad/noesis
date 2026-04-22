@@ -283,6 +283,102 @@ def test_treatment_and_baseline_share_model_prompt_and_max_turns(
     assert t_opts.max_turns == b_opts.max_turns
 
 
+# ── budget cap ───────────────────────────────────────────────────────────────
+
+
+def test_max_budget_usd_propagates_to_sdk_options(fake_sdk: _FakeSdk) -> None:
+    """The cap is the last line of defence against a runaway tool-use
+    loop burning money. If MCPAgent drops it or defaults it away, the
+    CLI subprocess has no budget rail and a bug could spend unbounded
+    $ before the runner's max_turns circuit breaker fires."""
+    agent = MCPAgent(query_fn=fake_sdk.query_fn, max_budget_usd=0.25)
+    agent.act("g", "o", [])
+    assert fake_sdk.captured_options.max_budget_usd == 0.25
+
+
+def test_max_budget_usd_defaults_to_none(fake_sdk: _FakeSdk) -> None:
+    """Left unset, the agent must pass None through rather than a
+    made-up default — otherwise callers couldn't opt out of the cap
+    for a one-off exploratory run."""
+    agent = MCPAgent(query_fn=fake_sdk.query_fn)
+    agent.act("g", "o", [])
+    assert fake_sdk.captured_options.max_budget_usd is None
+
+
+def test_mcp_agent_rejects_nonpositive_budget() -> None:
+    """0 or negative would silently pass but mean nothing useful at
+    the CLI layer. Fail fast at construction."""
+    with pytest.raises(ValueError, match="positive"):
+        MCPAgent(max_budget_usd=0)
+    with pytest.raises(ValueError, match="positive"):
+        MCPAgent(max_budget_usd=-1.5)
+
+
+def test_build_treatment_reads_budget_from_env(
+    monkeypatch: pytest.MonkeyPatch, fake_sdk: _FakeSdk
+) -> None:
+    """CI + the ab wrapper don't thread a --max-budget-usd flag
+    through every layer — they set NOESIS_AB_MAX_BUDGET_USD in the
+    service env envelope. Pin that the factory honours it."""
+    monkeypatch.setenv("NOESIS_MNEME_URL", "https://mneme.example")
+    monkeypatch.setenv("NOESIS_AB_MAX_BUDGET_USD", "2.50")
+    agent = build_treatment_agent(query_fn=fake_sdk.query_fn)
+    agent.act("g", "o", [])
+    assert fake_sdk.captured_options.max_budget_usd == 2.50
+
+
+def test_build_baseline_reads_budget_from_env(
+    monkeypatch: pytest.MonkeyPatch, fake_sdk: _FakeSdk
+) -> None:
+    monkeypatch.setenv("NOESIS_AB_MAX_BUDGET_USD", "1.00")
+    agent = build_baseline_agent(query_fn=fake_sdk.query_fn)
+    agent.act("g", "o", [])
+    assert fake_sdk.captured_options.max_budget_usd == 1.00
+
+
+def test_factory_explicit_arg_overrides_env(
+    monkeypatch: pytest.MonkeyPatch, fake_sdk: _FakeSdk
+) -> None:
+    """Explicit argument beats env — normal precedence, but pin it so
+    a future refactor that swaps the order doesn't silently flip
+    precedence and surprise callers."""
+    monkeypatch.setenv("NOESIS_AB_MAX_BUDGET_USD", "9.99")
+    agent = build_baseline_agent(
+        query_fn=fake_sdk.query_fn, max_budget_usd=0.50
+    )
+    agent.act("g", "o", [])
+    assert fake_sdk.captured_options.max_budget_usd == 0.50
+
+
+def test_factory_rejects_invalid_env_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NOESIS_MNEME_URL", "https://mneme.example")
+    monkeypatch.setenv("NOESIS_AB_MAX_BUDGET_USD", "not-a-number")
+    with pytest.raises(RuntimeError, match="not a valid float"):
+        build_treatment_agent()
+
+
+def test_factory_rejects_nonpositive_env_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NOESIS_AB_MAX_BUDGET_USD", "0")
+    with pytest.raises(RuntimeError, match="positive"):
+        build_baseline_agent()
+
+
+def test_env_var_unset_or_blank_uses_no_cap(
+    monkeypatch: pytest.MonkeyPatch, fake_sdk: _FakeSdk
+) -> None:
+    """Blank string must not be parsed as 0 — otherwise a CI env
+    that forwards the var even when it's empty would fail all
+    downstream runs."""
+    monkeypatch.setenv("NOESIS_AB_MAX_BUDGET_USD", "   ")
+    agent = build_baseline_agent(query_fn=fake_sdk.query_fn)
+    agent.act("g", "o", [])
+    assert fake_sdk.captured_options.max_budget_usd is None
+
+
 # ── asyncio isolation ────────────────────────────────────────────────────────
 
 

@@ -102,6 +102,10 @@ jobs:
         id: ab
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Per-act cost cap — cheap insurance against a runaway
+          # tool loop. Falls back to the secret if set, otherwise
+          # a conservative default.
+          NOESIS_AB_MAX_BUDGET_USD: ${{ secrets.NOESIS_AB_MAX_BUDGET_USD || '0.25' }}
           NOESIS_MNEME_URL: ${{ secrets.NOESIS_MNEME_URL }}
           NOESIS_MNEME_SECRET: ${{ secrets.NOESIS_MNEME_SECRET }}
           NOESIS_TELOS_URL: ${{ secrets.NOESIS_TELOS_URL }}
