@@ -1,11 +1,19 @@
 """CLI for the A/B harness.
 
-Three subcommands:
+Four subcommands:
 
     python -m noesis_eval.ab run <agent> [--suite default|stage3] --output run.jsonl
     python -m noesis_eval.ab diff <treatment.jsonl> <baseline.jsonl>
     python -m noesis_eval.ab ab --treatment <agent> --baseline <agent> \\
         [--samples N] [--out-dir DIR]
+    python -m noesis_eval.ab history <ab-runs-dir>
+
+``history`` walks a directory of past ``ab`` invocations (each a
+subdir containing a treatment + baseline JSONL and optionally a
+``delta.json``), prints the per-run headline numbers, then pools
+every episode across every run and prints a single ``SuiteDelta`` on
+the pooled data — which is how you tighten the CI without paying
+for another run.
 
 ``run`` drives one agent across a task suite and writes one JSON object
 per episode to stdout or ``--output``. ``diff`` loads two JSONL files,
@@ -278,6 +286,160 @@ def _cmd_ab(args: argparse.Namespace) -> int:
     return 0
 
 
+def _discover_ab_runs(root: Path) -> list[tuple[Path, Path, Path]]:
+    """Find every valid ``ab`` run directory under ``root``.
+
+    An ``ab`` run directory contains exactly one ``*.jsonl`` per
+    agent side. A run is "valid" for history-pooling purposes if
+    it holds **exactly two** JSONL files — one treatment, one
+    baseline. Subdirs with other file counts are silently skipped
+    (e.g. in-progress runs that only got treatment through, or a
+    leftover delta.json folder); ``history`` prints a warning so
+    the caller sees what was excluded.
+
+    Returns tuples of ``(run_dir, first_jsonl, second_jsonl)`` where
+    the first/second order is alphabetical for stability — the
+    pairing into treatment vs baseline happens later based on the
+    ``agent`` field inside the records, not filename.
+    """
+    runs: list[tuple[Path, Path, Path]] = []
+    for entry in sorted(root.iterdir()):
+        if not entry.is_dir():
+            continue
+        jsonls = sorted(entry.glob("*.jsonl"))
+        if len(jsonls) != 2:
+            print(
+                f"history: skipping {entry.name} — expected 2 JSONL "
+                f"files, found {len(jsonls)}",
+                file=sys.stderr,
+            )
+            continue
+        runs.append((entry, jsonls[0], jsonls[1]))
+    return runs
+
+
+def _cmd_history(args: argparse.Namespace) -> int:
+    """Walk a directory of past ``ab`` runs, print per-run + pooled deltas.
+
+    Per-run output is a compact one-line-per-run table — just the
+    headline numbers so weekly trends are visible at a glance. The
+    pooled row at the bottom is the single most informative piece
+    of output: concatenate every matching treatment + baseline
+    episode across every run, diff once, get a CI that's as tight
+    as the total sample count allows.
+
+    Pooling is safe because A/B record files are additive JSONL —
+    the whole harness was designed around this from the start.
+    """
+    root: Path = args.dir
+    if not root.is_dir():
+        raise SystemExit(f"{root}: not a directory")
+
+    runs = _discover_ab_runs(root)
+    if not runs:
+        raise SystemExit(f"{root}: no valid ab run subdirs found")
+
+    # Accumulator maps agent name → flat list of episodes drawn
+    # from every run, used to compute the pooled delta at the end.
+    pooled: dict[str, list[EpisodeResult]] = {}
+    # Tally of which agent played the treatment role in each run,
+    # so the pooled summary follows the majority rather than a
+    # brittle alphabetical default that can flip the sign.
+    treatment_role: dict[str, int] = {}
+
+    # Per-run table header — fixed-width so copy-paste into docs /
+    # GitHub comments renders as a clean code block.
+    print(
+        f"{'run':<30}  {'t':<12}  {'b':<12}  "
+        f"{'delta':>8}  {'ci95':>12}  {'p':>7}"
+    )
+    print("-" * 90)
+
+    for run_dir, a_path, b_path in runs:
+        side_a = _load_suite_results(a_path)
+        side_b = _load_suite_results(b_path)
+        # Decide which side is treatment vs baseline by consulting
+        # the matching delta.json if it's there; fall back to
+        # alphabetical otherwise. This matters when weekly dirs
+        # have the same agents in both positions and pooling across
+        # swaps would cancel signal.
+        delta_path = run_dir / "delta.json"
+        treatment_agent: str | None = None
+        if delta_path.exists():
+            try:
+                delta_summary = json.loads(delta_path.read_text(encoding="utf-8"))
+                treatment_agent = delta_summary.get("treatment")
+            except (json.JSONDecodeError, OSError):
+                treatment_agent = None
+        if treatment_agent is None or treatment_agent not in (
+            side_a.agent, side_b.agent,
+        ):
+            treatment, baseline = side_a, side_b
+        elif treatment_agent == side_a.agent:
+            treatment, baseline = side_a, side_b
+        else:
+            treatment, baseline = side_b, side_a
+
+        delta = treatment.diff(baseline)
+
+        # Row.
+        ci_str = f"[{delta.ci95_low:+.3f},{delta.ci95_high:+.3f}]"
+        sig = "*" if delta.significant_at_05 else " "
+        print(
+            f"{run_dir.name:<30}  {treatment.agent[:12]:<12}  "
+            f"{baseline.agent[:12]:<12}  "
+            f"{delta.delta:>+8.3f}  {ci_str:>12}  "
+            f"{delta.p_value:>6.4f}{sig}"
+        )
+
+        # Pool.
+        for ep in treatment.episodes:
+            pooled.setdefault(treatment.agent, []).append(ep)
+        for ep in baseline.episodes:
+            pooled.setdefault(baseline.agent, []).append(ep)
+        treatment_role[treatment.agent] = (
+            treatment_role.get(treatment.agent, 0) + 1
+        )
+
+    # Pool requires exactly two agent names across every run. If
+    # weekly runs swap agents around (e.g. a week of mcp-treatment
+    # vs mcp-baseline and then a week of mcp-treatment vs null),
+    # pooling straight across would be meaningless. Flag and
+    # refuse rather than quietly averaging noise.
+    if len(pooled) != 2:
+        print()
+        print(
+            f"history: found {len(pooled)} distinct agent names "
+            f"across runs ({sorted(pooled)}); skipping pooled delta.",
+            file=sys.stderr,
+        )
+        return 0
+
+    agent_names = sorted(pooled)
+    # "Treatment" role for pooling = whichever agent played
+    # treatment most often across the runs. Alphabetical as
+    # tiebreaker so the output is deterministic.
+    treatment_name = max(
+        agent_names,
+        key=lambda name: (treatment_role.get(name, 0), -agent_names.index(name)),
+    )
+    baseline_name = [n for n in agent_names if n != treatment_name][0]
+
+    pooled_treatment = SuiteResults(agent=treatment_name)
+    for ep in pooled[treatment_name]:
+        pooled_treatment.record(ep)
+    pooled_baseline = SuiteResults(agent=baseline_name)
+    for ep in pooled[baseline_name]:
+        pooled_baseline.record(ep)
+
+    pooled_delta = pooled_treatment.diff(pooled_baseline)
+
+    print()
+    print("Pooled across all runs:")
+    print(_format_delta(pooled_delta))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="noesis_eval.ab",
@@ -370,6 +532,24 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     ab_p.set_defaults(func=_cmd_ab)
+
+    history_p = sub.add_parser(
+        "history",
+        help=(
+            "walk a directory of past ab runs, print per-run headline "
+            "numbers plus a pooled delta across all of them"
+        ),
+    )
+    history_p.add_argument(
+        "dir",
+        type=Path,
+        help=(
+            "directory whose immediate subdirs are ab-run outputs "
+            "(each containing two JSONL files). Typically the "
+            "out-dir from prior `ab` invocations."
+        ),
+    )
+    history_p.set_defaults(func=_cmd_history)
 
     return parser
 
