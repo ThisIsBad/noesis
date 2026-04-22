@@ -1,16 +1,20 @@
 """CLI for the A/B harness.
 
-Two subcommands:
+Three subcommands:
 
     python -m noesis_eval.ab run <agent> [--suite default|stage3] --output run.jsonl
     python -m noesis_eval.ab diff <treatment.jsonl> <baseline.jsonl>
+    python -m noesis_eval.ab ab --treatment <agent> --baseline <agent> \\
+        [--samples N] [--out-dir DIR]
 
 ``run`` drives one agent across a task suite and writes one JSON object
 per episode to stdout or ``--output``. ``diff`` loads two JSONL files,
 pairs episodes by ``task_id``, and prints a summary plus per-task flip
-table. JSONL is the record format so multiple independent runs can be
-concatenated and re-diffed, which is how we'll measure variance once
-the API-backed agent lands.
+table. ``ab`` is the canonical-experiment wrapper: runs both sides,
+writes both JSONLs into a single output directory, then prints the
+``SuiteDelta`` so the user gets the answer in one invocation. JSONL is
+the record format so multiple independent runs can be concatenated and
+re-diffed across machines.
 
 Kept deliberately argparse-only (no Click / Typer) so the eval package
 doesn't grow dependencies for one CLI.
@@ -194,6 +198,84 @@ def _cmd_diff(args: argparse.Namespace) -> int:
     return 0
 
 
+def _build_agent_or_die(name: str, suite: list[Task]) -> Agent:
+    if name not in AGENT_FACTORIES:
+        raise SystemExit(
+            f"unknown agent {name!r}; choose from "
+            f"{sorted(AGENT_FACTORIES)}"
+        )
+    return AGENT_FACTORIES[name](suite)
+
+
+def _cmd_ab(args: argparse.Namespace) -> int:
+    """Canonical A/B in one shot: build both agents, run them across
+    the same suite, write JSONLs, print the ``SuiteDelta``.
+
+    The treatment/baseline names refer to entries in ``AGENT_FACTORIES``
+    so the wrapper inherits whatever agents the rest of the CLI knows
+    about — e.g. ``mcp-treatment`` / ``mcp-baseline`` once the SDK
+    factories are wired in. No special-cased "this is the canonical
+    experiment" flag: the experiment IS picking those names.
+    """
+    if args.samples < 1:
+        raise SystemExit(f"--samples must be >= 1, got {args.samples}")
+    if args.treatment == args.baseline:
+        # Two runs of the same agent measure noise, not a delta. The
+        # harness doesn't refuse, but it's almost always a typo, so
+        # warn loudly to stderr instead of silently producing a near-
+        # zero "result".
+        print(
+            f"warning: --treatment and --baseline are both "
+            f"{args.treatment!r}; you'll be measuring run-to-run "
+            f"noise, not a treatment effect.",
+            file=sys.stderr,
+        )
+
+    suite = SUITES[args.suite]()
+
+    out_dir: Path = args.out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    treatment_path = out_dir / f"{args.treatment}.jsonl"
+    baseline_path = out_dir / f"{args.baseline}.jsonl"
+    delta_path = out_dir / "delta.json"
+
+    # Build both agents up front so a typo in --baseline fails before
+    # we burn budget on the treatment run.
+    treatment_agent = _build_agent_or_die(args.treatment, suite)
+    baseline_agent = _build_agent_or_die(args.baseline, suite)
+
+    print(
+        f"running treatment {args.treatment!r} on suite "
+        f"{args.suite!r} ({args.samples} sample(s) per task) "
+        f"→ {treatment_path}",
+        file=sys.stderr,
+    )
+    with treatment_path.open("w", encoding="utf-8") as f:
+        treatment_results = _run(
+            treatment_agent, suite, f, samples=args.samples
+        )
+
+    print(
+        f"running baseline  {args.baseline!r} on suite "
+        f"{args.suite!r} ({args.samples} sample(s) per task) "
+        f"→ {baseline_path}",
+        file=sys.stderr,
+    )
+    with baseline_path.open("w", encoding="utf-8") as f:
+        baseline_results = _run(
+            baseline_agent, suite, f, samples=args.samples
+        )
+
+    delta = treatment_results.diff(baseline_results)
+    delta_path.write_text(
+        json.dumps(delta.summary(), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(_format_delta(delta))
+    print(f"\nwrote {delta_path}", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="noesis_eval.ab",
@@ -233,6 +315,59 @@ def build_parser() -> argparse.ArgumentParser:
     diff_p.add_argument("treatment", type=Path, help="treatment JSONL file")
     diff_p.add_argument("baseline", type=Path, help="baseline JSONL file")
     diff_p.set_defaults(func=_cmd_diff)
+
+    ab_p = sub.add_parser(
+        "ab",
+        help=(
+            "run treatment + baseline + diff in one shot — the "
+            "canonical-A/B convenience wrapper"
+        ),
+    )
+    ab_p.add_argument(
+        "--treatment",
+        required=True,
+        help=(
+            "treatment agent name. The canonical experiment uses "
+            "mcp-treatment (Claude with the Noesis MCP servers wired "
+            "in)."
+        ),
+    )
+    ab_p.add_argument(
+        "--baseline",
+        required=True,
+        help=(
+            "baseline agent name. The canonical experiment uses "
+            "mcp-baseline (same Claude config, no Noesis servers)."
+        ),
+    )
+    ab_p.add_argument(
+        "--suite",
+        default="stage3",
+        choices=sorted(SUITES),
+        help="task suite (default: %(default)s)",
+    )
+    ab_p.add_argument(
+        "--samples",
+        type=int,
+        default=1,
+        help=(
+            "replay each task N times per side (default: 1). "
+            "Higher values shrink the per-task confidence interval at "
+            "the cost of N× the budget; 3-5 is a reasonable starting "
+            "point for stochastic agents."
+        ),
+    )
+    ab_p.add_argument(
+        "--out-dir",
+        type=Path,
+        default=Path("ab-runs"),
+        help=(
+            "directory to write <treatment>.jsonl, <baseline>.jsonl, "
+            "and delta.json (default: %(default)s). Created if absent. "
+            "Existing files at those paths are overwritten."
+        ),
+    )
+    ab_p.set_defaults(func=_cmd_ab)
 
     return parser
 
