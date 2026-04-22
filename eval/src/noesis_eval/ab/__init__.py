@@ -12,21 +12,25 @@ action — the real ReAct-style loop Claude actually runs. The harness
 drives the same ``MockAlfworldEnv`` suite against two ``Agent``
 implementations and diffs their ``SuiteResults``.
 
-Three reference agents ship in this PR:
+Four reference agents ship:
 
     * ``NullAgent`` — fixed benign action; establishes the failure floor
       and pins the env's step contract against agents that never learn.
     * ``OracleAgent`` — knows every task's canonical plan; establishes
       the ceiling you'd see from a perfect policy.
-    * ``MCPAgent`` — stub awaiting ``claude-agent-sdk`` + API wiring.
-      The actual experiment — Claude-with-Noesis vs. Claude-alone — is
-      one follow-up PR away once that slot is filled.
-
-Kept deliberately API-free so this PR is CI-runnable with no secrets.
-The expensive piece (a real Anthropic API call per step × N tasks ×
-two configurations) lands in the follow-up, behind an opt-in CLI.
+    * ``MCPAgent`` — turn-by-turn Claude agent via ``claude-agent-sdk``
+      with a pluggable set of MCP tool servers. The same ``MCPAgent``
+      class powers both treatment (Noesis servers wired in) and
+      baseline (no Noesis servers) so the only variable in the A/B is
+      the MCP surface.
 """
-from .agent import ActionOutcome, Agent, MCPAgent, NullAgent, OracleAgent
+from .agent import ActionOutcome, Agent, NullAgent, OracleAgent
+from .mcp_agent import (
+    MCPAgent,
+    build_baseline_agent,
+    build_treatment_agent,
+    noesis_mcp_servers_from_env,
+)
 from .results import EpisodeResult, SuiteDelta, SuiteResults
 from .runner import run_ab, run_episode, run_suite
 
@@ -39,6 +43,9 @@ __all__ = [
     "OracleAgent",
     "SuiteDelta",
     "SuiteResults",
+    "build_baseline_agent",
+    "build_treatment_agent",
+    "noesis_mcp_servers_from_env",
     "run_ab",
     "run_episode",
     "run_suite",

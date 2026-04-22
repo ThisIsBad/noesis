@@ -127,38 +127,3 @@ class OracleAgent:
         return ""
 
 
-class MCPAgent:
-    """STUB — real implementation lands once ``claude-agent-sdk`` is wired up.
-
-    The eventual contract: on each ``act`` call, run one turn of a
-    Claude agent loop with a configurable set of MCP tool servers
-    attached. The A/B experiment runs the *same* model in two
-    configurations — one with every Noesis MCP server (Mneme, Telos,
-    Praxis, Logos, Episteme, Empiria, Techne, Kosmos), one with none —
-    and diffs the resulting ``SuiteResults``.
-
-    Keeping the slot explicit (rather than deferring the whole class)
-    lets the runner and suite-diff machinery be unit-tested against
-    the Oracle / Null baselines in this PR, so when the real agent
-    lands the only moving piece is the SDK wiring.
-    """
-    name = "mcp"
-
-    def __init__(
-        self,
-        *,
-        model: str = "claude-sonnet-4-6",
-        mcp_servers: Sequence[str] = (),
-    ) -> None:
-        self._model = model
-        self._mcp_servers = tuple(mcp_servers)
-
-    def act(
-        self, goal: str, observation: str, history: Sequence[ActionOutcome]
-    ) -> str:
-        raise NotImplementedError(
-            "MCPAgent awaits a follow-up PR that pulls in claude-agent-sdk "
-            "and wires the configured MCP servers into a real turn loop. "
-            "The A/B harness itself — env, runner, suite-diff — is pinned "
-            "by unit tests against the Oracle / Null baselines."
-        )
