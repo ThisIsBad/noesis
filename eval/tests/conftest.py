@@ -217,17 +217,34 @@ async def mneme_cleanup(mneme_url: str, mneme_secret: str) -> AsyncIterator[list
     Keeps the deployed Mneme store from accumulating per-run e2e records. The
     fixture depends on ``mneme_url`` so it skips alongside the test when
     ``NOESIS_MNEME_URL`` is unset — no forget calls are attempted.
+
+    Teardown is strictly best-effort: if the Railway edge drops the
+    connection mid-flight or the session handshake times out (common
+    after a long integration run has warmed up then let the container
+    idle for a few seconds), we swallow the exception rather than
+    failing the whole test. The tests themselves already passed by
+    the time this runs — failing CI on cleanup would be a false
+    alarm. Leftover memories are tolerable; the deployed Mneme has
+    compaction elsewhere.
     """
     memory_ids: list[str] = []
     yield memory_ids
     if not memory_ids:
         return
-    async with _mcp_session(mneme_url, mneme_secret) as session:
-        for mid in memory_ids:
-            try:
-                await session.call_tool(
-                    "forget_memory",
-                    {"memory_id": mid, "reason": "e2e cleanup"},
-                )
-            except Exception:  # pragma: no cover — best-effort teardown
-                pass
+    try:
+        async with _mcp_session(mneme_url, mneme_secret) as session:
+            for mid in memory_ids:
+                try:
+                    await session.call_tool(
+                        "forget_memory",
+                        {"memory_id": mid, "reason": "e2e cleanup"},
+                    )
+                except Exception:  # pragma: no cover — best-effort teardown
+                    pass
+    except BaseException:  # pragma: no cover — session-open flake
+        # ``_mcp_session`` can surface McpError / BaseExceptionGroup
+        # from the SSE handshake or from anyio task groups. Catch
+        # BaseException (not just Exception) so CancelledError from
+        # anyio cleanup doesn't escape either — teardown MUST NOT
+        # mark a passing test as failed.
+        pass
