@@ -25,6 +25,7 @@ EXPECTED_TOOLS: dict[str, set[str]] = {
     "forget_memory": {"memory_id", "reason"},
     "list_proven_beliefs": set(),
     "consolidate_memories": {"similarity_threshold"},
+    "certify_memory": {"memory_id"},
 }
 
 JSON_STRING_PARAMS: set[tuple[str, str]] = {

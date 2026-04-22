@@ -12,6 +12,7 @@ from starlette.routing import Route
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .core import MnemeCore
+from .logos_client import LogosClient
 from .tracing import get_tracer
 
 logging.basicConfig(
@@ -37,6 +38,13 @@ try:
 except Exception:
     log.exception("mneme core init failed at %s", _data_dir)
     raise
+
+# Logos sidecar: read-only verification calls go direct, bypassing
+# Claude as orchestrator. Configured via LOGOS_URL / LOGOS_SECRET env;
+# unset → certify_memory returns a clear "not configured" payload
+# instead of a broken call.
+_logos_client: LogosClient | None = LogosClient.from_env()
+log.info("mneme logos sidecar: configured=%s", _logos_client is not None)
 
 # FastMCP enables DNS-rebinding protection by default and only allows
 # localhost Host headers. Behind Railway's edge the public host is e.g.
@@ -155,6 +163,74 @@ def list_proven_beliefs() -> str:
     with get_tracer().span("list_proven_beliefs"):
         beliefs = _core.list_proven()
         return json.dumps([b.model_dump() for b in beliefs], default=str)
+
+
+async def _certify_memory_impl(
+    memory_id: str,
+    core: MnemeCore,
+    logos_client: LogosClient | None,
+) -> str:
+    """Pure async implementation of the ``certify_memory`` MCP tool.
+
+    Lives outside the ``@mcp.tool`` decorator so unit tests can call
+    it directly with a tmp ``MnemeCore`` and a fake ``LogosClient``,
+    without going through FastMCP's transport plumbing.
+    """
+    if logos_client is None:
+        return json.dumps({"status": "logos_unconfigured"})
+
+    memory = core.get(memory_id)
+    if memory is None:
+        return json.dumps({"status": "not_found", "memory_id": memory_id})
+
+    cert = await logos_client.certify_claim(memory.content)
+    if cert is None:
+        return json.dumps({
+            "status": "logos_unreachable",
+            "memory_id": memory_id,
+            "error": logos_client.last_error or "unknown",
+        })
+
+    updated = core.attach_certificate(memory_id, cert)
+    if updated is None:  # pragma: no cover — forget-race after the get()
+        return json.dumps({"status": "not_found", "memory_id": memory_id})
+
+    return json.dumps({
+        "status": "certified" if cert.verified else "refuted",
+        "memory_id": memory_id,
+        "verified": cert.verified,
+        "method": cert.method,
+        "proven": updated.proven,
+    })
+
+
+@mcp.tool()
+async def certify_memory(memory_id: str) -> str:
+    """Ask Logos to verify an existing memory and stamp the result.
+
+    Calls Logos's ``certify_claim`` over the configured sidecar with
+    the memory's ``content`` as the argument. On success, attaches
+    the returned ``ProofCertificate`` to the memory in place,
+    setting ``proven`` to the certificate's ``verified`` flag.
+
+    Returns a JSON payload with one of:
+        {"status": "certified",  "memory_id": ..., "verified": bool,
+         "method": "...", "proven": bool}
+        {"status": "refuted",    "memory_id": ..., "method": "...",
+         "proven": false}
+        {"status": "not_found",  "memory_id": ...}
+        {"status": "logos_unconfigured"}                    (no LOGOS_URL)
+        {"status": "logos_unreachable", "error": "..."}     (network etc.)
+
+    Never raises — the caller's orchestration loop must keep working
+    even when Logos is down or the claim isn't well-formed enough to
+    parse. ``last_error`` from the underlying client is surfaced in
+    the ``error`` field so logs stay diagnostic.
+    """
+    with get_tracer().span(
+        "certify_memory", metadata={"memory_id": memory_id}
+    ):
+        return await _certify_memory_impl(memory_id, _core, _logos_client)
 
 
 @mcp.tool()
