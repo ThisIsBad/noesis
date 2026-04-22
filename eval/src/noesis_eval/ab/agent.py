@@ -15,6 +15,24 @@ from typing import Protocol, Sequence
 
 
 @dataclass(frozen=True)
+class AgentTelemetry:
+    """Per-episode cost counters drained from an agent after each run.
+
+    Integer fields default to 0 so deterministic agents (Oracle, Null)
+    never need to implement ``drain_telemetry``. The runner falls back
+    to a zeroed ``AgentTelemetry`` for any agent without the method.
+
+    Wall time is not carried here — the runner owns the step loop and
+    measures it directly. Tokens / tool-calls are agent-internal and
+    only the agent (e.g. MCPAgent draining SDK result messages) can
+    see them.
+    """
+    tokens_in: int = 0
+    tokens_out: int = 0
+    tool_calls: int = 0
+
+
+@dataclass(frozen=True)
 class ActionOutcome:
     """One (action, observation, reward) triple from an episode.
 
