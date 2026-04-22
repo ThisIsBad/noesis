@@ -54,12 +54,27 @@ _RETRY_EXCEPTIONS: tuple[type[BaseException], ...] = (
     httpx.ReadTimeout,
     httpx.RemoteProtocolError,
 )
+_MCP_RETRYABLE_MESSAGES = ("Connection closed", "Timed out")
+"""MCP-layer error messages that mean transport failure (worth
+retrying), not protocol/tool error (not worth retrying). Matching
+on message text is coarse but the SDK's McpError wraps transport
+timeouts with these exact strings — see ``mcp.shared.session.send_request``.
+Unknown McpError messages fall through and surface the real failure."""
 
 
 def _is_retryable_leaf(exc: BaseException) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in _RETRY_STATUS
-    return isinstance(exc, _RETRY_EXCEPTIONS)
+    if isinstance(exc, _RETRY_EXCEPTIONS):
+        return True
+    # Match McpError by class name instead of importing at module load,
+    # so this module stays importable before the mcp package is pulled
+    # in and so tests that monkeypatch the MCP client don't break the
+    # classifier.
+    if type(exc).__name__ == "McpError":
+        msg = str(exc)
+        return any(needle in msg for needle in _MCP_RETRYABLE_MESSAGES)
+    return False
 
 
 def _is_retryable(exc: BaseException) -> bool:
