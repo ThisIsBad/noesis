@@ -54,12 +54,27 @@ _RETRY_EXCEPTIONS: tuple[type[BaseException], ...] = (
     httpx.ReadTimeout,
     httpx.RemoteProtocolError,
 )
+_MCP_RETRYABLE_MESSAGES = ("Connection closed", "Timed out")
+"""MCP-layer error messages that mean transport failure (worth
+retrying), not protocol/tool error (not worth retrying). Matching
+on message text is coarse but the SDK's McpError wraps transport
+timeouts with these exact strings — see ``mcp.shared.session.send_request``.
+Unknown McpError messages fall through and surface the real failure."""
 
 
 def _is_retryable_leaf(exc: BaseException) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in _RETRY_STATUS
-    return isinstance(exc, _RETRY_EXCEPTIONS)
+    if isinstance(exc, _RETRY_EXCEPTIONS):
+        return True
+    # Match McpError by class name instead of importing at module load,
+    # so this module stays importable before the mcp package is pulled
+    # in and so tests that monkeypatch the MCP client don't break the
+    # classifier.
+    if type(exc).__name__ == "McpError":
+        msg = str(exc)
+        return any(needle in msg for needle in _MCP_RETRYABLE_MESSAGES)
+    return False
 
 
 def _is_retryable(exc: BaseException) -> bool:
@@ -217,17 +232,34 @@ async def mneme_cleanup(mneme_url: str, mneme_secret: str) -> AsyncIterator[list
     Keeps the deployed Mneme store from accumulating per-run e2e records. The
     fixture depends on ``mneme_url`` so it skips alongside the test when
     ``NOESIS_MNEME_URL`` is unset — no forget calls are attempted.
+
+    Teardown is strictly best-effort: if the Railway edge drops the
+    connection mid-flight or the session handshake times out (common
+    after a long integration run has warmed up then let the container
+    idle for a few seconds), we swallow the exception rather than
+    failing the whole test. The tests themselves already passed by
+    the time this runs — failing CI on cleanup would be a false
+    alarm. Leftover memories are tolerable; the deployed Mneme has
+    compaction elsewhere.
     """
     memory_ids: list[str] = []
     yield memory_ids
     if not memory_ids:
         return
-    async with _mcp_session(mneme_url, mneme_secret) as session:
-        for mid in memory_ids:
-            try:
-                await session.call_tool(
-                    "forget_memory",
-                    {"memory_id": mid, "reason": "e2e cleanup"},
-                )
-            except Exception:  # pragma: no cover — best-effort teardown
-                pass
+    try:
+        async with _mcp_session(mneme_url, mneme_secret) as session:
+            for mid in memory_ids:
+                try:
+                    await session.call_tool(
+                        "forget_memory",
+                        {"memory_id": mid, "reason": "e2e cleanup"},
+                    )
+                except Exception:  # pragma: no cover — best-effort teardown
+                    pass
+    except BaseException:  # pragma: no cover — session-open flake
+        # ``_mcp_session`` can surface McpError / BaseExceptionGroup
+        # from the SSE handshake or from anyio task groups. Catch
+        # BaseException (not just Exception) so CancelledError from
+        # anyio cleanup doesn't escape either — teardown MUST NOT
+        # mark a passing test as failed.
+        pass

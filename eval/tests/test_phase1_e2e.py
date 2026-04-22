@@ -49,12 +49,24 @@ _RETRY_EXCEPTIONS: tuple[type[BaseException], ...] = (
     httpx.ReadTimeout,
     httpx.RemoteProtocolError,
 )
+_MCP_RETRYABLE_MESSAGES = ("Connection closed", "Timed out")
+"""MCP-layer errors to retry. The SDK turns transport drops during
+``session.initialize()`` into ``McpError("Connection closed")`` and
+read timeouts into ``McpError("Timed out ...")`` — both are pure
+Railway-edge flake. Other McpError messages (protocol mismatch,
+tool-returned errors, etc.) fall through and surface the real
+failure."""
 
 
 def _is_retryable_leaf(exc: BaseException) -> bool:
     if isinstance(exc, httpx.HTTPStatusError):
         return exc.response.status_code in _RETRY_STATUS
-    return isinstance(exc, _RETRY_EXCEPTIONS)
+    if isinstance(exc, _RETRY_EXCEPTIONS):
+        return True
+    if type(exc).__name__ == "McpError":
+        msg = str(exc)
+        return any(needle in msg for needle in _MCP_RETRYABLE_MESSAGES)
+    return False
 
 
 def _is_retryable(exc: BaseException) -> bool:
