@@ -11,7 +11,7 @@ Pins the contract:
 * Every failure mode (network error, missing field, bad JSON, schema
   mismatch, empty argument) returns ``None`` and stamps ``last_error``.
   No exception ever escapes — the rule is that a Logos outage must
-  never break the caller's ``verify_plan`` path.
+  never break the caller's ``store_memory`` path.
 * The session factory is injectable so this entire suite runs
   without a network: a hand-rolled fake mirrors the SDK's
   call-tool surface.
@@ -24,7 +24,7 @@ from collections.abc import AsyncIterator, Coroutine, Mapping
 from contextlib import asynccontextmanager
 from typing import Any, TypeVar
 
-from praxis.logos_client import LogosClient, _extract_certificate_json
+from noesis_clients.logos import LogosClient, _extract_certificate_json
 
 T = TypeVar("T")
 
@@ -32,7 +32,7 @@ T = TypeVar("T")
 def _run(coro: Coroutine[Any, Any, T]) -> T:
     """Run an async coroutine to completion in a fresh event loop.
 
-    The Praxis test deps don't include pytest-asyncio (and we don't
+    The Mneme test deps don't include pytest-asyncio (and we don't
     want to add it just for one client), so async behaviour is
     exercised through a trivial sync wrapper that creates and
     disposes a per-test event loop. ``asyncio.run`` does the right
@@ -215,7 +215,7 @@ def test_certify_claim_accepts_bare_json_string_response() -> None:
 
 def test_certify_claim_returns_none_when_session_factory_raises() -> None:
     """Network outage → None + last_error populated. The caller's
-    verify_plan must keep working; we never propagate the exception."""
+    store_memory must keep working; we never propagate the exception."""
 
     class _Fake502:
         status_code = 502

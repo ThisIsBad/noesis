@@ -7,12 +7,14 @@ on:
       - "services/praxis/**"
       - "schemas/**"
       - "kairos/**"
+      - "clients/**"
       - ".github/workflows/praxis.yml"
   pull_request:
     paths:
       - "services/praxis/**"
       - "schemas/**"
       - "kairos/**"
+      - "clients/**"
       - ".github/workflows/praxis.yml"
 
 defaults:
@@ -37,6 +39,7 @@ jobs:
           cache-dependency-path: |
             schemas/pyproject.toml
             kairos/pyproject.toml
+            clients/pyproject.toml
             services/praxis/pyproject.toml
 
       - name: Install schemas
@@ -45,6 +48,10 @@ jobs:
 
       - name: Install kairos
         working-directory: kairos
+        run: pip install -e .
+
+      - name: Install noesis-clients
+        working-directory: clients
         run: pip install -e .
 
       - name: Install praxis + dev deps
@@ -72,6 +79,7 @@ jobs:
           cache-dependency-path: |
             schemas/pyproject.toml
             kairos/pyproject.toml
+            clients/pyproject.toml
             services/praxis/pyproject.toml
 
       - name: Install schemas
@@ -80,6 +88,10 @@ jobs:
 
       - name: Install kairos
         working-directory: kairos
+        run: pip install -e .
+
+      - name: Install noesis-clients
+        working-directory: clients
         run: pip install -e .
 
       - name: Install praxis

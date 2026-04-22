@@ -5,6 +5,7 @@ import sys
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from noesis_clients import LogosClient
 from noesis_schemas import MemoryType, ProofCertificate
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -12,7 +13,6 @@ from starlette.routing import Route
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .core import MnemeCore
-from .logos_client import LogosClient
 from .tracing import get_tracer
 
 logging.basicConfig(

@@ -1,23 +1,34 @@
 """Logos sidecar client — async MCP wrapper around Logos's read-only verification tools.
 
-Mneme owns memories; Logos owns proofs. The original ROADMAP routes
-verification through Claude as orchestrator, which costs 4× round
-trips for every belief that wants graduating. The Logos-as-sidecar
-exception (see ``docs/ROADMAP.md`` ``Kommunikations-Pattern``) lets
-read-only, idempotent verification calls bypass Claude — Mneme
-itself can ask Logos "is this claim provable?" and stamp the
-returned ``ProofCertificate`` directly.
+Multiple Noesis services (Mneme, Praxis, and later Telos / Episteme)
+need to call Logos for verification. Routing every such call through
+Claude as orchestrator costs 4× round trips per request — the
+Logos-as-sidecar exception in the ROADMAP's ``Kommunikations-Pattern``
+lets read-only, idempotent calls bypass Claude. Each caller owns its
+own integration; this client is the shared transport they plug into.
 
-This module is pure infrastructure: it adds the call path. Wiring
-``MnemeCore.store`` to *use* it (auto-graduating beliefs on insert)
-is a follow-up PR so the surface stays reviewable.
+Callers that use this client:
+
+* **Mneme** — ``certify_claim(memory.content)`` on store / on demand
+  via the ``certify_memory`` MCP tool, auto-graduating beliefs with
+  a ``ProofCertificate``.
+* **Praxis** — (planned) ``certify_claim`` over a plan's goal to
+  attach a certificate before ``commit_step``.
+* **Telos** — (planned) same path for goal-contract verification.
 
 Failure mode: every public coroutine returns ``None`` instead of
 raising on any network / SSE / schema problem. Logos is best-effort
-from Mneme's perspective — losing a graduation chance must not
-prevent the underlying ``store_memory`` from succeeding. The
+from every caller's perspective — losing a verification chance must
+not prevent the caller's primary operation from succeeding. The
 ``last_error`` attribute carries the exception string for callers
 that want to log or surface it.
+
+Transport notes: the default ``session_factory`` opens an MCP/SSE
+session against ``<url>/sse``. ``url`` is whatever the caller passes
+— typically the service's own env envelope (``LOGOS_URL``). For
+Railway deployments the internal hostname ``logos.railway.internal``
+works the same way and avoids the edge round-trip; the client is
+agnostic to which one's configured.
 """
 from __future__ import annotations
 
