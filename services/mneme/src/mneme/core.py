@@ -164,6 +164,56 @@ class MnemeCore:
         ).fetchall()
         return [Memory.model_validate_json(r[0]) for r in rows]
 
+    def get(self, memory_id: str) -> Memory | None:
+        """Look up a single memory by ID, or ``None`` if it doesn't exist
+        (or has been forgotten)."""
+        row = self._conn.execute(
+            "SELECT data_json FROM memories WHERE memory_id=?", (memory_id,)
+        ).fetchone()
+        if not row:
+            return None
+        return Memory.model_validate_json(row[0])
+
+    def attach_certificate(
+        self, memory_id: str, certificate: ProofCertificate
+    ) -> Memory | None:
+        """Stamp a Logos ``ProofCertificate`` onto an existing memory.
+
+        Returns the updated ``Memory`` on success, or ``None`` if no
+        memory with that ID exists. Sets ``proven`` to the certificate's
+        ``verified`` flag in both SQLite and Chroma metadata so the
+        ``proven=1`` index and ``list_proven`` stay consistent without
+        a re-add.
+
+        Re-attaching overwrites any earlier certificate. That's the
+        right semantics: Logos may have grown a stronger method (FOL
+        instead of propositional) since the original graduation, and
+        the consumer asked for the new one explicitly.
+        """
+        existing = self.get(memory_id)
+        if existing is None:
+            return None
+        updated = existing.model_copy(update={
+            "certificate": certificate,
+            "proven": certificate.verified,
+        })
+        self._conn.execute(
+            "UPDATE memories SET data_json=?, proven=? WHERE memory_id=?",
+            (updated.model_dump_json(), int(updated.proven), memory_id),
+        )
+        self._conn.commit()
+        # Chroma's ``update`` keeps the embedding intact and just
+        # refreshes the metadata — cheap, no re-embedding cost.
+        self._col.update(
+            ids=[memory_id],
+            metadatas=[{
+                "confidence": existing.confidence,
+                "proven": int(updated.proven),
+                "memory_type": existing.memory_type.value,
+            }],
+        )
+        return updated
+
     def consolidate(self, similarity_threshold: float = 0.15) -> int:
         """Merge near-duplicate memories; keeps the higher-confidence copy."""
         rows = self._conn.execute(
