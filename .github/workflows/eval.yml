@@ -7,6 +7,7 @@ on:
       - "eval/**"
       - "schemas/**"
       - "kairos/**"
+      - "clients/**"
       - "services/praxis/**"
       - ".github/workflows/eval.yml"
   pull_request:
@@ -14,6 +15,7 @@ on:
       - "eval/**"
       - "schemas/**"
       - "kairos/**"
+      - "clients/**"
       - "services/praxis/**"
       - ".github/workflows/eval.yml"
 
@@ -48,6 +50,10 @@ jobs:
         working-directory: kairos
         run: pip install -e .
 
+      - name: Install noesis-clients
+        working-directory: clients
+        run: pip install -e .
+
       - name: Install praxis (PraxisCorePlanner adapter test)
         working-directory: services/praxis
         run: pip install -e .
@@ -79,6 +85,10 @@ jobs:
 
       - name: Install kairos
         working-directory: kairos
+        run: pip install -e .
+
+      - name: Install noesis-clients
+        working-directory: clients
         run: pip install -e .
 
       - name: Install praxis

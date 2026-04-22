@@ -5,6 +5,7 @@ description = "Persistent episodic and semantic memory for the Noesis AGI stack"
 requires-python = ">=3.11"
 dependencies = [
     "noesis-schemas>=0.1.0,<0.2",
+    "noesis-clients>=0.1.0,<0.2",
     "kairos>=0.1.0,<0.2",
     "fastapi>=0.111",
     "uvicorn>=0.30",
@@ -26,7 +27,12 @@ packages = ["src/mneme"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../../schemas/src", "../../kairos/src"]
+pythonpath = [
+    "src",
+    "../../schemas/src",
+    "../../kairos/src",
+    "../../clients/src",
+]
 markers = [
     "acceptance: ROADMAP acceptance-criterion benchmark",
 ]
