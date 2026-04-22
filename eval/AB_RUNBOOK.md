@@ -52,9 +52,37 @@ python -m noesis_eval.ab ab \
   shrink the per-task confidence interval without 10× cost. Use 5+
   once you want narrower CIs.
 * `--suite stage3` is the 50-task suite. Use `--suite default` (5
-  tasks) for a smoke run.
+  tasks) for a smoke run. `--suite memory` is the 6-task
+  Mneme-favouring suite (see below) — picks up a much cleaner signal
+  on whether cross-episode memory specifically helps.
 * `--out-dir` defaults to `ab-runs/`. Stamping it with a UTC
   timestamp keeps successive runs from overwriting each other.
+
+## Which suite to run
+
+The stage3 suite (50 single-step recovery tasks) tests the overall
+"do MCP tools help?" question. A positive delta on stage3 could be
+any of: Mneme helps, Praxis helps, Telos helps, or "having more
+tools reduces Claude's prompt confusion."
+
+**`--suite memory`** narrows the signal. 6 linked tasks: 3 *plant*
+tasks embed a nonce in the initial observation (e.g. "The vault code
+is K42-N9T"), then 3 *query* tasks later ask for that exact nonce
+with no hint in the query prompt itself. Cross-episode memory (the
+`store_memory` / `retrieve_memory` tools on Mneme) is the only way
+to bridge the gap — a baseline with no memory can't retrieve a
+nonce it didn't see this episode.
+
+Expected result shape on `--suite memory`:
+
+| Side | Plant tasks | Query tasks |
+|---|---|---|
+| treatment (mcp-treatment, Mneme wired in) | ~100% | hopefully > 50% if Claude spontaneously uses `store_memory` |
+| baseline (mcp-baseline, no Mneme) | ~100% | ~0% |
+
+If treatment clears the plants but flunks the queries, the read is
+"Claude has Mneme available but doesn't spontaneously use it." That's
+useful signal too — tells us whether we need a system-prompt nudge.
 
 The wrapper streams the JSONLs as it goes — if the run dies halfway
 through, the partial files are still on disk and you can `ab diff`
