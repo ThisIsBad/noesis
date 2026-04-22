@@ -43,6 +43,7 @@ def test_run_oracle_writes_one_jsonl_line_per_episode(
         "agent", "task_id", "success", "steps_taken",
         "failures_seen", "failures_recovered", "final_reward",
         "seed",
+        "tokens_in", "tokens_out", "tool_calls", "wall_time_s",
     }
     assert fields == expected
 

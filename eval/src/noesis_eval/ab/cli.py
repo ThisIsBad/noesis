@@ -122,6 +122,8 @@ def _load_suite_results(path: Path) -> SuiteResults:
 
 def _format_delta(delta: SuiteDelta) -> str:
     sig_marker = " *" if delta.significant_at_05 else ""
+    ratio = delta.tokens_ratio
+    ratio_str = "inf" if ratio == float("inf") else f"{ratio:.2f}×"
     lines = [
         f"treatment ({delta.treatment}) vs baseline ({delta.baseline})",
         f"  shared tasks:      {delta.shared_tasks}"
@@ -134,6 +136,13 @@ def _format_delta(delta: SuiteDelta) -> str:
         f"  p-value:           {delta.p_value:.4f}{sig_marker}",
         f"  wins:   {delta.wins}",
         f"  losses: {delta.losses}",
+        f"  cost (tokens/episode): "
+        f"treatment={delta.treatment_tokens_per_episode:.1f}, "
+        f"baseline={delta.baseline_tokens_per_episode:.1f} "
+        f"(ratio {ratio_str})",
+        f"  wall time (s/episode): "
+        f"treatment={delta.treatment_wall_time_per_episode:.3f}, "
+        f"baseline={delta.baseline_wall_time_per_episode:.3f}",
     ]
     if delta.only_treatment:
         lines.append(

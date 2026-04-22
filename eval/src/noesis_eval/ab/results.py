@@ -23,7 +23,7 @@ import statistics
 from collections import defaultdict
 from dataclasses import asdict, dataclass, field
 from math import comb
-from typing import Any, Sequence
+from typing import Any, Iterable, Sequence
 
 
 @dataclass(frozen=True)
@@ -40,6 +40,17 @@ class EpisodeResult:
     — lets ``ab run --samples N`` tag each replay and lets downstream
     joins pair episodes across independent invocations. Defaults to
     0 so JSONL records written before multi-sample landed still load.
+    """
+    tokens_in: int = 0
+    tokens_out: int = 0
+    tool_calls: int = 0
+    wall_time_s: float = 0.0
+    """Cost counters for the episode. All default to 0 so (a) legacy
+    JSONL without these fields still deserialises and (b) deterministic
+    agents like Oracle / Null don't have to surface telemetry they
+    don't have. ``wall_time_s`` is measured by the runner (end-to-end
+    of ``run_episode``); the token / tool-call counts come from the
+    agent's ``drain_telemetry`` hook after the episode finishes.
     """
 
     def to_dict(self) -> dict[str, Any]:
@@ -78,12 +89,36 @@ class SuiteResults:
             return 0.0
         return sum(e.failures_recovered for e in self.episodes) / total
 
+    @property
+    def tokens_per_episode(self) -> float:
+        """Mean (tokens_in + tokens_out) per episode. Zero for
+        deterministic agents that don't report telemetry."""
+        if not self.episodes:
+            return 0.0
+        total = sum(e.tokens_in + e.tokens_out for e in self.episodes)
+        return total / len(self.episodes)
+
+    @property
+    def tool_calls_per_episode(self) -> float:
+        if not self.episodes:
+            return 0.0
+        return sum(e.tool_calls for e in self.episodes) / len(self.episodes)
+
+    @property
+    def wall_time_per_episode(self) -> float:
+        if not self.episodes:
+            return 0.0
+        return sum(e.wall_time_s for e in self.episodes) / len(self.episodes)
+
     def summary(self) -> dict[str, float | int | str]:
         return {
             "agent": self.agent,
             "episodes": len(self.episodes),
             "success_rate": round(self.success_rate, 3),
             "recovery_rate": round(self.recovery_rate, 3),
+            "tokens_per_episode": round(self.tokens_per_episode, 1),
+            "tool_calls_per_episode": round(self.tool_calls_per_episode, 2),
+            "wall_time_per_episode": round(self.wall_time_per_episode, 3),
         }
 
     def diff(self, baseline: "SuiteResults") -> "SuiteDelta":
@@ -157,6 +192,24 @@ class SuiteResults:
             else 0.0
         )
 
+        # Cost: aggregate over all episodes on each side of the shared
+        # task set. Pooled (not per-task) so a task with 20 samples
+        # correctly dominates a task with 1 — the question "how much
+        # does this agent cost per run" is weighted by how many runs
+        # happened, not by the task catalogue.
+        t_episodes = [
+            e for tid in shared for e in self_by_task[tid]
+        ]
+        b_episodes = [
+            e for tid in shared for e in base_by_task[tid]
+        ]
+        t_tokens = _mean(e.tokens_in + e.tokens_out for e in t_episodes)
+        b_tokens = _mean(e.tokens_in + e.tokens_out for e in b_episodes)
+        t_tool_calls = _mean(e.tool_calls for e in t_episodes)
+        b_tool_calls = _mean(e.tool_calls for e in b_episodes)
+        t_wall_time = _mean(e.wall_time_s for e in t_episodes)
+        b_wall_time = _mean(e.wall_time_s for e in b_episodes)
+
         return SuiteDelta(
             treatment=self.agent,
             baseline=baseline.agent,
@@ -178,6 +231,12 @@ class SuiteResults:
             only_baseline=sorted(set(base_by_task) - set(self_by_task)),
             per_task=per_task,
             samples_per_task=samples_per_task,
+            treatment_tokens_per_episode=t_tokens,
+            baseline_tokens_per_episode=b_tokens,
+            treatment_tool_calls_per_episode=t_tool_calls,
+            baseline_tool_calls_per_episode=b_tool_calls,
+            treatment_wall_time_per_episode=t_wall_time,
+            baseline_wall_time_per_episode=b_wall_time,
         )
 
 
@@ -221,6 +280,51 @@ class SuiteDelta:
     only_baseline: list[str]
     per_task: dict[str, tuple[float, float]]
     samples_per_task: dict[str, tuple[int, int]]
+    treatment_tokens_per_episode: float
+    baseline_tokens_per_episode: float
+    treatment_tool_calls_per_episode: float
+    baseline_tool_calls_per_episode: float
+    treatment_wall_time_per_episode: float
+    baseline_wall_time_per_episode: float
+
+    @property
+    def tokens_ratio(self) -> float:
+        """How many tokens does treatment use per baseline token?
+
+        Returns ``inf`` when baseline is 0 and treatment is not —
+        "Noesis costs something, baseline costs nothing" is a real
+        signal that a raw ratio of 0/0 → NaN would hide. Returns 1.0
+        when both sides are 0 (deterministic agents).
+        """
+        if self.baseline_tokens_per_episode == 0:
+            if self.treatment_tokens_per_episode == 0:
+                return 1.0
+            return float("inf")
+        return (
+            self.treatment_tokens_per_episode
+            / self.baseline_tokens_per_episode
+        )
+
+    @property
+    def success_per_1k_tokens_treatment(self) -> float:
+        """Headline economics metric — a tool that solves more tasks
+        but burns 5× the tokens is not obviously a win. Zero means
+        no tokens reported (default for deterministic agents)."""
+        if self.treatment_tokens_per_episode == 0:
+            return 0.0
+        return (
+            1000.0 * self.treatment_success_rate
+            / self.treatment_tokens_per_episode
+        )
+
+    @property
+    def success_per_1k_tokens_baseline(self) -> float:
+        if self.baseline_tokens_per_episode == 0:
+            return 0.0
+        return (
+            1000.0 * self.baseline_success_rate
+            / self.baseline_tokens_per_episode
+        )
 
     @property
     def ci95_low(self) -> float:
@@ -259,6 +363,23 @@ class SuiteDelta:
             "losses": self.losses,
             "only_treatment": len(self.only_treatment),
             "only_baseline": len(self.only_baseline),
+            "treatment_tokens_per_episode": round(
+                self.treatment_tokens_per_episode, 1
+            ),
+            "baseline_tokens_per_episode": round(
+                self.baseline_tokens_per_episode, 1
+            ),
+            "tokens_ratio": (
+                "inf"
+                if self.tokens_ratio == float("inf")
+                else round(self.tokens_ratio, 3)
+            ),
+            "treatment_wall_time_per_episode": round(
+                self.treatment_wall_time_per_episode, 3
+            ),
+            "baseline_wall_time_per_episode": round(
+                self.baseline_wall_time_per_episode, 3
+            ),
         }
 
 
@@ -269,6 +390,18 @@ def _rate(episodes: Sequence[EpisodeResult]) -> float:
     if not episodes:
         return 0.0
     return sum(1 for e in episodes if e.success) / len(episodes)
+
+
+def _mean(values: Iterable[float]) -> float:
+    """Mean with an empty-input fallback of 0.0.
+
+    Used so ``SuiteDelta`` cost aggregates stay well-defined even when
+    one side of the A/B has no shared tasks (``mean of []`` would raise).
+    """
+    vals = list(values)
+    if not vals:
+        return 0.0
+    return statistics.fmean(vals)
 
 
 _Z_95 = 1.959963984540054

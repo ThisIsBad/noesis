@@ -24,7 +24,13 @@ Four reference agents ship:
       baseline (no Noesis servers) so the only variable in the A/B is
       the MCP surface.
 """
-from .agent import ActionOutcome, Agent, NullAgent, OracleAgent
+from .agent import (
+    ActionOutcome,
+    Agent,
+    AgentTelemetry,
+    NullAgent,
+    OracleAgent,
+)
 from .mcp_agent import (
     MCPAgent,
     build_baseline_agent,
@@ -37,6 +43,7 @@ from .runner import run_ab, run_episode, run_suite
 __all__ = [
     "ActionOutcome",
     "Agent",
+    "AgentTelemetry",
     "EpisodeResult",
     "MCPAgent",
     "NullAgent",

@@ -8,11 +8,12 @@ agents actually operate.
 """
 from __future__ import annotations
 
+import time
 from typing import Iterable
 
 from noesis_eval.alfworld_bench.env import MockAlfworldEnv, Task
 
-from .agent import ActionOutcome, Agent
+from .agent import ActionOutcome, Agent, AgentTelemetry
 from .results import EpisodeResult, SuiteResults
 
 MAX_STEPS = 16
@@ -21,11 +22,35 @@ are scored as failures. Matches ``alfworld_bench.runner.MAX_STEPS`` so
 the two harnesses stay comparable."""
 
 
+def _drain_telemetry(agent: Agent) -> AgentTelemetry:
+    """Fetch the agent's per-episode counters if it exposes them.
+
+    Agents without ``drain_telemetry`` (NullAgent, OracleAgent, the
+    current stub MCPAgent) return zeroed telemetry. This keeps cost
+    tracking opt-in: the A/B harness stays usable with the simple
+    reference agents without forcing them to implement telemetry
+    they don't have.
+    """
+    drain = getattr(agent, "drain_telemetry", None)
+    if drain is None:
+        return AgentTelemetry()
+    result = drain()
+    if not isinstance(result, AgentTelemetry):
+        raise TypeError(
+            f"{type(agent).__name__}.drain_telemetry() must return "
+            f"AgentTelemetry, got {type(result).__name__}"
+        )
+    return result
+
+
 def run_episode(env: MockAlfworldEnv, agent: Agent) -> EpisodeResult:
     """Drive one task to termination under ``agent``'s policy.
 
     The runner — not the agent — owns env.reset/step, the circuit
     breaker, and the history accumulation. Agents only choose actions.
+    Wall time is measured here because the runner owns the loop; token
+    / tool-call counts come from ``agent.drain_telemetry`` (optional)
+    after the episode ends.
     """
     observation = env.reset()
     history: list[ActionOutcome] = []
@@ -36,6 +61,7 @@ def run_episode(env: MockAlfworldEnv, agent: Agent) -> EpisodeResult:
     final_reward = 0.0
     success = False
 
+    start = time.perf_counter()
     while steps < MAX_STEPS:
         action = agent.act(env.task.goal, observation, history)
         if not action:
@@ -61,6 +87,9 @@ def run_episode(env: MockAlfworldEnv, agent: Agent) -> EpisodeResult:
             success = result.reward > 0
             break
         observation = result.observation
+    wall_time_s = time.perf_counter() - start
+
+    telemetry = _drain_telemetry(agent)
 
     return EpisodeResult(
         agent=agent.name,
@@ -70,6 +99,10 @@ def run_episode(env: MockAlfworldEnv, agent: Agent) -> EpisodeResult:
         failures_seen=failures_seen,
         failures_recovered=failures_recovered,
         final_reward=final_reward,
+        tokens_in=telemetry.tokens_in,
+        tokens_out=telemetry.tokens_out,
+        tool_calls=telemetry.tool_calls,
+        wall_time_s=wall_time_s,
     )
 
 
