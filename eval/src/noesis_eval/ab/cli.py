@@ -32,6 +32,7 @@ from noesis_eval.alfworld_bench import (
 from noesis_eval.alfworld_bench.env import MockAlfworldEnv
 
 from .agent import Agent, NullAgent, OracleAgent
+from .mcp_agent import build_baseline_agent, build_treatment_agent
 from .results import EpisodeResult, SuiteDelta, SuiteResults
 from .runner import run_episode
 
@@ -54,6 +55,8 @@ def _build_oracle(suite: list[Task]) -> OracleAgent:
 AGENT_FACTORIES: dict[str, Callable[[list[Task]], Agent]] = {
     "null": lambda _suite: NullAgent(action="wait"),
     "oracle": _build_oracle,
+    "mcp-treatment": lambda _suite: build_treatment_agent(),
+    "mcp-baseline": lambda _suite: build_baseline_agent(),
 }
 
 
