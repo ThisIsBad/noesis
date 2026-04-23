@@ -5,6 +5,7 @@ import sys
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from noesis_clients import LogosClient
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -26,9 +27,21 @@ log.info(
     "praxis boot: data_dir=%s port=%s secret_set=%s",
     _data_dir, os.getenv("PORT", "8000"), _secret_set,
 )
+# Logos sidecar — read-only verification only, per architecture.md's
+# "Logos-as-Sidecar" exception. Returns None if LOGOS_URL isn't set;
+# in that case verify_plan keeps its local-only verdict.
+_logos_client: LogosClient | None = LogosClient.from_env()
+log.info(
+    "praxis logos sidecar: %s",
+    "configured" if _logos_client is not None else "unconfigured (LOGOS_URL unset)",
+)
+
 try:
     os.makedirs(_data_dir, exist_ok=True)
-    _core = PraxisCore(db_path=os.path.join(_data_dir, "praxis.db"))
+    _core = PraxisCore(
+        db_path=os.path.join(_data_dir, "praxis.db"),
+        logos_client=_logos_client,
+    )
     log.info("praxis core ready: db=%s/praxis.db", _data_dir)
 except Exception:
     log.exception("praxis core init failed at %s", _data_dir)

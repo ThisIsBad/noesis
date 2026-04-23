@@ -142,23 +142,39 @@ does, when to call which, or error-handling norms. A single
 
 ## Tier 2 — next month
 
-- [ ] **T2.1 Reusable CI workflow.** 10 near-identical workflows →
-  1 matrix workflow with a `service` input. Cuts config ~80 %,
-  makes Python-version bumps one-line changes.
+- [x] **T2.1 Reusable CI workflow.** New
+  `.github/workflows/_python-component.yml` accepts service-path /
+  -name / coverage args / dep-flags / Docker flag /
+  `coverage-fail-under` / extra pytest args / Python versions. Every
+  per-service / per-package workflow is now a 26-line caller.
+  Workflows shrank 1,617 → 938 lines (-42 %). Python-version bumps
+  are now a one-line change. — *landed 2026-04-23*
 - [ ] **T2.2 Cross-service E2E gate.** The architecture doc calls
   for ≥ 3-service E2E per phase. Today that lives in `eval/` and
   runs on its own schedule. Promote the Phase-1 scenario
   (`register_goal → decompose_goal → verify_plan → commit_step +
   store_memory`) to a PR gate using stub/mock services.
-- [ ] **T2.3 Praxis Logos-sidecar wiring.** Commit `6f1f43f` landed
-  the client skeleton; `PraxisCore.verify_plan` still does the
-  basic stub check, not the actual Logos call. Finish the wiring.
+- [x] **T2.3 Praxis Logos-sidecar wiring.** `PraxisCore.__init__`
+  now accepts an optional `LogosClient`. `verify_plan` runs local
+  fast-fail checks first (no steps / risk ≥ 0.8), then asks Logos
+  to certify the rendered plan: verified ⇒ pass with method noted,
+  refuted ⇒ block, sidecar unreachable ⇒ pass with degraded note
+  (architecture rule: a sidecar outage must not break the primary
+  call). 5 new tests + 21 preexisting tests all green, 67 total
+  Praxis tests pass. The MCP server reads `LOGOS_URL` /
+  `LOGOS_SECRET` via `LogosClient.from_env()`. —
+  *landed 2026-04-23*
 - [ ] **T2.4 Shared test utilities.** Every service has fixtures
   for "fake Kairos", "fake MCP server", auth-header helpers.
   Extract into `testing/` or `clients/noesis_testing/` to DRY
   ~500 lines.
-- [ ] **T2.5 Add schemas + clients CI** (even if they're exercised
-  via consumers) so contract-level regressions surface immediately.
+- [x] **T2.5 Add schemas + clients CI.** Both now have dedicated
+  `.github/workflows/{schemas,clients}.yml` callers of the reusable
+  workflow. `schemas` runs at 99.5 % coverage (10 passed, 1 skipped
+  when z3 isn't available — added an `importorskip` guard on the
+  Logos round-trip test). `clients` runs at 68 % coverage with the
+  gate set to 65 % until SSE-transport paths get integration
+  coverage. — *landed 2026-04-23*
 
 ## Tier 3 — backlog
 

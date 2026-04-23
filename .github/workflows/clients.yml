@@ -1,0 +1,35 @@
+name: clients
+
+# noesis-clients wraps cross-service HTTP calls (today: LogosClient).
+# Independent gate so client regressions surface before they break
+# Mneme / Praxis / any other consumer.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "clients/**"
+      - "schemas/**"
+      - ".github/workflows/_python-component.yml"
+      - ".github/workflows/clients.yml"
+  pull_request:
+    paths:
+      - "clients/**"
+      - "schemas/**"
+      - ".github/workflows/_python-component.yml"
+      - ".github/workflows/clients.yml"
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_python-component.yml
+    with:
+      service-path: clients
+      service-name: noesis_clients
+      coverage-args: "--cov=noesis_clients"
+      # SSE/async transport paths in logos.py are hard to unit-test
+      # without spinning up a real MCP server. Lower than the 85%
+      # default until those paths get integration coverage; do not
+      # silently lower further without adding tests.
+      coverage-fail-under: "65"
+      needs-kairos: false           # clients has no kairos dep
+      has-docker: false             # clients isn't deployable
