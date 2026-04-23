@@ -324,8 +324,20 @@ does, when to call which, or error-handling norms. A single
      design *and* a concrete consumer (e.g. Praxis scoring plans
      with causal priors). Speculative until there's a user.
 
-  No code change needed on the triage itself; recommendation lives
-  here for planning. — *landed 2026-04-23*
+  **Techne ChromaDB promotion landed.** `TechneCore` now uses
+  SQLite for structured rows + ChromaDB for semantic retrieval,
+  mirroring Mneme's split. `store`, `retrieve`, `record_use` keep
+  their signatures; new `get(skill_id)` helper. Retrieval uses
+  Chroma k-nearest and re-ranks by `success_rate` so proven skills
+  outrank marginally-better-matching unproven ones. Tests cover
+  store + retrieve, semantic-beyond-substring (pins "retry" query
+  hitting "attempt repeatedly"), verified-only filtering (3 cases),
+  record-use rate updates + raises on unknown id, success-rate
+  ranking, persistence across reopen. 12 new core tests + the 7
+  auth tests + 11 preexisting = 30 Techne tests, all green.
+  Dockerfile updated to install `noesis-clients` and document the
+  new volume requirement. Empiria + Kosmos follow the same pattern
+  when their turn comes. — *Techne promoted 2026-04-23*
 - [x] **T3.10 ~~Move Theoria persistence to Mneme~~** — **retracted**.
   My original recommendation was wrong: Mneme's schema is "memory +
   optional certificate"; Theoria's is "DAG of reasoning steps +

@@ -14,6 +14,10 @@ RUN pip install /schemas
 COPY kairos/ /kairos
 RUN pip install /kairos
 
+# ── Shared HTTP clients + test/auth helpers (bearer middleware, persistence) ──
+COPY clients/ /clients
+RUN pip install /clients
+
 # ── Service ───────────────────────────────────────────────────────────────────
 COPY services/techne/pyproject.toml .
 COPY services/techne/src/ src/
@@ -21,5 +25,9 @@ COPY services/techne/src/ src/
 RUN sed -i 's|noesis-schemas @ file://[^"]*|noesis-schemas|g' pyproject.toml && pip install .
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
+# Techne now has durable state (SQLite + ChromaDB). Railway must mount a
+# volume at $TECHNE_DATA_DIR (default /data) for persistence across deploys;
+# alternatively set TECHNE_DATABASE_URL=sqlite:///<path> to override the
+# SQLite location (Chroma still uses <TECHNE_DATA_DIR>/techne_chroma).
 EXPOSE 8000
 CMD python -m techne.mcp_server_http
