@@ -1,0 +1,78 @@
+name: e2e
+
+# Cross-service Phase-1 E2E gate. Unlike the deployed-services E2E suite
+# (eval/tests/test_phase1_e2e.py) which skips when env vars are unset,
+# this gate instantiates real TelosCore + PraxisCore + MnemeCore + a
+# fake LogosClient in-process and exercises the canonical scenario:
+#
+#     register_goal → decompose_goal → verify_plan → commit_step
+#         → store_memory → check_alignment
+#
+# Runs on EVERY PR (no paths filter) — an E2E regression in any
+# participating service should fail the PR, even if the PR only
+# touched that one service's paths.
+#
+# Scope is intentionally the tool-call layer (direct core calls),
+# not HTTP. Wire-format drift is already covered by
+# schemas/tests/test_logos_certificate_round_trip and
+# clients/tests/test_logos.py.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  phase1:
+    name: Phase-1 in-process E2E
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            schemas/pyproject.toml
+            kairos/pyproject.toml
+            clients/pyproject.toml
+            services/telos/pyproject.toml
+            services/praxis/pyproject.toml
+            services/mneme/pyproject.toml
+            eval/pyproject.toml
+
+      - name: Install schemas
+        working-directory: schemas
+        run: pip install -e .
+
+      - name: Install kairos
+        working-directory: kairos
+        run: pip install -e .
+
+      - name: Install noesis-clients
+        working-directory: clients
+        run: pip install -e .
+
+      - name: Install telos
+        working-directory: services/telos
+        run: pip install -e ".[dev]"
+
+      - name: Install praxis
+        working-directory: services/praxis
+        run: pip install -e ".[dev]"
+
+      - name: Install mneme
+        working-directory: services/mneme
+        run: pip install -e ".[dev]"
+
+      - name: Install eval + pytest-asyncio
+        working-directory: eval
+        run: |
+          pip install -e .
+          pip install pytest-asyncio
+
+      - name: Phase-1 in-process E2E
+        working-directory: eval
+        run: python -m pytest tests/test_phase1_inprocess.py -v
