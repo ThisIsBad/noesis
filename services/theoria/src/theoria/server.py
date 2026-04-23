@@ -185,7 +185,7 @@ class TheoriaHandler(BaseHTTPRequestHandler):
             else:
                 status = int(HTTPStatus.OK)
                 headers = {
-                    "Content-Type": "text/plain; charset=utf-8",
+                    "Content-Type": _content_type_for(fmt),
                     "Cache-Control": "no-store",
                     "Content-Disposition": f'inline; filename="{trace_id}.{_ext_for(fmt)}"',
                 }
@@ -235,11 +235,19 @@ def _json_error(message: str) -> bytes:
     return json.dumps({"error": message}).encode("utf-8")
 
 
+def _content_type_for(fmt: str) -> str:
+    if fmt in ("markdown", "md"):
+        return "text/markdown; charset=utf-8"
+    return "text/plain; charset=utf-8"
+
+
 def _ext_for(fmt: str) -> str:
     if fmt == "mermaid":
         return "mmd"
     if fmt in ("dot", "graphviz"):
         return "dot"
+    if fmt in ("markdown", "md"):
+        return "md"
     return "txt"
 
 
