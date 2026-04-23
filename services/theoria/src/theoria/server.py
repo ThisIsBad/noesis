@@ -22,16 +22,20 @@ from __future__ import annotations
 import json
 import logging
 import mimetypes
+import queue
 import re
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
+from theoria.export import format_for
 from theoria.models import DecisionTrace
 from theoria.samples import build_samples
 from theoria.store import TraceStore
+
+SSE_HEARTBEAT_SECONDS = 15.0
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -54,6 +58,15 @@ class TheoriaHandler(BaseHTTPRequestHandler):
     # ---- routing -----------------------------------------------------
 
     def do_GET(self) -> None:  # noqa: N802
+        # SSE and export require streaming/non-JSON responses — bypass _dispatch.
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/stream":
+            self._handle_sse()
+            return
+        export_match = re.fullmatch(r"/api/traces/([^/]+)/export", parsed.path)
+        if export_match:
+            self._handle_export(export_match.group(1), parsed.query)
+            return
         self._dispatch("GET")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -121,6 +134,70 @@ class TheoriaHandler(BaseHTTPRequestHandler):
 
         raise _HTTPError(HTTPStatus.NOT_FOUND, f"no route for {method} {path}")
 
+    # ---- streaming endpoints -----------------------------------------
+
+    def _handle_sse(self) -> None:
+        """Server-Sent Events — emit an event for every store mutation."""
+        self.send_response(int(HTTPStatus.OK))
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        q = self.store.subscribe()
+        try:
+            # Initial comment establishes the stream for browsers.
+            self.wfile.write(b": connected\n\n")
+            self.wfile.flush()
+            while True:
+                try:
+                    msg = q.get(timeout=SSE_HEARTBEAT_SECONDS)
+                except queue.Empty:
+                    self.wfile.write(b": heartbeat\n\n")
+                    self.wfile.flush()
+                    continue
+                event = msg.get("type", "message").replace(".", "_")
+                payload = json.dumps(msg, sort_keys=True)
+                self.wfile.write(f"event: {event}\ndata: {payload}\n\n".encode("utf-8"))
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+        finally:
+            self.store.unsubscribe(q)
+
+    def _handle_export(self, trace_id: str, query_str: str) -> None:
+        """Render a trace in a human-readable format (Mermaid / DOT)."""
+        query = parse_qs(query_str or "")
+        fmt = (query.get("format", ["mermaid"])[0]).lower()
+        trace = self.store.get(trace_id)
+        if trace is None:
+            status, headers, body = int(HTTPStatus.NOT_FOUND), {
+                "Content-Type": "application/json"
+            }, _json_error(f"trace '{trace_id}' not found")
+        else:
+            try:
+                rendered = format_for(trace, fmt)
+            except ValueError as exc:
+                status, headers, body = int(HTTPStatus.BAD_REQUEST), {
+                    "Content-Type": "application/json"
+                }, _json_error(str(exc))
+            else:
+                status = int(HTTPStatus.OK)
+                headers = {
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "Cache-Control": "no-store",
+                    "Content-Disposition": f'inline; filename="{trace_id}.{_ext_for(fmt)}"',
+                }
+                body = rendered.encode("utf-8")
+
+        self.send_response(status)
+        for key, value in headers.items():
+            self.send_header(key, value)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _read_json_body(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0") or 0)
         if length <= 0:
@@ -156,6 +233,14 @@ def _json_response(
 
 def _json_error(message: str) -> bytes:
     return json.dumps({"error": message}).encode("utf-8")
+
+
+def _ext_for(fmt: str) -> str:
+    if fmt == "mermaid":
+        return "mmd"
+    if fmt in ("dot", "graphviz"):
+        return "dot"
+    return "txt"
 
 
 def _serve_file(path: Path) -> tuple[int, dict[str, str], bytes]:

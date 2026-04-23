@@ -8,7 +8,7 @@ Logos MCP server) pass it in; we read only public attributes.
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Protocol
+from typing import Any, Iterable, Mapping, Protocol, Sequence
 from uuid import uuid4
 
 from theoria.models import (
@@ -172,6 +172,327 @@ def trace_from_logos_policy(
 
 
 # ---------------------------------------------------------------------------
+# Praxis plan tree → DecisionTrace
+# ---------------------------------------------------------------------------
+
+# Status strings exported by noesis_schemas.StepStatus (see
+# services/praxis/src/praxis/core.py). Kept as strings so we don't
+# import noesis_schemas here — the adapter remains duck-typed.
+_PRAXIS_STATUS_MAP: Mapping[str, StepStatus] = {
+    "pending":   StepStatus.PENDING,
+    "completed": StepStatus.OK,
+    "failed":    StepStatus.FAILED,
+    "skipped":   StepStatus.REJECTED,
+}
+
+
+def trace_from_praxis_plan(
+    plan_view: Mapping[str, Any],
+    *,
+    question: str | None = None,
+    title: str | None = None,
+    trace_id: str | None = None,
+) -> DecisionTrace:
+    """Build a DecisionTrace from a Praxis plan-tree view.
+
+    ``plan_view`` is a plain dict so Theoria doesn't have to import
+    networkx or noesis_schemas::
+
+        {
+            "plan_id": "plan-abc",
+            "goal": "Migrate users table",
+            "nodes": {
+                "s1": {"description": "dump data", "status": "completed",
+                       "risk_score": 0.1, "score": 0.9, "tool_call": "pg_dump"},
+                "s2": {"description": "alter schema", "status": "pending",
+                       "risk_score": 0.5, "score": 0.7},
+                ...
+            },
+            # Parent → child edges. Root is the plan_id itself.
+            "edges": [("plan-abc", "s1"), ("s1", "s2"), ("s1", "s3_alt")],
+            # Optional: the beam-search winner. Steps on this path get
+            # highlighted; competing branches render as pruned alternatives.
+            "selected_path": ["s1", "s2"],
+        }
+    """
+    plan_id = str(plan_view.get("plan_id") or "plan")
+    goal = str(plan_view.get("goal") or "(no goal specified)")
+    nodes: Mapping[str, Mapping[str, Any]] = plan_view.get("nodes") or {}
+    edges: Sequence[tuple[str, str]] = plan_view.get("edges") or ()
+    selected_path: set[str] = set(plan_view.get("selected_path") or [])
+
+    trace_id = trace_id or f"praxis-plan-{plan_id[:12]}"
+    title = title or f"Praxis plan — {goal}"
+    question = question or f"Plan: {goal}"
+
+    steps: list[ReasoningStep] = [
+        ReasoningStep(
+            id="q",
+            kind=StepKind.QUESTION,
+            label=f"Plan: {goal}",
+            detail="Hierarchical planning via Tree-of-Thoughts beam search.",
+            source_ref="services/praxis/src/praxis/core.py",
+        )
+    ]
+
+    for step_id, node in nodes.items():
+        status_raw = str(node.get("status", "pending")).lower()
+        status = _PRAXIS_STATUS_MAP.get(status_raw, StepStatus.INFO)
+        on_best_path = step_id in selected_path
+        description = str(node.get("description", step_id))
+
+        if status is StepStatus.FAILED:
+            kind = StepKind.ALTERNATIVE
+        elif on_best_path and status is StepStatus.OK:
+            kind = StepKind.INFERENCE
+        elif on_best_path:
+            kind = StepKind.INFERENCE
+        else:
+            kind = StepKind.ALTERNATIVE
+
+        tool_call = node.get("tool_call")
+        detail_parts: list[str] = []
+        if tool_call:
+            detail_parts.append(f"tool: {tool_call}")
+        if "risk_score" in node:
+            detail_parts.append(f"risk: {float(node['risk_score']):.2f}")
+        if "score" in node:
+            detail_parts.append(f"score: {float(node['score']):.2f}")
+        if node.get("outcome"):
+            detail_parts.append(f"outcome: {node['outcome']}")
+
+        steps.append(
+            ReasoningStep(
+                id=step_id,
+                kind=kind,
+                label=description,
+                detail=" · ".join(detail_parts) or None,
+                status=(
+                    StepStatus.REJECTED
+                    if (not on_best_path and selected_path and status is not StepStatus.FAILED)
+                    else status
+                ),
+                confidence=_optional_float(node.get("score")),
+                meta={"risk_score": node.get("risk_score"), "tool_call": tool_call},
+            )
+        )
+
+    trace_edges: list[Edge] = []
+    for parent, child in edges:
+        # Parent may be the plan_id (root) — remap to "q".
+        parent_id = "q" if parent == plan_id else parent
+        if parent_id == "q":
+            trace_edges.append(Edge(parent_id, child, EdgeRelation.REQUIRES))
+            continue
+        child_on_path = child in selected_path
+        parent_on_path = parent in selected_path
+        if child_on_path and parent_on_path:
+            trace_edges.append(Edge(parent, child, EdgeRelation.YIELDS))
+        elif selected_path and not child_on_path:
+            trace_edges.append(Edge(parent, child, EdgeRelation.CONSIDERS, "alternative"))
+        else:
+            trace_edges.append(Edge(parent, child, EdgeRelation.CONSIDERS))
+
+    # Emit a conclusion node summarising the beam selection.
+    selected_last = next(iter(reversed(list(selected_path))), None) if selected_path else None
+    concl_id = "conclusion"
+    concl_kind = StepKind.CONCLUSION
+    if selected_path:
+        steps.append(
+            ReasoningStep(
+                id=concl_id,
+                kind=concl_kind,
+                label=f"Selected path: {' → '.join(selected_path)}",
+                status=StepStatus.OK,
+                detail="Top beam-search score.",
+            )
+        )
+        if selected_last is not None:
+            trace_edges.append(Edge(selected_last, concl_id, EdgeRelation.YIELDS))
+        verdict = "plan-selected"
+        summary = f"Beam search selected {len(selected_path)}-step path."
+    else:
+        steps.append(
+            ReasoningStep(
+                id=concl_id,
+                kind=concl_kind,
+                label="No path selected yet",
+                status=StepStatus.PENDING,
+                detail="Beam search did not produce a complete path.",
+            )
+        )
+        trace_edges.append(Edge("q", concl_id, EdgeRelation.YIELDS))
+        verdict = "plan-pending"
+        summary = "No complete root-to-leaf path yet."
+
+    trace = DecisionTrace(
+        id=trace_id,
+        title=title,
+        question=question,
+        source="praxis",
+        kind="plan",
+        root="q",
+        steps=steps,
+        edges=trace_edges,
+        outcome=Outcome(
+            verdict=verdict,
+            summary=summary,
+            meta={"plan_id": plan_id, "branches": len(nodes), "selected": len(selected_path)},
+        ),
+        tags=["praxis", "plan"],
+    )
+    trace.validate()
+    return trace
+
+
+# ---------------------------------------------------------------------------
+# Telos AlignmentResult → DecisionTrace
+# ---------------------------------------------------------------------------
+
+class _AlignmentResult(Protocol):
+    aligned: bool
+    drift_score: float
+    reason: str | None
+
+
+def trace_from_telos_drift(
+    result: _AlignmentResult,
+    *,
+    action_description: str,
+    active_goals: Sequence[Mapping[str, Any]] = (),
+    conflicts: Sequence[Mapping[str, Any]] = (),
+    threshold: float = 0.3,
+    question: str | None = None,
+    title: str | None = None,
+    trace_id: str | None = None,
+) -> DecisionTrace:
+    """Build a DecisionTrace from a Telos ``AlignmentResult``.
+
+    Arguments:
+        result: ``AlignmentResult``-shaped object (aligned, drift_score, reason).
+        action_description: The action Telos was asked to check.
+        active_goals: List of ``{goal_id, description}`` dicts for the currently
+            active GoalContracts. Rendered as premises.
+        conflicts: Optional ``[{"goal_id", "postcondition", "score"}, ...]``
+            list — if present, each becomes a constraint node connected to the
+            offending observation.
+        threshold: Conflict threshold (for display; default matches Telos).
+    """
+    trace_id = trace_id or f"telos-drift-{uuid4().hex[:12]}"
+    verdict_word = "aligned" if result.aligned else "drift"
+    title = title or f"Telos alignment — {verdict_word.upper()}"
+    question = question or "Is the agent still aligned with its declared goals?"
+
+    steps: list[ReasoningStep] = [
+        ReasoningStep(
+            id="q",
+            kind=StepKind.QUESTION,
+            label=question,
+            source_ref="services/telos/src/telos/core.py",
+        ),
+        ReasoningStep(
+            id="action",
+            kind=StepKind.OBSERVATION,
+            label=f"Proposed action: {action_description}",
+            status=StepStatus.INFO,
+        ),
+    ]
+    edges: list[Edge] = [Edge("q", "action", EdgeRelation.CONSIDERS)]
+
+    for i, goal in enumerate(active_goals):
+        gid = f"goal.{i}"
+        description = str(goal.get("description") or goal.get("goal_id") or f"goal-{i}")
+        steps.append(
+            ReasoningStep(
+                id=gid,
+                kind=StepKind.PREMISE,
+                label=f"Active goal: {description}",
+                status=StepStatus.OK,
+                meta={"goal_id": goal.get("goal_id")},
+            )
+        )
+        edges.append(Edge("q", gid, EdgeRelation.REQUIRES))
+
+    for i, conflict in enumerate(conflicts):
+        cid = f"conflict.{i}"
+        pc = str(conflict.get("postcondition") or "")
+        score = float(conflict.get("score") or 0.0)
+        steps.append(
+            ReasoningStep(
+                id=cid,
+                kind=StepKind.CONSTRAINT,
+                label=f"Postcondition: {pc}",
+                detail=f"similarity = {score:.2f}  (threshold {threshold:.2f})",
+                status=StepStatus.FAILED,
+                confidence=score,
+                meta={"goal_id": conflict.get("goal_id"), "score": score},
+            )
+        )
+        edges.append(Edge("action", cid, EdgeRelation.CONTRADICTS, f"sim={score:.2f}"))
+        # Link back to the goal that owns this postcondition if we can.
+        goal_id = conflict.get("goal_id")
+        for j, goal in enumerate(active_goals):
+            if goal.get("goal_id") == goal_id:
+                edges.append(Edge(f"goal.{j}", cid, EdgeRelation.REQUIRES, "postcondition"))
+                break
+
+    drift_id = "drift"
+    drift_status = StepStatus.TRIGGERED if not result.aligned else StepStatus.OK
+    steps.append(
+        ReasoningStep(
+            id=drift_id,
+            kind=StepKind.INFERENCE,
+            label=f"Drift score: {result.drift_score:.2f} (threshold {threshold:.2f})",
+            status=drift_status,
+            confidence=result.drift_score,
+            detail=result.reason,
+        )
+    )
+    if conflicts:
+        for i in range(len(conflicts)):
+            edges.append(Edge(f"conflict.{i}", drift_id, EdgeRelation.SUPPORTS))
+    else:
+        edges.append(Edge("action", drift_id, EdgeRelation.SUPPORTS))
+
+    concl_id = "conclusion"
+    concl_status = StepStatus.OK if result.aligned else StepStatus.FAILED
+    steps.append(
+        ReasoningStep(
+            id=concl_id,
+            kind=StepKind.CONCLUSION,
+            label=("Aligned — action is consistent with goals"
+                   if result.aligned else "Drift detected — escalate to operator"),
+            status=concl_status,
+            detail=result.reason,
+        )
+    )
+    edges.append(Edge(drift_id, concl_id, EdgeRelation.YIELDS))
+
+    trace = DecisionTrace(
+        id=trace_id,
+        title=title,
+        question=question,
+        source="telos",
+        kind="goal",
+        root="q",
+        steps=steps,
+        edges=edges,
+        outcome=Outcome(
+            verdict="aligned" if result.aligned else "drift",
+            summary=result.reason or (
+                "No drift detected." if result.aligned
+                else f"Drift score {result.drift_score:.2f} exceeds threshold."
+            ),
+            confidence=result.drift_score,
+            meta={"threshold": threshold, "drift_score": result.drift_score},
+        ),
+        tags=["telos", "goal", verdict_word],
+    )
+    trace.validate()
+    return trace
+
+
+# ---------------------------------------------------------------------------
 # Generic tree → DecisionTrace helper (for lightweight external callers)
 # ---------------------------------------------------------------------------
 
@@ -247,6 +568,12 @@ def _enum_name(value: Any) -> str:
     if isinstance(name, str):
         return name
     return str(value)
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return float(value)
 
 
 def _default_reason(decision: str, n_violations: int) -> str:

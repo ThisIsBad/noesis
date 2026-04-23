@@ -480,6 +480,33 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
+// ----- Live updates via Server-Sent Events --------------------------------
+
+function initLiveStream() {
+  if (typeof EventSource === "undefined") return;
+  let src;
+  const connect = () => {
+    try {
+      src = new EventSource("/api/stream");
+    } catch (e) {
+      return;
+    }
+    src.addEventListener("trace_put", () => { loadTraces(); });
+    src.addEventListener("trace_delete", () => { loadTraces(); });
+    src.addEventListener("trace_clear", () => {
+      state.selectedTrace = null;
+      loadTraces();
+      clearCanvas();
+    });
+    src.onerror = () => {
+      src.close();
+      // Reconnect with a short backoff — the server may have restarted.
+      setTimeout(connect, 2000);
+    };
+  };
+  connect();
+}
+
 // ----- Wire up ------------------------------------------------------------
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -500,4 +527,5 @@ document.addEventListener("DOMContentLoaded", () => {
   initPanZoom();
   renderLegend();
   loadTraces();
+  initLiveStream();
 });
