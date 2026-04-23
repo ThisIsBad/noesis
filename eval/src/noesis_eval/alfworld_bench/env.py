@@ -5,9 +5,17 @@ goal + observation, issues a textual action, and the env returns the
 next observation, a reward, and a ``done`` flag. ``inject_failure_at``
 forces the env to return a failure for a specific step index, used to
 benchmark backtrack-recovery.
+
+Action matching is fuzzy (see ``_action_matches``): the canonical plan
+tokens (stop-words stripped) must cover ≥ 60% of the canonical step.
+That lets a real LLM agent emit a paraphrased action — e.g.
+``"walk from the lobby to the conference room"`` for a canonical
+``"walk to conference room"`` — without the env rejecting on a
+verbatim-string mismatch and burning through the step budget.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -34,31 +42,112 @@ class StepResult:
     info: dict[str, object] = field(default_factory=dict)
 
 
+# Filler tokens that don't carry goal meaning. Stripped from both the
+# canonical plan and the agent's action before overlap is computed so
+# that "walk to conference room" matches "walk from the lobby to the
+# conference room". Keep this list short — aggressive stop-word
+# stripping would start collapsing genuinely different actions.
+_STOP_WORDS = frozenset({
+    "a", "an", "the",
+    "to", "from", "into", "onto", "out", "off",
+    "in", "on", "at", "of", "for", "with", "by",
+    "over", "under", "through", "across",
+    "and", "or", "but",
+    "is", "are", "was", "were", "be", "been",
+    "this", "that", "these", "those",
+    "my", "your", "its",
+})
+
+_PUNCT_TRIM = '.,;:!?"\'()[]{}'
+
+
+def _tokenize(text: str) -> list[str]:
+    """Lowercase, split on whitespace, strip trailing punctuation, drop
+    stop-words. Internal punctuation is preserved so tokens like the
+    ``k42-n9t`` memory-suite nonce survive intact."""
+    tokens: list[str] = []
+    for raw in re.split(r"\s+", text.strip().lower()):
+        tok = raw.strip(_PUNCT_TRIM)
+        if tok and tok not in _STOP_WORDS:
+            tokens.append(tok)
+    return tokens
+
+
+def _action_matches(
+    action: str, canonical: str, min_overlap: float = 0.6
+) -> bool:
+    """Return True if ``action`` covers at least ``min_overlap`` of the
+    canonical action's content tokens.
+
+    The canonical string sets the denominator, so a verbose agent that
+    adds filler words is fine but a terse agent that drops content is
+    not. Exact-string matches are a trivial 100% and still succeed.
+
+    Empty canonical strings are a degenerate case we fall back to
+    exact-string compare on to avoid a zero-division false positive.
+    """
+    c_tokens = _tokenize(canonical)
+    if not c_tokens:
+        return action.strip().lower() == canonical.strip().lower()
+    a_tokens = set(_tokenize(action))
+    hits = sum(1 for t in c_tokens if t in a_tokens)
+    return (hits / len(c_tokens)) >= min_overlap
+
+
 class MockAlfworldEnv:
     """In-memory deterministic env. One env instance per task.
 
     Contract mirrors ALFWorld's textworld interface:
         env.reset() -> observation: str
         env.step(action: str) -> StepResult
+
+    Two safety rails matter for real-LLM traffic:
+
+    * ``_action_matches`` does fuzzy word-overlap matching instead of
+      exact-string equality, so a paraphrased canonical action still
+      succeeds. The alternative — agents burning 16 turns on a
+      phrasing mismatch — makes every A/B delta unmeasurable noise.
+    * ``max_consecutive_fails`` terminates the episode after N back-
+      to-back invalid actions (default 5). Stops token-cost burn on a
+      task whose canonical plan the agent simply can't find, rather
+      than letting it thrash for the full ``MAX_STEPS`` budget.
     """
 
-    def __init__(self, task: Task) -> None:
+    DEFAULT_MAX_CONSECUTIVE_FAILS = 5
+    """Terminate an episode after this many consecutive invalid actions.
+    Picked as the smallest number that lets an agent try a few
+    reasonable rephrasings before we conclude it's stuck — cheaper than
+    letting it thrash for the full 16-step runner budget."""
+
+    def __init__(
+        self,
+        task: Task,
+        *,
+        max_consecutive_fails: Optional[int] = None,
+    ) -> None:
         self.task = task
         self._cursor: int = 0
         self._injected_recovered: bool = False
         self._done: bool = False
+        self._consecutive_fails: int = 0
+        self._max_consecutive_fails: int = (
+            max_consecutive_fails
+            if max_consecutive_fails is not None
+            else self.DEFAULT_MAX_CONSECUTIVE_FAILS
+        )
 
     def reset(self) -> str:
         self._cursor = 0
         self._injected_recovered = False
         self._done = False
+        self._consecutive_fails = 0
         return f"Goal: {self.task.goal}\n{self.task.initial_observation}"
 
     def step(self, action: str) -> StepResult:
         if self._done:
             raise RuntimeError("step() called after episode terminated")
 
-        action = action.strip().lower()
+        action_lower = action.strip().lower()
         plan = self.task.canonical_plan
         idx = self._cursor
 
@@ -69,9 +158,13 @@ class MockAlfworldEnv:
             and not self._injected_recovered
         )
         if injecting:
-            if action in {a.lower() for a in self.task.recovery_actions}:
+            if any(
+                _action_matches(action_lower, r)
+                for r in self.task.recovery_actions
+            ):
                 self._injected_recovered = True
                 self._cursor += 1
+                self._consecutive_fails = 0
                 done = self._cursor >= len(plan)
                 self._done = done
                 return StepResult(
@@ -80,18 +173,17 @@ class MockAlfworldEnv:
                     done=done,
                     info={"recovered": True},
                 )
-            options = list(self.task.recovery_actions) or ["(no recovery)"]
-            return StepResult(
+            return self._fail(
                 observation=(
-                    f"Action '{action}' failed. Try one of: {options}"
+                    f"Action '{action_lower}' failed. Try one of: "
+                    f"{list(self.task.recovery_actions) or ['(no recovery)']}"
                 ),
-                reward=-1.0,
-                done=False,
-                info={"failed": True, "step": idx},
+                step_idx=idx,
             )
 
-        if idx < len(plan) and action == plan[idx].lower():
+        if idx < len(plan) and _action_matches(action_lower, plan[idx]):
             self._cursor += 1
+            self._consecutive_fails = 0
             done = self._cursor >= len(plan)
             self._done = done
             return StepResult(
@@ -104,11 +196,40 @@ class MockAlfworldEnv:
                 done=done,
             )
 
+        return self._fail(
+            observation=f"Action '{action_lower}' is not valid here.",
+            step_idx=idx,
+        )
+
+    def _fail(self, *, observation: str, step_idx: int) -> StepResult:
+        """Record a failed action and trip the consecutive-fail circuit
+        breaker if the agent has burned through its error budget."""
+        self._consecutive_fails += 1
+        if self._consecutive_fails >= self._max_consecutive_fails:
+            self._done = True
+            return StepResult(
+                observation=(
+                    f"Episode aborted after {self._consecutive_fails} "
+                    f"consecutive invalid actions."
+                ),
+                reward=-1.0,
+                done=True,
+                info={
+                    "failed": True,
+                    "aborted": True,
+                    "step": step_idx,
+                    "consecutive_fails": self._consecutive_fails,
+                },
+            )
         return StepResult(
-            observation=f"Action '{action}' is not valid here.",
+            observation=observation,
             reward=-1.0,
             done=False,
-            info={"failed": True, "step": idx},
+            info={
+                "failed": True,
+                "step": step_idx,
+                "consecutive_fails": self._consecutive_fails,
+            },
         )
 
     def _next_hint(self) -> str:
