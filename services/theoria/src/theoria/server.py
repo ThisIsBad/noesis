@@ -34,6 +34,7 @@ from theoria.diff import diff_to_markdown, diff_to_mermaid, diff_traces
 from theoria.export import format_for
 from theoria.filters import apply_filter, filter_from_query
 from theoria.models import DecisionTrace
+from theoria.patterns import parse_query, run_query
 from theoria.samples import build_samples
 from theoria.store import TraceStore
 
@@ -123,6 +124,17 @@ class TheoriaHandler(BaseHTTPRequestHandler):
             trace = DecisionTrace.from_dict(payload)
             self.store.put(trace)
             return _json_response(trace.to_dict(), status=HTTPStatus.CREATED)
+        if method == "POST" and path == "/api/traces/search":
+            payload = self._read_json_body()
+            try:
+                compiled = parse_query(payload)
+            except ValueError as exc:
+                raise _HTTPError(HTTPStatus.BAD_REQUEST, str(exc)) from exc
+            parsed_query = parse_qs(query or "")
+            limit = int(parsed_query["limit"][0]) if "limit" in parsed_query else None
+            results = run_query(self.store.list(), compiled, limit=limit)
+            return _json_response({"traces": [t.to_dict() for t in results]})
+
         if method == "POST" and path == "/api/samples/load":
             count = self.store.put_many(build_samples())
             return _json_response({"loaded": count})
@@ -134,10 +146,10 @@ class TheoriaHandler(BaseHTTPRequestHandler):
         if trace_match:
             trace_id = trace_match.group(1)
             if method == "GET":
-                trace = self.store.get(trace_id)
-                if trace is None:
+                found = self.store.get(trace_id)
+                if found is None:
                     raise _HTTPError(HTTPStatus.NOT_FOUND, f"trace '{trace_id}' not found")
-                return _json_response(trace.to_dict())
+                return _json_response(found.to_dict())
             if method == "DELETE":
                 deleted = self.store.delete(trace_id)
                 if not deleted:

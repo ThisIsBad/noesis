@@ -14,7 +14,7 @@ stable IDs like ``rule.0`` or ``fact.destructive``).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any, Sequence
 
 from theoria.export import _md_code, _md_escape
 from theoria.models import DecisionTrace, Edge, EdgeRelation, ReasoningStep, StepKind, StepStatus
@@ -288,9 +288,9 @@ def diff_to_mermaid(diff: TraceDiff) -> str:
     union_steps: dict[str, tuple[ReasoningStep, str]] = {}
     for step in diff.removed_steps:
         union_steps[step.id] = (step, "removed")
-    for step in diff.changed_steps:
+    for change in diff.changed_steps:
         # Show the "new" version when rendering a changed node.
-        union_steps[step.new.id] = (step.new, "changed")
+        union_steps[change.new.id] = (change.new, "changed")
     for step in diff.added_steps:
         union_steps[step.id] = (step, "added")
     # Fill in unchanged nodes (they appear in unchanged_step_ids — we need a
@@ -342,5 +342,5 @@ def _mermaid_escape(text: str) -> str:
                 .replace("\n", " "))
 
 
-__all__: Iterable[str] = ("diff_traces", "diff_to_markdown", "diff_to_mermaid",
+__all__: Sequence[str] = ("diff_traces", "diff_to_markdown", "diff_to_mermaid",
                           "TraceDiff", "StepChange")

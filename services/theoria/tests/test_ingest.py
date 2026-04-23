@@ -4,8 +4,11 @@ from dataclasses import dataclass
 from enum import Enum
 
 from theoria.ingest import (
+    trace_from_goal_contract,
     trace_from_logos_policy,
+    trace_from_plan,
     trace_from_praxis_plan,
+    trace_from_proof_certificate,
     trace_from_telos_drift,
     trace_from_tree,
 )
@@ -181,6 +184,163 @@ def test_telos_aligned_has_ok_conclusion_without_conflicts() -> None:
     assert trace.outcome.verdict == "aligned"
     concl = next(s for s in trace.steps if s.id == "conclusion")
     assert concl.status is StepStatus.OK
+
+
+@dataclass
+class _FakeCert:
+    schema_version: str
+    claim_type: str
+    claim: object
+    method: str
+    verified: bool
+    timestamp: str
+    verification_artifact: dict
+
+
+def test_proof_certificate_verified_is_ok() -> None:
+    cert = _FakeCert(
+        schema_version="1.0",
+        claim_type="propositional",
+        claim="x > 0 and y > 0 implies x + y > 0",
+        method="z3",
+        verified=True,
+        timestamp="2026-04-23T13:00:00+00:00",
+        verification_artifact={"status": "unsat", "solver": "z3"},
+    )
+    trace = trace_from_proof_certificate(cert)
+    trace.validate()
+    concl = next(s for s in trace.steps if s.id == "conclusion")
+    assert concl.status is StepStatus.OK
+    assert trace.outcome is not None
+    assert trace.outcome.verdict == "verified"
+    # The artifact should have become an evidence node.
+    assert any(s.id == "artifact" for s in trace.steps)
+
+
+def test_proof_certificate_refuted_is_failed() -> None:
+    cert = _FakeCert(
+        schema_version="1.0",
+        claim_type="propositional",
+        claim="P implies not P",
+        method="z3",
+        verified=False,
+        timestamp="2026-04-23T13:00:00+00:00",
+        verification_artifact={},
+    )
+    trace = trace_from_proof_certificate(cert)
+    assert trace.outcome is not None
+    assert trace.outcome.verdict == "refuted"
+    concl = next(s for s in trace.steps if s.id == "conclusion")
+    assert concl.status is StepStatus.FAILED
+
+
+@dataclass
+class _FakeConstraint:
+    description: str
+    formal: str | None = None
+
+
+@dataclass
+class _FakeContract:
+    goal_id: str
+    description: str
+    preconditions: list
+    postconditions: list
+    active: bool
+
+
+def test_goal_contract_renders_each_constraint() -> None:
+    contract = _FakeContract(
+        goal_id="g-abc",
+        description="Refactor auth module, preserve public API",
+        preconditions=[
+            _FakeConstraint("public API signatures known", "Callable[[], User]"),
+        ],
+        postconditions=[
+            _FakeConstraint("public API signature preserved"),
+            _FakeConstraint("tests still pass"),
+        ],
+        active=True,
+    )
+    trace = trace_from_goal_contract(contract)
+    trace.validate()
+    ids = [s.id for s in trace.steps]
+    assert "pre.0" in ids
+    assert "post.0" in ids and "post.1" in ids
+    assert trace.outcome is not None
+    assert trace.outcome.verdict == "active"
+    # Formal expression appears in the precondition's detail.
+    pre = next(s for s in trace.steps if s.id == "pre.0")
+    assert pre.detail is not None and "Callable" in pre.detail
+
+
+def test_inactive_goal_contract_concludes_rejected() -> None:
+    contract = _FakeContract(
+        goal_id="g-old", description="retired goal",
+        preconditions=[], postconditions=[], active=False,
+    )
+    trace = trace_from_goal_contract(contract)
+    concl = next(s for s in trace.steps if s.id == "conclusion")
+    assert concl.status is StepStatus.REJECTED
+
+
+class _PlanStatusEnum(Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+@dataclass
+class _FakePlanStep:
+    step_id: str
+    description: str
+    tool_call: str | None
+    status: object
+    outcome: str | None
+    risk_score: float
+
+
+@dataclass
+class _FakePlan:
+    plan_id: str
+    goal: str
+    steps: list
+    depth: int = 0
+
+
+def test_plan_ok_when_every_step_completed() -> None:
+    plan = _FakePlan(
+        plan_id="p-123", goal="Migrate users",
+        steps=[
+            _FakePlanStep("s1", "dump data", "pg_dump", _PlanStatusEnum.COMPLETED, "ok", 0.1),
+            _FakePlanStep("s2", "alter schema", None, _PlanStatusEnum.COMPLETED, "ok", 0.2),
+        ],
+    )
+    trace = trace_from_plan(plan)
+    trace.validate()
+    assert trace.outcome is not None
+    assert trace.outcome.verdict == "plan-ok"
+
+
+def test_plan_fails_when_any_step_failed() -> None:
+    plan = _FakePlan(
+        plan_id="p-124", goal="Migrate users",
+        steps=[
+            _FakePlanStep("s1", "dump data", "pg_dump", _PlanStatusEnum.COMPLETED, "ok", 0.1),
+            _FakePlanStep("s2", "alter schema", None, _PlanStatusEnum.FAILED, "lock timeout", 0.8),
+        ],
+    )
+    trace = trace_from_plan(plan)
+    assert trace.outcome is not None
+    assert trace.outcome.verdict == "plan-failed"
+    assert "plan-failed" in trace.tags
+
+
+def test_plan_with_no_steps_is_pending() -> None:
+    plan = _FakePlan(plan_id="p-empty", goal="nothing", steps=[])
+    trace = trace_from_plan(plan)
+    assert trace.outcome is not None
+    assert trace.outcome.verdict == "empty-plan"
 
 
 def test_trace_from_tree_walks_children() -> None:
