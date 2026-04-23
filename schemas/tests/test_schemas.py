@@ -136,6 +136,12 @@ def test_logos_certificate_round_trip():
     """
     import sys
     from pathlib import Path
+    import pytest
+    pytest.importorskip(
+        "z3",
+        reason="z3-solver required for the Logos round-trip test "
+               "(install Logos service deps to enable)",
+    )
     logos_src = Path(__file__).resolve().parents[2] / "services" / "logos" / "src"
     sys.path.insert(0, str(logos_src))
     try:
