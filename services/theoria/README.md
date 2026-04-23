@@ -34,10 +34,45 @@ Or install it properly (also no runtime deps):
 
 ```bash
 pip install -e services/theoria
-theoria --host 0.0.0.0 --port 8765
+theoria
 ```
 
-Options:
+Open the URL. The first time you launch you'll see four built-in sample
+traces that cover the main decision shapes. Click nodes to inspect
+premises / rules / evidence; pan with drag, zoom with the mouse wheel.
+
+## CLI
+
+Run any subcommand with `python -m theoria <cmd> [args]` or, if installed,
+`theoria <cmd> [args]`. Calling `theoria` with no subcommand (or with only
+server flags like `--port`) runs the server.
+
+| Command | Purpose |
+|---------|---------|
+| `theoria serve [--host --port --persist --no-samples]` | Run the HTTP server |
+| `theoria post <file\|->` | POST a trace JSON file (or stdin) to a running server |
+| `theoria export --id X [--format markdown\|mermaid\|dot\|json]` | Fetch + render one trace |
+| `theoria list [--source --kind --verdict --tag --q --limit --format table\|ids\|json]` | Filtered trace list |
+| `theoria diff <a_id> <b_id> [--format markdown\|mermaid\|json]` | Compare two traces |
+| `theoria tail` | Subscribe to the `/api/stream` SSE feed and print events |
+| `theoria sample [--index N]` | Print a built-in sample trace as JSON |
+
+Remote commands honour `THEORIA_URL` (default `http://127.0.0.1:8765`) or
+a per-call `--url`. Examples:
+
+```bash
+# Pipe a generated trace into a running server:
+my-tool --emit-trace | theoria post -
+
+# Find every Logos block and view it as Markdown:
+theoria list --source logos --verdict block --format ids \
+  | head -1 | xargs -I {} theoria export --id {} --format markdown
+
+# Watch decisions stream by:
+theoria tail
+```
+
+### Server options
 
 | Flag | Env var | Default | Purpose |
 |------|---------|---------|---------|
@@ -46,10 +81,6 @@ Options:
 | `--persist PATH` | `THEORIA_PERSIST` | *(off)* | Append each trace to a JSONL file, reload on start |
 | `--no-samples` | — | off | Skip loading the built-in demo traces |
 | `--log-level` | `THEORIA_LOG_LEVEL` | `INFO` | Python logging level |
-
-Open the URL. The first time you launch you'll see four built-in sample
-traces that cover the main decision shapes. Click nodes to inspect
-premises / rules / evidence; pan with drag, zoom with the mouse wheel.
 
 ## Emitting a trace from another service
 
@@ -110,14 +141,44 @@ runnable example.
 |--------|------|---------|
 | GET | `/` | Web UI (single page) |
 | GET | `/health` | Liveness + trace count |
-| GET | `/api/traces` | List all traces (most-recent first) |
+| GET | `/api/traces` | List traces (most-recent first). Supports `?source=` `?kind=` `?verdict=` `?tag=` (repeatable) `?q=` `?since=` `?until=` `?limit=` |
 | GET | `/api/traces/{id}` | Single trace |
 | GET | `/api/traces/{id}/export?format=mermaid\|dot\|markdown` | Render as Mermaid / Graphviz DOT / reviewable Markdown |
+| GET | `/api/traces/{a}/diff/{b}?format=json\|markdown\|mermaid` | Structural diff of two traces |
 | GET | `/api/stream` | Server-Sent Events — pushes `trace_put` / `trace_delete` / `trace_clear` |
 | POST | `/api/traces` | Ingest a trace (JSON body) |
 | DELETE | `/api/traces/{id}` | Remove a trace |
 | POST | `/api/samples/load` | Load the built-in sample traces |
 | POST | `/api/clear` | Clear all traces |
+
+### Filtering
+
+`GET /api/traces` accepts AND-combined filters; tag membership is OR:
+
+```bash
+# Every Logos block from the last day:
+curl 'http://theoria:8765/api/traces?source=logos&verdict=block&since=2026-04-22T00:00:00Z'
+
+# Anything tagged policy or plan, containing "auth" in title/question/labels, top 5:
+curl 'http://theoria:8765/api/traces?tag=policy,plan&q=auth&limit=5'
+```
+
+Timestamps accept ISO-8601 with `Z` or `+00:00` offsets. Malformed dates are
+silently ignored (the filter becomes no-op for that field).
+
+### Trace diff
+
+```bash
+curl 'http://theoria:8765/api/traces/v1/diff/v2?format=markdown' > diff.md
+curl 'http://theoria:8765/api/traces/v1/diff/v2?format=mermaid' > diff.mmd
+curl 'http://theoria:8765/api/traces/v1/diff/v2?format=json'   | jq .
+```
+
+Returned fields: `added_steps`, `removed_steps`, `changed_steps`
+(with per-field before/after), `added_edges`, `removed_edges`,
+`outcome_change`, `unchanged_step_ids`. The Markdown rendering
+includes a merged Mermaid graph that colour-codes added (green),
+removed (red), and changed (amber) nodes.
 
 ### Live streaming
 
@@ -233,6 +294,8 @@ python -m mypy --strict src/
 - [x] Praxis beam-search state adapter
 - [x] Telos alignment / drift adapter
 - [x] Exporter: decision trace → Mermaid / Graphviz DOT / Markdown
+- [x] Trace diff (compare two traces — added / removed / changed)
+- [x] Filter/search API on `/api/traces`
+- [x] CLI: `post`, `export`, `list`, `tail`, `diff`, `sample`
 - [ ] Kairos OpenTelemetry span ingestion adapter
 - [ ] MCP-over-HTTP wrapping for uniform Noesis deployment
-- [ ] Trace diff (compare two traces side-by-side)

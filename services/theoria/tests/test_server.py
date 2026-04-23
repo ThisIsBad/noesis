@@ -100,6 +100,33 @@ def test_post_custom_trace_round_trip(live_server) -> None:
     assert body["title"] == "Custom"
 
 
+def test_list_accepts_filter_query_params(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    # Filter by source.
+    status, body = _get(f"{base}/api/traces?source=logos")
+    assert status == 200
+    sources = {t["source"] for t in body["traces"]}
+    assert sources == {"logos"}
+    # Filter by verdict.
+    status, body = _get(f"{base}/api/traces?verdict=block")
+    assert status == 200
+    assert all(t["outcome"]["verdict"] == "block" for t in body["traces"])
+    # Filter by tag.
+    status, body = _get(f"{base}/api/traces?tag=drift")
+    assert status == 200
+    assert all("drift" in t["tags"] for t in body["traces"])
+    # Full-text search.
+    status, body = _get(f"{base}/api/traces?q=refactor")
+    assert status == 200
+    titles = [t["title"].lower() for t in body["traces"]]
+    assert any("auth" in title or "refactor" in title for title in titles)
+    # Limit.
+    status, body = _get(f"{base}/api/traces?limit=1")
+    assert status == 200
+    assert len(body["traces"]) == 1
+
+
 def test_get_unknown_trace_returns_404(live_server) -> None:
     base, _ = live_server
     status, _ = _get(f"{base}/api/traces/does-not-exist")
@@ -199,6 +226,53 @@ def test_export_unknown_trace_returns_404(live_server) -> None:
         assert False, "should have raised HTTPError"
     except urllib.error.HTTPError as exc:
         assert exc.code == 404
+
+
+# ---------------------------------------------------------------------------
+# Diff endpoint
+# ---------------------------------------------------------------------------
+
+def test_diff_endpoint_json(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    status, body = _get(f"{base}/api/traces/sample-logos-policy-block/diff/sample-z3-proof")
+    assert status == 200
+    assert body["a_id"] == "sample-logos-policy-block"
+    assert body["b_id"] == "sample-z3-proof"
+    assert "added_steps" in body and "removed_steps" in body
+
+
+def test_diff_endpoint_markdown(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    with urllib.request.urlopen(
+        f"{base}/api/traces/sample-logos-policy-block/diff/sample-z3-proof?format=markdown"
+    ) as resp:
+        assert resp.status == 200
+        assert resp.headers.get("Content-Type", "").startswith("text/markdown")
+        body = resp.read().decode()
+    assert body.startswith("# Trace diff")
+
+
+def test_diff_endpoint_missing_trace_returns_404(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    status, body = _get(f"{base}/api/traces/not-there/diff/sample-z3-proof")
+    assert status == 404
+    assert "not found" in body["error"]
+
+
+def test_diff_endpoint_unknown_format_returns_400(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    req = urllib.request.Request(
+        f"{base}/api/traces/sample-z3-proof/diff/sample-telos-drift?format=pdf"
+    )
+    try:
+        urllib.request.urlopen(req)
+        assert False, "should have raised HTTPError"
+    except urllib.error.HTTPError as exc:
+        assert exc.code == 400
 
 
 # ---------------------------------------------------------------------------

@@ -30,7 +30,9 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
+from theoria.diff import diff_to_markdown, diff_to_mermaid, diff_traces
 from theoria.export import format_for
+from theoria.filters import apply_filter, filter_from_query
 from theoria.models import DecisionTrace
 from theoria.samples import build_samples
 from theoria.store import TraceStore
@@ -67,6 +69,10 @@ class TheoriaHandler(BaseHTTPRequestHandler):
         if export_match:
             self._handle_export(export_match.group(1), parsed.query)
             return
+        diff_match = re.fullmatch(r"/api/traces/([^/]+)/diff/([^/]+)", parsed.path)
+        if diff_match:
+            self._handle_diff(diff_match.group(1), diff_match.group(2), parsed.query)
+            return
         self._dispatch("GET")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -78,8 +84,9 @@ class TheoriaHandler(BaseHTTPRequestHandler):
     def _dispatch(self, method: str) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
+        query = parsed.query
         try:
-            status, headers, body = self._route(method, path)
+            status, headers, body = self._route(method, path, query)
         except _HTTPError as exc:
             status, headers, body = exc.status, {"Content-Type": "application/json"}, _json_error(exc.message)
         except Exception:  # pragma: no cover - defensive
@@ -96,7 +103,9 @@ class TheoriaHandler(BaseHTTPRequestHandler):
         if method != "HEAD":
             self.wfile.write(body)
 
-    def _route(self, method: str, path: str) -> tuple[int, dict[str, str], bytes]:
+    def _route(
+        self, method: str, path: str, query: str = "",
+    ) -> tuple[int, dict[str, str], bytes]:
         if method == "GET" and (path == "/" or path == "/index.html"):
             return _serve_file(STATIC_DIR / "index.html")
         if method == "GET" and path.startswith("/static/"):
@@ -105,7 +114,10 @@ class TheoriaHandler(BaseHTTPRequestHandler):
             return _json_response({"ok": True, "traces": len(self.store)})
 
         if method == "GET" and path == "/api/traces":
-            return _json_response({"traces": [t.to_dict() for t in self.store.list()]})
+            parsed_query = parse_qs(query or "")
+            flt, limit = filter_from_query(parsed_query)
+            filtered = apply_filter(self.store.list(), flt, limit=limit)
+            return _json_response({"traces": [t.to_dict() for t in filtered]})
         if method == "POST" and path == "/api/traces":
             payload = self._read_json_body()
             trace = DecisionTrace.from_dict(payload)
@@ -191,6 +203,67 @@ class TheoriaHandler(BaseHTTPRequestHandler):
                 }
                 body = rendered.encode("utf-8")
 
+        self.send_response(status)
+        for key, value in headers.items():
+            self.send_header(key, value)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _handle_diff(self, a_id: str, b_id: str, query_str: str) -> None:
+        """Compare two traces and return a structured diff."""
+        query = parse_qs(query_str or "")
+        fmt = (query.get("format", ["json"])[0]).lower()
+
+        a = self.store.get(a_id)
+        b = self.store.get(b_id)
+        missing = [i for i, t in ((a_id, a), (b_id, b)) if t is None]
+        if missing:
+            self._write_response(
+                int(HTTPStatus.NOT_FOUND),
+                {"Content-Type": "application/json"},
+                _json_error(f"trace(s) not found: {', '.join(missing)}"),
+            )
+            return
+        assert a is not None and b is not None  # narrowed by the missing check above
+
+        diff = diff_traces(a, b)
+        if fmt == "json":
+            self._write_response(
+                int(HTTPStatus.OK),
+                {"Content-Type": "application/json", "Cache-Control": "no-store"},
+                json.dumps(diff.to_dict(), sort_keys=True).encode("utf-8"),
+            )
+            return
+        if fmt in ("markdown", "md"):
+            body = diff_to_markdown(diff).encode("utf-8")
+            self._write_response(
+                int(HTTPStatus.OK),
+                {
+                    "Content-Type": "text/markdown; charset=utf-8",
+                    "Content-Disposition": f'inline; filename="{a_id}-vs-{b_id}.md"',
+                },
+                body,
+            )
+            return
+        if fmt == "mermaid":
+            body = diff_to_mermaid(diff).encode("utf-8")
+            self._write_response(
+                int(HTTPStatus.OK),
+                {
+                    "Content-Type": "text/plain; charset=utf-8",
+                    "Content-Disposition": f'inline; filename="{a_id}-vs-{b_id}.mmd"',
+                },
+                body,
+            )
+            return
+        self._write_response(
+            int(HTTPStatus.BAD_REQUEST),
+            {"Content-Type": "application/json"},
+            _json_error(f"unknown diff format: {fmt!r}"),
+        )
+
+    def _write_response(self, status: int, headers: dict[str, str], body: bytes) -> None:
         self.send_response(status)
         for key, value in headers.items():
             self.send_header(key, value)
