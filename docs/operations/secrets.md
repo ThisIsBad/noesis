@@ -97,20 +97,29 @@ app.add_middleware(bearer_middleware, env_var="MNEME_SECRET")
 This is strictly refactoring — no auth-model change. **Ship this
 regardless of what we decide about Stage 2/3.**
 
-### Stage 2 — Rotatable tokens (1 PR, ~1 week)
+### Stage 2 — Rotatable tokens ✅ landed
 
-Accept two environment variables per service: `<SVC>_SECRET` (active)
-and `<SVC>_SECRET_PREV` (grace-period). The middleware accepts
-either during rotation. Ops procedure:
+`noesis_clients.auth.bearer_middleware` accepts two environment
+variables per service: `<SVC>_SECRET` (active) and, by default,
+`<SVC>_SECRET_PREV` (grace-period). The middleware trusts a request
+whose token matches either during the rotation window. Override the
+previous-env-var name with `prev_env_var=...` if your service uses a
+non-standard convention.
 
-1. Generate new token. Deploy with `<SVC>_SECRET_PREV = old_token,
-   <SVC>_SECRET = new_token`.
-2. Update every caller's config with the new token. Restart each.
-3. After all callers are on new token, deploy with
-   `<SVC>_SECRET_PREV` unset.
+**Rotation runbook:**
 
-Gives us 30-minute rotation with zero downtime, still single-string
-secrets.
+1. Generate a new token: `openssl rand -hex 32`.
+2. Deploy the service with `<SVC>_SECRET=<new>` and
+   `<SVC>_SECRET_PREV=<old>`. Both tokens now accepted.
+3. Update every caller's config to `<new>`. Restart each caller.
+4. Deploy the service again with `<SVC>_SECRET_PREV` **unset** to
+   close the rotation window.
+
+Wall time: ≈ 30 minutes, zero downtime, zero lost requests. Tests
+in `clients/tests/test_auth.py::test_rotation_*` pin the behaviour.
+
+If you skip step 4 permanently you effectively double your valid
+secrets — don't.
 
 ### Stage 3 — Central auth (roadmap, not committed)
 
@@ -130,11 +139,19 @@ Either way, defer until the per-service bearer model actually bites
 (first rotation fire drill, or first ops request that can't be
 served by it).
 
-## Checklist for today
+## Checklist
 
 - [x] Document the current auth model accurately (**this file**).
-- [ ] Stage 1 — extract `noesis_clients.auth.bearer_middleware`.
+- [x] Stage 1 — extract `noesis_clients.auth.bearer_middleware`.
+- [x] Stage 2 — rotatable `<SVC>_SECRET_PREV` in the shared
+      middleware (no service migration yet — see below).
+- [ ] Migrate each service from its hand-rolled `_BearerAuth` class
+      to `bearer_middleware(env_var)` from `noesis_clients.auth`.
+      The MVP services (Telos, Episteme, Kosmos, Empiria, Techne,
+      Praxis) are straightforward. Logos and Mneme are
+      production-deployed — their sweep should be its own PR with
+      explicit per-service review.
 - [ ] Add `Authorization` redaction to every service's structured
       log emitter.
-- [ ] Decide on Stage 2 rotation support before the first secret
-      rotation, not during.
+- [ ] Decide between Stage-3 options (mTLS vs gateway-JWT) when the
+      per-service bearer model starts biting operationally.

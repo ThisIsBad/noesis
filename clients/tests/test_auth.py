@@ -174,3 +174,85 @@ def test_bearer_middleware_factory_reads_env_at_construction_not_call(
     scope = _http_scope(headers=[(b"authorization", b"Bearer initial")])
     status, _ = asyncio.run(_drive(mw, scope))
     assert status == 200    # original secret still honoured
+
+
+# ── Rotation: <SVC>_SECRET + <SVC>_SECRET_PREV ────────────────────────────────
+
+def test_rotation_both_tokens_accepted() -> None:
+    """During the rotation window both active and previous tokens pass."""
+    mw = BearerAuthMiddleware(
+        _stub_app, secrets=("new-token", "old-token"),
+    )
+    for token in ("new-token", "old-token"):
+        scope = _http_scope(headers=[(b"authorization", f"Bearer {token}".encode())])
+        status, _ = asyncio.run(_drive(mw, scope))
+        assert status == 200, f"{token!r} should be accepted during rotation"
+
+
+def test_rotation_rejects_token_not_in_active_set() -> None:
+    mw = BearerAuthMiddleware(
+        _stub_app, secrets=("new-token", "old-token"),
+    )
+    scope = _http_scope(headers=[(b"authorization", b"Bearer stale-token")])
+    status, _ = asyncio.run(_drive(mw, scope))
+    assert status == 401
+
+
+def test_rotation_empty_previous_is_ignored() -> None:
+    """Unset <SVC>_SECRET_PREV must not collapse to accepting empty token."""
+    mw = BearerAuthMiddleware(_stub_app, secrets=("active", ""))
+    scope = _http_scope(headers=[(b"authorization", b"Bearer ")])
+    status, _ = asyncio.run(_drive(mw, scope))
+    assert status == 401
+    # And a missing Authorization header is also rejected.
+    status, _ = asyncio.run(_drive(mw, _http_scope()))
+    assert status == 401
+
+
+def test_bearer_middleware_reads_prev_env_var(monkeypatch) -> None:
+    """Default prev env-var is ``<env_var>_PREV``."""
+    from noesis_clients.auth import bearer_middleware
+
+    monkeypatch.setenv("ROT_SECRET", "active")
+    monkeypatch.setenv("ROT_SECRET_PREV", "previous")
+    factory = bearer_middleware("ROT_SECRET")
+    mw = factory(_stub_app)
+
+    for token in ("active", "previous"):
+        scope = _http_scope(headers=[(b"authorization", f"Bearer {token}".encode())])
+        status, _ = asyncio.run(_drive(mw, scope))
+        assert status == 200, f"{token} should work in rotation window"
+
+
+def test_bearer_middleware_custom_prev_env_var(monkeypatch) -> None:
+    """Caller can override the prev env-var name."""
+    from noesis_clients.auth import bearer_middleware
+
+    monkeypatch.setenv("CUR", "new")
+    monkeypatch.setenv("OLD", "old")
+    factory = bearer_middleware("CUR", prev_env_var="OLD")
+    mw = factory(_stub_app)
+
+    scope = _http_scope(headers=[(b"authorization", b"Bearer old")])
+    status, _ = asyncio.run(_drive(mw, scope))
+    assert status == 200
+
+
+def test_bearer_middleware_no_prev_env_var_still_works(monkeypatch) -> None:
+    """When only <SVC>_SECRET is set, behaviour matches Stage-1."""
+    from noesis_clients.auth import bearer_middleware
+
+    monkeypatch.setenv("STAGE1_SECRET", "only-token")
+    monkeypatch.delenv("STAGE1_SECRET_PREV", raising=False)
+    factory = bearer_middleware("STAGE1_SECRET")
+    mw = factory(_stub_app)
+
+    scope = _http_scope(headers=[(b"authorization", b"Bearer only-token")])
+    status, _ = asyncio.run(_drive(mw, scope))
+    assert status == 200
+
+
+def test_duplicate_secrets_are_deduplicated() -> None:
+    """Same string for both active and prev collapses to one."""
+    mw = BearerAuthMiddleware(_stub_app, secrets=("same", "same"))
+    assert mw.secrets == ("same",)

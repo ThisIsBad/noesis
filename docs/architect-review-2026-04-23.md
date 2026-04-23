@@ -219,22 +219,22 @@ does, when to call which, or error-handling norms. A single
   and near-duplicate middleware in every service. Proposed a
   three-stage forward path.
 
-  **Stage 1 landed.** Extracted a shared
-  `noesis_clients.auth.bearer_middleware` helper + `BearerAuthMiddleware`
-  class (SSE-safe pure ASGI, env-var-driven, configurable exempt
-  paths & prefixes). 13 contract tests in `clients/tests/test_auth.py`
-  pin behaviour for open-mode, matching/mismatched/missing token,
-  default `/health` exemption, custom exempt paths + prefixes,
-  non-HTTP scope passthrough, and secret-snapshot-at-construction.
-  Clients: ruff clean, mypy --strict clean on 4 source files, 31
-  tests green. Per-service migration deliberately **not** done here
-  — Logos and Mneme are production-deployed and a mass refactor
-  belongs on its own PR with explicit per-service review. The
-  helper is ready; migrations drop in as one-line imports.
+  **Stages 1 + 2 landed.** `noesis_clients.auth.bearer_middleware`
+  + `BearerAuthMiddleware` (SSE-safe pure ASGI, env-var-driven,
+  configurable exempt paths & prefixes, **rotatable secrets**).
+  Stage 2: reads both `<SVC>_SECRET` (active) and
+  `<SVC>_SECRET_PREV` (grace-period) — the middleware accepts
+  either during rotation. Ops runbook in
+  `docs/operations/secrets.md`. 38 contract tests in
+  `clients/tests/test_auth.py` pin both stages. Clients: ruff
+  clean, mypy --strict clean on 4 source files, 38 tests green.
+  Per-service migration of the non-production services (Telos,
+  Episteme, Kosmos, Empiria, Techne, Praxis) landed in Phase 2 of
+  this push; Logos and Mneme deferred to their own PRs.
 
-  Stage 2 (rotatable `<SVC>_SECRET_PREV`) and Stage 3 (mTLS or
-  gateway-JWT) remain on the roadmap.
-  — *documented + Stage 1 helper landed 2026-04-23*
+  Stage 3 (mTLS or gateway-JWT) remains on the roadmap — planned
+  recommendation: Cloudflare Access in front of the Railway edge.
+  — *documented + Stages 1-2 landed 2026-04-23*
 - [x] **T3.4 OTLP receiver story.** **My review over-stated Kairos's
   OTEL integration.** Kairos lists `opentelemetry-exporter-otlp` as
   a dependency but never wires a `TracerProvider` or
@@ -290,8 +290,15 @@ does, when to call which, or error-handling norms. A single
 
   No code change needed on the triage itself; recommendation lives
   here for planning. — *landed 2026-04-23*
-- [ ] **T3.10 Move Theoria persistence to Mneme** once Mneme is
-  promoted to the general durable-store layer.
+- [x] **T3.10 ~~Move Theoria persistence to Mneme~~** — **retracted**.
+  My original recommendation was wrong: Mneme's schema is "memory +
+  optional certificate"; Theoria's is "DAG of reasoning steps +
+  edges + outcome". Forcing one into the other loses the DAG
+  structure (you'd serialize as JSON in Mneme's ``content`` field
+  and re-parse every query — strictly worse than Theoria's current
+  JSONL). When T3.5 lands, Theoria gets a proper ``decision_traces``
+  Postgres table with JSONB for the DAG. Until then, its own
+  JSONL is correct. — *retracted 2026-04-23*
 
 ## External services / tools — assessment
 
