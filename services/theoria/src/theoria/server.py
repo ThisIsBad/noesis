@@ -36,6 +36,7 @@ from theoria.filters import apply_filter, filter_from_query
 from theoria.models import DecisionTrace
 from theoria.patterns import parse_query, run_query
 from theoria.samples import build_samples
+from theoria.stats import compute_stats
 from theoria.store import TraceStore
 
 SSE_HEARTBEAT_SECONDS = 15.0
@@ -113,6 +114,13 @@ class TheoriaHandler(BaseHTTPRequestHandler):
             return _serve_static(path[len("/static/"):])
         if method == "GET" and path == "/health":
             return _json_response({"ok": True, "traces": len(self.store)})
+
+        if method == "GET" and path == "/api/stats":
+            parsed_query = parse_qs(query or "")
+            top_n_raw = parsed_query.get("top_n", ["5"])[0]
+            top_n = int(top_n_raw) if top_n_raw.isdigit() else 5
+            stats = compute_stats(self.store.list(), top_n=top_n)
+            return _json_response(stats.to_dict())
 
         if method == "GET" and path == "/api/traces":
             parsed_query = parse_qs(query or "")

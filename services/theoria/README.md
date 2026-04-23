@@ -18,6 +18,7 @@ fired, which alternatives it pruned, and how it reached its verdict.
 | **Logos** | `proof` | Z3 assertions → `check()` → theorem holds / refuted |
 | **Praxis** | `plan` | Subgoals → beam branches → pruned alternatives → selected plan |
 | **Telos** | `goal` | Goal anchor → observed actions → similarity + postcondition checks → drift verdict |
+| **Kairos** | `trace` | OTEL span tree — service·operation per span, success → status, parent→child as YIELDS |
 | **Any** | `custom` | Nested reasoning tree via `trace_from_tree()` |
 
 ## Running the server
@@ -145,6 +146,7 @@ runnable example.
 | GET | `/api/traces/{id}` | Single trace |
 | GET | `/api/traces/{id}/export?format=mermaid\|dot\|markdown` | Render as Mermaid / Graphviz DOT / reviewable Markdown |
 | GET | `/api/traces/{a}/diff/{b}?format=json\|markdown\|mermaid` | Structural diff of two traces |
+| GET | `/api/stats` | Aggregate counts (`?top_n=N` caps the lists) |
 | GET | `/api/stream` | Server-Sent Events — pushes `trace_put` / `trace_delete` / `trace_clear` |
 | POST | `/api/traces` | Ingest a trace (JSON body) |
 | POST | `/api/traces/search` | Pattern query: step/edge predicates (JSON body) |
@@ -355,5 +357,6 @@ The Dockerfile runs `theoria serve --host 0.0.0.0 --port $PORT`.
 - [x] Native adapters for `noesis_schemas.{ProofCertificate, GoalContract, Plan}`
 - [x] Railway deploy config (`Dockerfile`, `railway.toml`)
 - [x] `ruff` / `mypy --strict` / `coverage ≥ 85%` preflight gates green
-- [ ] Kairos OpenTelemetry span ingestion adapter
+- [x] Kairos OpenTelemetry span ingestion adapter (`trace_from_trace_spans`)
+- [x] Aggregate stats endpoint (`GET /api/stats`)
 - [ ] MCP-over-HTTP wrapping for uniform Noesis deployment

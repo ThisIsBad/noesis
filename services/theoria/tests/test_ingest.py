@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+import pytest
+
 from theoria.ingest import (
     trace_from_goal_contract,
     trace_from_logos_policy,
@@ -10,6 +12,7 @@ from theoria.ingest import (
     trace_from_praxis_plan,
     trace_from_proof_certificate,
     trace_from_telos_drift,
+    trace_from_trace_spans,
     trace_from_tree,
 )
 from theoria.models import Outcome, StepStatus
@@ -341,6 +344,75 @@ def test_plan_with_no_steps_is_pending() -> None:
     trace = trace_from_plan(plan)
     assert trace.outcome is not None
     assert trace.outcome.verdict == "empty-plan"
+
+
+@dataclass
+class _FakeSpan:
+    trace_id: str
+    span_id: str
+    parent_span_id: str | None
+    service: str
+    operation: str
+    duration_ms: float | None
+    success: bool | None
+    metadata: dict
+
+
+def test_trace_spans_linear_chain_all_ok() -> None:
+    spans = [
+        _FakeSpan("t-1", "a", None, "logos", "certify_claim", 12.3, True, {}),
+        _FakeSpan("t-1", "b", "a", "mneme", "recall", 4.1, True, {"hits": "3"}),
+        _FakeSpan("t-1", "c", "b", "logos", "verify_argument", 8.7, True, {}),
+    ]
+    trace = trace_from_trace_spans(spans)
+    trace.validate()
+    assert trace.source == "kairos"
+    assert trace.outcome is not None and trace.outcome.verdict == "ok"
+    # Parent→child edges should be YIELDS; root-level span attaches via REQUIRES.
+    relations = {(e.source, e.target, e.relation.value) for e in trace.edges}
+    assert ("q", "a", "requires") in relations
+    assert ("a", "b", "yields") in relations
+    assert ("b", "c", "yields") in relations
+    # c is the only leaf; it connects to the conclusion.
+    assert ("c", "conclusion", "implies") in relations
+
+
+def test_trace_spans_with_failure_produces_failed_verdict() -> None:
+    spans = [
+        _FakeSpan("t-2", "a", None, "telos", "check_alignment", 5.0, True, {}),
+        _FakeSpan("t-2", "b", "a", "praxis", "commit_step", 30.0, False, {"err": "timeout"}),
+    ]
+    trace = trace_from_trace_spans(spans)
+    assert trace.outcome is not None and trace.outcome.verdict == "failed"
+    concl = next(s for s in trace.steps if s.id == "conclusion")
+    assert concl.status is StepStatus.FAILED
+    # Failed span's metadata surfaces as step detail.
+    b = next(s for s in trace.steps if s.id == "b")
+    assert b.detail is not None and "err=timeout" in b.detail
+    assert b.status is StepStatus.FAILED
+
+
+def test_trace_spans_unknown_success_falls_back_to_info() -> None:
+    spans = [_FakeSpan("t-3", "a", None, "custom", "noop", None, None, {})]
+    trace = trace_from_trace_spans(spans)
+    assert trace.outcome is not None and trace.outcome.verdict == "unknown"
+    a = next(s for s in trace.steps if s.id == "a")
+    assert a.status is StepStatus.INFO
+
+
+def test_trace_spans_orphan_parent_attaches_to_root() -> None:
+    # Parent span not included → child hangs off the synthetic root.
+    spans = [
+        _FakeSpan("t-4", "child", "missing-parent", "svc", "op", 1.0, True, {}),
+    ]
+    trace = trace_from_trace_spans(spans)
+    relations = {(e.source, e.target, e.relation.value) for e in trace.edges}
+    assert ("q", "child", "requires") in relations
+
+
+def test_trace_spans_empty_input_raises() -> None:
+    with pytest.raises(ValueError, match="at least one span"):
+        trace_from_trace_spans([])
 
 
 def test_trace_from_tree_walks_children() -> None:

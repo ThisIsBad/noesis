@@ -100,6 +100,24 @@ def test_post_custom_trace_round_trip(live_server) -> None:
     assert body["title"] == "Custom"
 
 
+def test_stats_endpoint(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    status, body = _get(f"{base}/api/stats")
+    assert status == 200
+    assert body["total"] == 4
+    assert set(body["by_source"]) == {"logos", "praxis", "telos"}
+    assert "top_triggered_rules" in body
+
+
+def test_stats_endpoint_top_n(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    status, body = _get(f"{base}/api/stats?top_n=1")
+    assert status == 200
+    assert len(body["top_triggered_rules"]) <= 1
+
+
 def test_search_endpoint_with_step_predicate(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
