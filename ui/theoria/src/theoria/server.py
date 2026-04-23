@@ -27,12 +27,14 @@ import re
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from urllib.parse import parse_qs, urlparse
 
 from theoria.diff import diff_to_markdown, diff_to_mermaid, diff_traces
 from theoria.export import format_for
 from theoria.filters import apply_filter, filter_from_query
+from theoria.ingest import trace_from_trace_spans
+from theoria.kairos_client import KairosClient, KairosError
 from theoria.models import DecisionTrace
 from theoria.patterns import parse_query, run_query
 from theoria.samples import build_samples
@@ -45,14 +47,23 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 logger = logging.getLogger("theoria.server")
 
+# Paths that never require auth — browser fetches them before the user
+# can provide credentials, and monitoring hits /health.
+_AUTH_EXEMPT_PATHS = frozenset({
+    "/", "/index.html", "/health",
+})
+_AUTH_EXEMPT_PREFIXES = ("/static/",)
+
 
 Route = tuple[re.Pattern[str], str, Callable[..., tuple[int, dict[str, str], bytes]]]
 
 
 class TheoriaHandler(BaseHTTPRequestHandler):
-    """HTTP request handler bound to a ``TraceStore``."""
+    """HTTP request handler bound to a ``TraceStore`` and a ``KairosClient``."""
 
     store: TraceStore
+    kairos: KairosClient             # bound per-server; see make_handler()
+    secret: str | None = None        # bound per-server; None = auth disabled
     server_version = "Theoria/0.1"
 
     # Silence default stderr access logging; re-route through logging module.
@@ -64,6 +75,8 @@ class TheoriaHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         # SSE and export require streaming/non-JSON responses — bypass _dispatch.
         parsed = urlparse(self.path)
+        if not self._check_auth(parsed.path):
+            return
         if parsed.path == "/api/stream":
             self._handle_sse()
             return
@@ -78,10 +91,47 @@ class TheoriaHandler(BaseHTTPRequestHandler):
         self._dispatch("GET")
 
     def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if not self._check_auth(parsed.path):
+            return
         self._dispatch("POST")
 
     def do_DELETE(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        if not self._check_auth(parsed.path):
+            return
         self._dispatch("DELETE")
+
+    # ---- auth --------------------------------------------------------
+
+    def _check_auth(self, path: str) -> bool:
+        """Enforce bearer-token auth if ``self.secret`` is set.
+
+        Returns True when the request may proceed. When False, a 401 has
+        already been written to the wire.
+
+        /health, /, /index.html, /static/* and the SSE stream are always
+        public — a browser fetches them before the user can authenticate
+        and monitors need /health to work.
+        """
+        if not self.secret:
+            return True
+        if path in _AUTH_EXEMPT_PATHS or any(
+            path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES
+        ):
+            return True
+        header = self.headers.get("Authorization", "") or ""
+        expected = f"Bearer {self.secret}"
+        if header != expected:
+            body = _json_error("unauthorized")
+            self.send_response(int(HTTPStatus.UNAUTHORIZED))
+            self.send_header("Content-Type", "application/json")
+            self.send_header("WWW-Authenticate", 'Bearer realm="theoria"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return False
+        return True
 
     def _dispatch(self, method: str) -> None:
         parsed = urlparse(self.path)
@@ -121,6 +171,27 @@ class TheoriaHandler(BaseHTTPRequestHandler):
             top_n = int(top_n_raw) if top_n_raw.isdigit() else 5
             stats = compute_stats(self.store.list(), top_n=top_n)
             return _json_response(stats.to_dict())
+
+        kairos_match = re.fullmatch(r"/api/kairos/traces/([^/]+)", path)
+        if method == "GET" and kairos_match:
+            kairos_trace_id = kairos_match.group(1)
+            try:
+                spans = self.kairos.fetch_trace(kairos_trace_id)
+            except KairosError as exc:
+                raise _HTTPError(
+                    HTTPStatus.BAD_GATEWAY,
+                    f"Kairos fetch failed: {exc}",
+                ) from exc
+            if not spans:
+                raise _HTTPError(
+                    HTTPStatus.NOT_FOUND,
+                    f"no spans for Kairos trace '{kairos_trace_id}'",
+                )
+            # trace_from_trace_spans is duck-typed on the TraceSpan Protocol;
+            # KairosSpan exposes the same attributes but isn't a Protocol
+            # subclass, so help mypy past the structural-match gap.
+            trace = trace_from_trace_spans(cast(Any, spans))
+            return _json_response(trace.to_dict())
 
         if method == "GET" and path == "/api/traces":
             parsed_query = parse_qs(query or "")
@@ -367,20 +438,45 @@ def _serve_static(relpath: str) -> tuple[int, dict[str, str], bytes]:
     return _serve_file(target)
 
 
-def make_handler(store: TraceStore) -> type[TheoriaHandler]:
-    """Return a ``TheoriaHandler`` subclass bound to ``store``."""
-    return type("BoundTheoriaHandler", (TheoriaHandler,), {"store": store})
+def make_handler(
+    store: TraceStore,
+    *,
+    secret: str | None = None,
+    kairos: KairosClient | None = None,
+) -> type[TheoriaHandler]:
+    """Return a ``TheoriaHandler`` subclass bound to ``store``, ``secret``, ``kairos``."""
+    return type(
+        "BoundTheoriaHandler",
+        (TheoriaHandler,),
+        {
+            "store": store,
+            "secret": secret,
+            "kairos": kairos if kairos is not None else KairosClient(),
+        },
+    )
 
 
 def make_server(
     host: str = "127.0.0.1",
     port: int = 8765,
     store: TraceStore | None = None,
+    secret: str | None = None,
+    kairos: KairosClient | None = None,
 ) -> tuple[ThreadingHTTPServer, TraceStore]:
-    """Build (but don't start) a ``ThreadingHTTPServer`` plus its store."""
+    """Build (but don't start) a ``ThreadingHTTPServer`` plus its store.
+
+    When ``secret`` is set (or the ``THEORIA_SECRET`` env var is set and
+    the caller doesn't override), all non-public endpoints require
+    ``Authorization: Bearer <secret>``. ``kairos`` defaults to a
+    client pointed at ``$KAIROS_URL`` (or localhost).
+    """
+    import os as _os
     # NB: use `is None` — an empty TraceStore is falsy because __len__ returns 0.
     resolved_store = TraceStore() if store is None else store
-    handler_cls = make_handler(resolved_store)
+    resolved_secret = secret if secret is not None else _os.environ.get("THEORIA_SECRET") or None
+    handler_cls = make_handler(
+        resolved_store, secret=resolved_secret, kairos=kairos,
+    )
     server = ThreadingHTTPServer((host, port), handler_cls)
     return server, resolved_store
 
@@ -390,12 +486,20 @@ def serve(
     port: int = 8765,
     store: TraceStore | None = None,
     load_samples: bool = True,
+    secret: str | None = None,
+    kairos: KairosClient | None = None,
 ) -> None:
     """Run the Theoria server until SIGINT."""
-    server, resolved_store = make_server(host=host, port=port, store=store)
+    server, resolved_store = make_server(
+        host=host, port=port, store=store, secret=secret, kairos=kairos,
+    )
     if load_samples and len(resolved_store) == 0:
         resolved_store.put_many(build_samples())
-    logger.info("Theoria listening on http://%s:%d (traces=%d)", host, port, len(resolved_store))
+    auth_note = "auth=on" if server.RequestHandlerClass.secret else "auth=off"  # type: ignore[attr-defined]
+    logger.info(
+        "Theoria listening on http://%s:%d (traces=%d, %s)",
+        host, port, len(resolved_store), auth_note,
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:

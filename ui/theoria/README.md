@@ -2,11 +2,21 @@
 
 > θεωρία — _"contemplation, viewing"_. The visual observatory for Noesis decisions.
 
-Theoria ingests **decision traces** from any service in the Noesis ecosystem
-and renders them as an interactive reasoning DAG in your browser. It
-gives human operators a single place to see _why_ an agent / service
-made a particular call — what premises it considered, which rules
-fired, which alternatives it pruned, and how it reached its verdict.
+Theoria is a **human-facing UI client** for the Noesis ecosystem. It is
+**not a cognitive-gap service** like Logos / Mneme / Praxis / Telos —
+there is no MCP endpoint, Claude does not call Theoria as a tool.
+Instead, operators open it in a browser and inspect decision traces
+produced by the real services: what premises were considered, which
+rules fired, which alternatives were pruned, how the verdict was
+reached.
+
+Architecturally, Theoria is:
+
+- a **reader** over data the other services produce,
+- a **visualizer** that renders decision traces as interactive DAGs,
+- a **live-fetch bridge** to Kairos (no duplicate span storage).
+
+It lives under `ui/` for that reason — not `services/`.
 
 ![](docs/screenshot.png) <!-- optional; add later -->
 
@@ -26,7 +36,7 @@ fired, which alternatives it pruned, and how it reached its verdict.
 Theoria is **zero-dependency**. No `pip install` needed to try it.
 
 ```bash
-cd services/theoria
+cd ui/theoria
 PYTHONPATH=src python -m theoria
 # → http://127.0.0.1:8765
 ```
@@ -34,7 +44,7 @@ PYTHONPATH=src python -m theoria
 Or install it properly (also no runtime deps):
 
 ```bash
-pip install -e services/theoria
+pip install -e ui/theoria
 theoria
 ```
 
@@ -81,7 +91,39 @@ theoria tail
 | `--port` | `THEORIA_PORT` | `8765` | Bind port |
 | `--persist PATH` | `THEORIA_PERSIST` | *(off)* | Append each trace to a JSONL file, reload on start |
 | `--no-samples` | — | off | Skip loading the built-in demo traces |
+| `--secret TOKEN` | `THEORIA_SECRET` | *(off)* | Require `Authorization: Bearer TOKEN` on non-public requests |
 | `--log-level` | `THEORIA_LOG_LEVEL` | `INFO` | Python logging level |
+
+### Authentication
+
+Set `THEORIA_SECRET` (or pass `--secret`) in any non-local deployment.
+When set, every request other than `/`, `/index.html`, `/static/*`,
+`/health`, and the SSE `/api/stream` requires
+`Authorization: Bearer <token>` and returns `401` otherwise. The CLI
+client commands accept `--secret` and honour `THEORIA_SECRET`:
+
+```bash
+theoria serve --secret "$(openssl rand -hex 32)" &
+export THEORIA_SECRET="..."   # same value
+theoria list                   # picks up the env var
+```
+
+Leave the secret unset for local dev — the server logs `auth=off` on
+boot so you know which mode you're in.
+
+### Kairos live fetch
+
+Theoria does **not** persist TraceSpans — that's Kairos's job. To
+visualise a distributed trace, point Theoria at Kairos
+(`KAIROS_URL`, default `http://127.0.0.1:8000`) and fetch live:
+
+```bash
+curl http://theoria:8765/api/kairos/traces/<kairos_trace_id>
+```
+
+The endpoint pulls spans from Kairos, converts them to a DecisionTrace
+on the fly, and returns it — nothing is written to Theoria's own
+store. If Kairos is down, the endpoint returns `502 Bad Gateway`.
 
 ## Emitting a trace from another service
 
@@ -147,6 +189,7 @@ runnable example.
 | GET | `/api/traces/{id}/export?format=mermaid\|dot\|markdown` | Render as Mermaid / Graphviz DOT / reviewable Markdown |
 | GET | `/api/traces/{a}/diff/{b}?format=json\|markdown\|mermaid` | Structural diff of two traces |
 | GET | `/api/stats` | Aggregate counts (`?top_n=N` caps the lists) |
+| GET | `/api/kairos/traces/{kairos_trace_id}` | **Live fetch** from Kairos; converts spans → DecisionTrace without persisting |
 | GET | `/api/stream` | Server-Sent Events — pushes `trace_put` / `trace_delete` / `trace_clear` |
 | POST | `/api/traces` | Ingest a trace (JSON body) |
 | POST | `/api/traces/search` | Pattern query: step/edge predicates (JSON body) |
@@ -300,27 +343,37 @@ A decision trace is a DAG of reasoning steps plus a verdict:
 The full preflight gates (matching the rest of the monorepo):
 
 ```bash
-cd services/theoria
+cd ui/theoria
 pip install -e ".[dev]"
-python -m pytest -q                                          # 110 tests
+python -m pytest -q                                          # unit + integration
 python -m ruff check src/ tests/                             # lint
 python -m mypy --strict src/                                 # type check
 python -m pytest --cov=src/theoria --cov-fail-under=85       # coverage ≥ 85%
 ```
 
-All four are currently green on this branch.
+Browser smoke tests (optional — skipped automatically when Chromium
+isn't installed):
+
+```bash
+pip install -e ".[frontend-tests]"
+playwright install chromium
+python -m pytest tests/test_frontend.py -q
+```
 
 ## Deploying on Railway
 
-Matches the other Noesis services:
+Matches the pattern of the Noesis services, even though Theoria is a
+UI client rather than a cognitive-gap service:
 
 1. **New Service → GitHub repo → `ThisIsBad/noesis`**
 2. **Settings → Build**
    - Root Directory: *(leave empty — repo root)*
-   - Dockerfile Path: `services/theoria/Dockerfile`
+   - Dockerfile Path: `ui/theoria/Dockerfile`
 3. **Settings → Variables** (all optional):
    ```
    THEORIA_PERSIST=/data/traces.jsonl       # durable trace storage
+   THEORIA_SECRET=<openssl rand -hex 32>    # required on non-public endpoints
+   KAIROS_URL=https://kairos.railway.app    # for /api/kairos/traces/{id}
    PORT=8000
    ```
 4. **Settings → Volumes** — mount `/data` if you set `THEORIA_PERSIST`.
@@ -330,18 +383,25 @@ The Dockerfile runs `theoria serve --host 0.0.0.0 --port $PORT`.
 
 ## Design notes
 
+- **UI client, not a service.** No MCP endpoint; Claude does not call
+  Theoria as a tool. The other services produce decision traces, and
+  Theoria is where a human reads them.
 - **Zero runtime dependencies** — stdlib only (`http.server`, `json`,
   `dataclasses`). Keeps Theoria runnable from a clean checkout.
 - **Service-agnostic schema** — traces from Logos / Praxis / Telos /
   Kosmos / ad-hoc code all share one visualization surface.
 - **Duck-typed adapters** — `ingest.trace_from_logos_policy` reads
   `ActionPolicyResult`-shaped objects without importing Logos, so the
-  services stay decoupled at module-load time.
+  services stay decoupled at module-load time. Integration tests
+  against the real `noesis_schemas` Pydantic models back this up.
 - **DAG, not just tree** — decisions often involve the same evidence
   feeding multiple rules or alternatives converging on one conclusion.
-- **In-memory first, persistence opt-in** — a JSONL path is all the
-  persistence this service needs; Mneme is the right home for durable
-  storage once it ships.
+- **Kairos owns spans; Theoria owns decision traces.** TraceSpans are
+  fetched live from Kairos (`/api/kairos/traces/{id}`) rather than
+  copied into a second storage system.
+- **In-memory first, persistence opt-in** — a JSONL file is enough
+  while Mneme doesn't yet exist. Once it ships, persistent
+  decision-trace storage should migrate there.
 
 ## Roadmap
 
@@ -354,9 +414,12 @@ The Dockerfile runs `theoria serve --host 0.0.0.0 --port $PORT`.
 - [x] Filter/search API on `/api/traces`
 - [x] CLI: `post`, `export`, `list`, `tail`, `diff`, `sample`
 - [x] Pattern query API (`POST /api/traces/search`)
-- [x] Native adapters for `noesis_schemas.{ProofCertificate, GoalContract, Plan}`
+- [x] Native adapters for `noesis_schemas.{ProofCertificate, GoalContract, Plan, TraceSpan}`
 - [x] Railway deploy config (`Dockerfile`, `railway.toml`)
 - [x] `ruff` / `mypy --strict` / `coverage ≥ 85%` preflight gates green
-- [x] Kairos OpenTelemetry span ingestion adapter (`trace_from_trace_spans`)
+- [x] Kairos live fetch (`GET /api/kairos/traces/{id}`, no duplicate storage)
 - [x] Aggregate stats endpoint (`GET /api/stats`)
-- [ ] MCP-over-HTTP wrapping for uniform Noesis deployment
+- [x] Bearer-token authentication (`THEORIA_SECRET`)
+- [x] Playwright browser smoke tests (skipped when Chromium absent)
+- [ ] Move persistent storage behind Mneme once it ships
+- [ ] Optional FastAPI + FastMCP wrap if Claude ever needs to call Theoria as a tool

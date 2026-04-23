@@ -1,7 +1,7 @@
 [project]
 name = "theoria"
 version = "0.1.0"
-description = "Decision-logic visualization for the Noesis ecosystem"
+description = "Decision-logic visualization UI for the Noesis ecosystem"
 requires-python = ">=3.11"
 dependencies = []
 
@@ -11,6 +11,11 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.4",
     "mypy>=1.10",
+]
+# Optional: browser-level smoke tests for the single-page UI.
+# Requires `playwright install chromium` after pip install.
+frontend-tests = [
+    "playwright>=1.44",
 ]
 
 [project.scripts]
