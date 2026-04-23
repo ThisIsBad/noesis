@@ -56,14 +56,22 @@ class BearerAuthMiddleware:
     happens once at service-boot time; the class is exported too for
     callers that want to bind directly (e.g. tests).
 
-    When ``secret`` is an empty string the middleware is a no-op —
-    that's the local-dev path. Every service logs ``secret_set=...``
-    on boot so the mode is observable without reading env state.
+    Accepts **multiple** valid secrets so zero-downtime rotation
+    works: the middleware trusts a request whose token matches any
+    non-empty entry in ``secrets``. The canonical env convention is
+
+        <SVC>_SECRET         # new / active token
+        <SVC>_SECRET_PREV    # previous token during rotation window
+
+    When *every* entry in ``secrets`` is empty the middleware is a
+    no-op — that's the local-dev path. Every service logs
+    ``secret_set=...`` on boot so the mode is observable without
+    reading env state.
 
     The middleware 401s on:
 
     * Missing ``Authorization`` header.
-    * Mismatched token.
+    * Token that doesn't match any active secret.
 
     Exempt paths (default: ``/health``) always pass through. Callers
     can widen the set per service — Theoria exempts ``/``,
@@ -75,18 +83,35 @@ class BearerAuthMiddleware:
         self,
         app: ASGIApp,
         *,
-        secret: str,
+        secret: str | None = None,
+        secrets: Iterable[str] = (),
         exempt_paths: Iterable[str] = DEFAULT_EXEMPT_PATHS,
         exempt_prefixes: Iterable[str] = (),
     ) -> None:
         self.app = app
-        self.secret = secret
+        # Back-compat: legacy callers pass a single ``secret`` kwarg.
+        # New callers pass ``secrets`` (tuple) to support rotation.
+        all_secrets: list[str] = []
+        if secret:
+            all_secrets.append(secret)
+        all_secrets.extend(s for s in secrets if s)
+        # Deduplicate while preserving order — tests assert on the set.
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for s in all_secrets:
+            if s in seen:
+                continue
+            seen.add(s)
+            deduped.append(s)
+        self.secrets: tuple[str, ...] = tuple(deduped)
         self.exempt_paths = frozenset(exempt_paths)
         self.exempt_prefixes = tuple(exempt_prefixes)
-        self._expected = f"Bearer {secret}".encode() if secret else None
+        self._expected: tuple[bytes, ...] = tuple(
+            f"Bearer {s}".encode() for s in self.secrets
+        )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or self._expected is None:
+        if scope["type"] != "http" or not self._expected:
             await self.app(scope, receive, send)
             return
         path = scope.get("path", "")
@@ -96,7 +121,8 @@ class BearerAuthMiddleware:
             await self.app(scope, receive, send)
             return
         headers = dict(scope.get("headers") or [])
-        if headers.get(b"authorization") != self._expected:
+        got = headers.get(b"authorization")
+        if got not in self._expected:
             if JSONResponse is None:   # pragma: no cover - starlette missing
                 raise RuntimeError(
                     "starlette is required to emit 401 responses; install "
@@ -113,10 +139,17 @@ class BearerAuthMiddleware:
 def bearer_middleware(
     env_var: str,
     *,
+    prev_env_var: str | None = None,
     exempt_paths: Iterable[str] = DEFAULT_EXEMPT_PATHS,
     exempt_prefixes: Iterable[str] = (),
 ) -> Callable[[ASGIApp], ASGIApp]:
-    """Return an ASGI middleware factory bound to an env-var secret.
+    """Return an ASGI middleware factory bound to env-var secret(s).
+
+    Reads ``env_var`` (the active token) and, if provided,
+    ``prev_env_var`` (the previous token kept valid during rotation).
+    The convention for ``env_var="MNEME_SECRET"`` is
+    ``prev_env_var="MNEME_SECRET_PREV"``; when ``prev_env_var`` is
+    omitted we default to ``<env_var>_PREV``.
 
     Usage::
 
@@ -131,15 +164,24 @@ def bearer_middleware(
             )
         )
 
+    Rotation runbook::
+
+        1. openssl rand -hex 32 → new token
+        2. Deploy with <SVC>_SECRET=<new>, <SVC>_SECRET_PREV=<old>
+        3. Update every caller's config to the new token; restart each
+        4. Deploy again with <SVC>_SECRET_PREV unset
+
     ``add_middleware`` calls the returned factory with the upstream
     app; the returned value is the wired middleware instance.
     """
-    secret = os.environ.get(env_var, "")
+    prev_name = prev_env_var if prev_env_var is not None else f"{env_var}_PREV"
+    active = os.environ.get(env_var, "")
+    previous = os.environ.get(prev_name, "")
 
     def _factory(app: ASGIApp) -> ASGIApp:
         return BearerAuthMiddleware(
             app,
-            secret=secret,
+            secrets=(active, previous),
             exempt_paths=exempt_paths,
             exempt_prefixes=exempt_prefixes,
         )
