@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theoria — Decision Logic Visualizer</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="app-bar">
+    <div class="brand">
+      <span class="glyph">θ</span>
+      <span class="brand-name">Theoria</span>
+      <span class="brand-sub">decision logic visualizer</span>
+    </div>
+    <div class="toolbar">
+      <button id="btn-load-samples" class="btn" title="Load the built-in demo traces">Load samples</button>
+      <button id="btn-refresh" class="btn" title="Refresh trace list">Refresh</button>
+      <button id="btn-clear" class="btn btn-danger" title="Delete all traces">Clear</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>Traces</h2>
+      <input id="filter" type="search" placeholder="Filter by title, tag, service..." />
+      <ul id="trace-list" class="trace-list" aria-label="Decision traces"></ul>
+    </aside>
+
+    <section class="canvas-wrap" aria-label="Reasoning graph">
+      <div class="canvas-header">
+        <div>
+          <h1 id="trace-title">Select a trace</h1>
+          <p id="trace-question" class="muted"></p>
+        </div>
+        <div id="trace-outcome" class="outcome"></div>
+      </div>
+      <div id="legend" class="legend" aria-hidden="true"></div>
+      <svg id="graph" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Reasoning DAG"></svg>
+    </section>
+
+    <aside class="details" aria-label="Step details">
+      <h2>Step details</h2>
+      <div id="details-body">
+        <p class="muted">Click a node to inspect the reasoning step.</p>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

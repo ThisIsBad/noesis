@@ -1,0 +1,218 @@
+"""Stdlib HTTP server for Theoria.
+
+Deliberately zero-dependency so the visualization can be launched from
+a clean checkout without pip-installing anything::
+
+    python -m theoria
+
+Routes:
+    GET  /                        → static index.html
+    GET  /static/<path>           → other frontend assets
+    GET  /api/traces              → list of traces (most recent first)
+    GET  /api/traces/{id}         → single trace
+    POST /api/traces              → ingest a trace (JSON body)
+    DELETE /api/traces/{id}       → remove a trace
+    POST /api/samples/load        → load built-in samples into the store
+    POST /api/clear               → clear all traces
+    GET  /health                  → liveness
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import mimetypes
+import re
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any, Callable
+from urllib.parse import urlparse
+
+from theoria.models import DecisionTrace
+from theoria.samples import build_samples
+from theoria.store import TraceStore
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+logger = logging.getLogger("theoria.server")
+
+
+Route = tuple[re.Pattern[str], str, Callable[..., tuple[int, dict[str, str], bytes]]]
+
+
+class TheoriaHandler(BaseHTTPRequestHandler):
+    """HTTP request handler bound to a ``TraceStore``."""
+
+    store: TraceStore
+    server_version = "Theoria/0.1"
+
+    # Silence default stderr access logging; re-route through logging module.
+    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+        logger.info("%s - %s", self.address_string(), format % args)
+
+    # ---- routing -----------------------------------------------------
+
+    def do_GET(self) -> None:  # noqa: N802
+        self._dispatch("GET")
+
+    def do_POST(self) -> None:  # noqa: N802
+        self._dispatch("POST")
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self._dispatch("DELETE")
+
+    def _dispatch(self, method: str) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+        try:
+            status, headers, body = self._route(method, path)
+        except _HTTPError as exc:
+            status, headers, body = exc.status, {"Content-Type": "application/json"}, _json_error(exc.message)
+        except Exception:  # pragma: no cover - defensive
+            logger.exception("Unhandled error in request %s %s", method, path)
+            status, headers, body = HTTPStatus.INTERNAL_SERVER_ERROR, {"Content-Type": "application/json"}, _json_error(
+                "internal server error"
+            )
+
+        self.send_response(status)
+        for key, value in headers.items():
+            self.send_header(key, value)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if method != "HEAD":
+            self.wfile.write(body)
+
+    def _route(self, method: str, path: str) -> tuple[int, dict[str, str], bytes]:
+        if method == "GET" and (path == "/" or path == "/index.html"):
+            return _serve_file(STATIC_DIR / "index.html")
+        if method == "GET" and path.startswith("/static/"):
+            return _serve_static(path[len("/static/"):])
+        if method == "GET" and path == "/health":
+            return _json_response({"ok": True, "traces": len(self.store)})
+
+        if method == "GET" and path == "/api/traces":
+            return _json_response({"traces": [t.to_dict() for t in self.store.list()]})
+        if method == "POST" and path == "/api/traces":
+            payload = self._read_json_body()
+            trace = DecisionTrace.from_dict(payload)
+            self.store.put(trace)
+            return _json_response(trace.to_dict(), status=HTTPStatus.CREATED)
+        if method == "POST" and path == "/api/samples/load":
+            count = self.store.put_many(build_samples())
+            return _json_response({"loaded": count})
+        if method == "POST" and path == "/api/clear":
+            self.store.clear()
+            return _json_response({"ok": True})
+
+        trace_match = re.fullmatch(r"/api/traces/([^/]+)", path)
+        if trace_match:
+            trace_id = trace_match.group(1)
+            if method == "GET":
+                trace = self.store.get(trace_id)
+                if trace is None:
+                    raise _HTTPError(HTTPStatus.NOT_FOUND, f"trace '{trace_id}' not found")
+                return _json_response(trace.to_dict())
+            if method == "DELETE":
+                deleted = self.store.delete(trace_id)
+                if not deleted:
+                    raise _HTTPError(HTTPStatus.NOT_FOUND, f"trace '{trace_id}' not found")
+                return _json_response({"deleted": trace_id})
+
+        raise _HTTPError(HTTPStatus.NOT_FOUND, f"no route for {method} {path}")
+
+    def _read_json_body(self) -> dict[str, Any]:
+        length = int(self.headers.get("Content-Length", "0") or 0)
+        if length <= 0:
+            raise _HTTPError(HTTPStatus.BAD_REQUEST, "empty request body")
+        raw = self.rfile.read(length)
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise _HTTPError(HTTPStatus.BAD_REQUEST, f"invalid JSON body: {exc}") from exc
+        if not isinstance(payload, dict):
+            raise _HTTPError(HTTPStatus.BAD_REQUEST, "JSON body must be an object")
+        return payload
+
+
+class _HTTPError(Exception):
+    def __init__(self, status: int, message: str) -> None:
+        super().__init__(message)
+        self.status = status
+        self.message = message
+
+
+def _json_response(
+    payload: Any,
+    status: int = int(HTTPStatus.OK),
+) -> tuple[int, dict[str, str], bytes]:
+    body = json.dumps(payload, sort_keys=True).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+    }
+    return status, headers, body
+
+
+def _json_error(message: str) -> bytes:
+    return json.dumps({"error": message}).encode("utf-8")
+
+
+def _serve_file(path: Path) -> tuple[int, dict[str, str], bytes]:
+    if not path.is_file():
+        raise _HTTPError(HTTPStatus.NOT_FOUND, f"file not found: {path.name}")
+    data = path.read_bytes()
+    ctype, _ = mimetypes.guess_type(path.name)
+    headers = {
+        "Content-Type": ctype or "application/octet-stream",
+        "Cache-Control": "no-cache",
+    }
+    return int(HTTPStatus.OK), headers, data
+
+
+def _serve_static(relpath: str) -> tuple[int, dict[str, str], bytes]:
+    # Defend against path traversal — join + resolve, then check containment.
+    base = STATIC_DIR.resolve()
+    target = (base / relpath).resolve()
+    try:
+        target.relative_to(base)
+    except ValueError as exc:
+        raise _HTTPError(HTTPStatus.FORBIDDEN, "path escapes static root") from exc
+    return _serve_file(target)
+
+
+def make_handler(store: TraceStore) -> type[TheoriaHandler]:
+    """Return a ``TheoriaHandler`` subclass bound to ``store``."""
+    return type("BoundTheoriaHandler", (TheoriaHandler,), {"store": store})
+
+
+def make_server(
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    store: TraceStore | None = None,
+) -> tuple[ThreadingHTTPServer, TraceStore]:
+    """Build (but don't start) a ``ThreadingHTTPServer`` plus its store."""
+    # NB: use `is None` — an empty TraceStore is falsy because __len__ returns 0.
+    resolved_store = TraceStore() if store is None else store
+    handler_cls = make_handler(resolved_store)
+    server = ThreadingHTTPServer((host, port), handler_cls)
+    return server, resolved_store
+
+
+def serve(
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    store: TraceStore | None = None,
+    load_samples: bool = True,
+) -> None:
+    """Run the Theoria server until SIGINT."""
+    server, resolved_store = make_server(host=host, port=port, store=store)
+    if load_samples and len(resolved_store) == 0:
+        resolved_store.put_many(build_samples())
+    logger.info("Theoria listening on http://%s:%d (traces=%d)", host, port, len(resolved_store))
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        logger.info("Shutting down Theoria")
+    finally:
+        server.server_close()
