@@ -28,6 +28,7 @@ pythonpath = [
     "../schemas/src",
     "../services/mneme/src",
     "../services/praxis/src",
+    "../services/telos/src",
 ]
 addopts = "-m 'not slow'"
 markers = [

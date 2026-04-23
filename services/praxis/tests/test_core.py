@@ -1,4 +1,9 @@
 import pytest
+from noesis_clients.testing import (
+    FakeLogosClient,
+    refuted_certificate,
+    verified_certificate,
+)
 from noesis_schemas import StepStatus
 
 from praxis.core import PraxisCore
@@ -206,49 +211,14 @@ def test_persistence_survives_restart(tmp_path):
 
 
 # ── Logos sidecar (verify_plan) ───────────────────────────────────────────────
-
-class _FakeLogosClient:
-    """Minimal stand-in for noesis_clients.LogosClient.
-
-    Just enough surface to drive verify_plan: an async ``certify_claim``
-    that returns whatever the test pre-loaded, plus a ``last_error``
-    attribute that the production client also exposes.
-    """
-
-    def __init__(self, response, error=None):
-        self._response = response
-        self.last_error = error
-        self.calls: list[str] = []
-
-    async def certify_claim(self, argument: str):
-        self.calls.append(argument)
-        return self._response
-
-
-def _verified_certificate():
-    from noesis_schemas import ProofCertificate
-    return ProofCertificate(
-        claim_type="propositional",
-        claim="example",
-        method="z3_propositional",
-        verified=True,
-        timestamp="2026-04-23T16:00:00+00:00",
-    )
-
-
-def _refuted_certificate():
-    from noesis_schemas import ProofCertificate
-    return ProofCertificate(
-        claim_type="propositional",
-        claim="example",
-        method="z3_propositional",
-        verified=False,
-        timestamp="2026-04-23T16:00:00+00:00",
-    )
+#
+# Stand-ins come from the shared ``noesis_clients.testing`` module so
+# this file stays focused on Praxis-specific assertions and the fake's
+# contract is validated in one place (clients/tests/test_testing_helpers.py).
 
 
 def test_verify_plan_with_logos_pass(tmp_path):
-    fake = _FakeLogosClient(_verified_certificate())
+    fake = FakeLogosClient(verified_certificate())
     core = PraxisCore(db_path=str(tmp_path / "logos.db"), logos_client=fake)
     plan = core.decompose("Migrate users")
     core.add_step(plan.plan_id, "dump data", risk_score=0.1)
@@ -263,7 +233,7 @@ def test_verify_plan_with_logos_pass(tmp_path):
 
 
 def test_verify_plan_with_logos_refutation_blocks(tmp_path):
-    fake = _FakeLogosClient(_refuted_certificate())
+    fake = FakeLogosClient(refuted_certificate())
     core = PraxisCore(db_path=str(tmp_path / "logos.db"), logos_client=fake)
     plan = core.decompose("Risky plan")
     core.add_step(plan.plan_id, "weird step", risk_score=0.1)
@@ -274,7 +244,7 @@ def test_verify_plan_with_logos_refutation_blocks(tmp_path):
 
 
 def test_verify_plan_with_logos_unreachable_degrades_to_local(tmp_path):
-    fake = _FakeLogosClient(None, error="connection refused")
+    fake = FakeLogosClient(None, last_error="connection refused")
     core = PraxisCore(db_path=str(tmp_path / "logos.db"), logos_client=fake)
     plan = core.decompose("OK plan")
     core.add_step(plan.plan_id, "safe step", risk_score=0.2)
@@ -287,7 +257,7 @@ def test_verify_plan_with_logos_unreachable_degrades_to_local(tmp_path):
 
 def test_verify_plan_local_high_risk_skips_logos(tmp_path):
     """High-risk fast-fail must short-circuit before touching Logos."""
-    fake = _FakeLogosClient(_verified_certificate())
+    fake = FakeLogosClient(verified_certificate())
     core = PraxisCore(db_path=str(tmp_path / "logos.db"), logos_client=fake)
     plan = core.decompose("Dangerous plan")
     core.add_step(plan.plan_id, "Drop production DB", risk_score=0.9)

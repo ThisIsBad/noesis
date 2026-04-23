@@ -25,6 +25,7 @@ from typing import Any, TypeVar
 
 import chromadb
 import pytest
+from noesis_clients.testing import FakeLogosClient
 from noesis_schemas import MemoryType, ProofCertificate
 
 from mneme.core import MnemeCore
@@ -155,23 +156,10 @@ def test_attach_certificate_is_visible_to_retrieve(core: MnemeCore) -> None:
 
 
 # ── certify_memory MCP tool ──────────────────────────────────────────────────
-
-
-class _FakeLogos:
-    """Drop-in replacement for the module-level LogosClient that
-    returns whatever certificate (or None) the test asks for, and
-    records the last argument seen so we can pin Mneme→Logos plumbing.
-    """
-
-    def __init__(self, cert: ProofCertificate | None = None,
-                 last_error: str | None = None) -> None:
-        self.cert = cert
-        self.last_error = last_error
-        self.last_argument: str | None = None
-
-    async def certify_claim(self, argument: str) -> ProofCertificate | None:
-        self.last_argument = argument
-        return self.cert
+#
+# Logos stand-in is ``noesis_clients.testing.FakeLogosClient`` — its
+# ``last_argument`` property mirrors the old local ``_FakeLogos``
+# attribute, so the call-site assertions below ported verbatim.
 
 
 @pytest.fixture
@@ -199,7 +187,7 @@ def test_certify_memory_returns_certified_status_on_success(
     """Happy path: existing memory + Logos returns a verified cert →
     JSON payload with status=certified, proven=true, method echoed."""
     mem = patched_module._core.store("rain implies wet", MemoryType.SEMANTIC)
-    fake = _FakeLogos(cert=_verified_cert())
+    fake = FakeLogosClient(_verified_cert())
     monkeypatch.setattr(patched_module, "_logos_client", fake)
 
     raw = _run(patched_module._certify_memory_impl(
@@ -230,7 +218,7 @@ def test_certify_memory_status_refuted_on_unverified_cert(
     but ``proven`` is honest."""
     mem = patched_module._core.store("p and not p", MemoryType.SEMANTIC)
     monkeypatch.setattr(
-        patched_module, "_logos_client", _FakeLogos(cert=_refuted_cert())
+        patched_module, "_logos_client", FakeLogosClient(_refuted_cert())
     )
     raw = _run(patched_module._certify_memory_impl(
         memory_id=mem.memory_id,
@@ -250,7 +238,7 @@ def test_certify_memory_status_not_found_for_unknown_id(
     """No memory with that ID → status=not_found, no Logos call.
     Bounds-checking happens before the network round-trip so we don't
     waste a Z3 invocation."""
-    fake = _FakeLogos(cert=_verified_cert())
+    fake = FakeLogosClient(_verified_cert())
     monkeypatch.setattr(patched_module, "_logos_client", fake)
     raw = _run(patched_module._certify_memory_impl(
         memory_id="nope",
@@ -289,8 +277,8 @@ def test_certify_memory_status_unreachable_with_error(
     ``LogosClient.last_error`` for diagnostics. Memory stays
     un-graduated; the run continues."""
     mem = patched_module._core.store("rain implies wet", MemoryType.SEMANTIC)
-    fake = _FakeLogos(
-        cert=None, last_error="ConnectError: connection refused"
+    fake = FakeLogosClient(
+        None, last_error="ConnectError: connection refused"
     )
     monkeypatch.setattr(patched_module, "_logos_client", fake)
     raw = _run(patched_module._certify_memory_impl(
@@ -316,7 +304,7 @@ def test_certify_memory_unreachable_falls_back_to_unknown_error(
     (e.g. empty argument). Tool surfaces a literal ``"unknown"``
     rather than ``None`` so JSON shape is consistent."""
     mem = patched_module._core.store("rain implies wet", MemoryType.SEMANTIC)
-    fake = _FakeLogos(cert=None, last_error=None)
+    fake = FakeLogosClient(None, last_error=None)
     monkeypatch.setattr(patched_module, "_logos_client", fake)
     raw = _run(patched_module._certify_memory_impl(
         memory_id=mem.memory_id,
