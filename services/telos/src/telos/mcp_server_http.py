@@ -5,11 +5,11 @@ import sys
 
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
+from noesis_clients.auth import bearer_middleware
 from noesis_schemas import GoalContract
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
-from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .core import TelosCore
 from .tracing import get_tracer
@@ -117,38 +117,15 @@ def list_active_goals() -> str:
 
 # ── HTTP app ──────────────────────────────────────────────────────────────────
 
-_SECRET = os.environ.get("TELOS_SECRET", "")
-
-
 async def _health(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "service": "telos"})
 
 
-class _BearerAuth:
-    """Pure-ASGI Bearer-token gate. BaseHTTPMiddleware buffers responses
-    and breaks SSE streams, so we wrap the app at the ASGI layer instead.
-    No-op when TELOS_SECRET is unset or the path is /health."""
-
-    def __init__(self, app: ASGIApp) -> None:
-        self.app = app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or not _SECRET or scope.get("path") == "/health":
-            await self.app(scope, receive, send)
-            return
-        headers = dict(scope.get("headers") or [])
-        expected = f"Bearer {_SECRET}".encode()
-        if headers.get(b"authorization") != expected:
-            await JSONResponse({"error": "Unauthorized"}, status_code=401)(
-                scope, receive, send
-            )
-            return
-        await self.app(scope, receive, send)
-
-
 app = mcp.sse_app()
 app.routes.insert(0, Route("/health", _health, methods=["GET"]))
-app.add_middleware(_BearerAuth)
+# Bearer-token gate — reads TELOS_SECRET + TELOS_SECRET_PREV for rotation.
+# See noesis_clients.auth + docs/operations/secrets.md.
+app.add_middleware(bearer_middleware("TELOS_SECRET"))
 
 if __name__ == "__main__":
     import uvicorn
