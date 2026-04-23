@@ -59,25 +59,34 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command")
 
+    def _remote(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--url", default=os.environ.get("THEORIA_URL", DEFAULT_URL))
+        p.add_argument("--secret", default=os.environ.get("THEORIA_SECRET"),
+                       help="Bearer token sent as Authorization header. "
+                            "Falls back to THEORIA_SECRET.")
+
     # serve
     p_serve = sub.add_parser("serve", help="Run the Theoria HTTP server (default).")
     p_serve.add_argument("--host", default=os.environ.get("THEORIA_HOST", "127.0.0.1"))
     p_serve.add_argument("--port", type=int, default=int(os.environ.get("THEORIA_PORT", "8765")))
     p_serve.add_argument("--persist", default=os.environ.get("THEORIA_PERSIST"))
     p_serve.add_argument("--no-samples", action="store_true")
+    p_serve.add_argument("--secret", default=os.environ.get("THEORIA_SECRET"),
+                         help="Require this Bearer token on non-public requests. "
+                              "Falls back to THEORIA_SECRET; unset = open.")
     p_serve.add_argument("--log-level", default=os.environ.get("THEORIA_LOG_LEVEL", "INFO"))
 
     # post
     p_post = sub.add_parser("post", help="POST a trace from a JSON file (or stdin).")
     p_post.add_argument("file", help='Path to a JSON file, or "-" for stdin.')
-    p_post.add_argument("--url", default=os.environ.get("THEORIA_URL", DEFAULT_URL))
+    _remote(p_post)
 
     # export
     p_export = sub.add_parser("export", help="Fetch + render a trace as text.")
     p_export.add_argument("--id", required=True, help="Trace id.")
     p_export.add_argument("--format", default="markdown",
                           choices=["json", "mermaid", "dot", "graphviz", "markdown", "md"])
-    p_export.add_argument("--url", default=os.environ.get("THEORIA_URL", DEFAULT_URL))
+    _remote(p_export)
 
     # list
     p_list = sub.add_parser("list", help="List traces with optional filters.")
@@ -88,11 +97,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_list.add_argument("--q", help="Full-text substring search.")
     p_list.add_argument("--limit", type=int)
     p_list.add_argument("--format", default="table", choices=["table", "json", "ids"])
-    p_list.add_argument("--url", default=os.environ.get("THEORIA_URL", DEFAULT_URL))
+    _remote(p_list)
 
     # tail
     p_tail = sub.add_parser("tail", help="Subscribe to the /api/stream SSE feed.")
-    p_tail.add_argument("--url", default=os.environ.get("THEORIA_URL", DEFAULT_URL))
+    _remote(p_tail)
 
     # diff
     p_diff = sub.add_parser("diff", help="Diff two traces.")
@@ -100,7 +109,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_diff.add_argument("b_id")
     p_diff.add_argument("--format", default="markdown",
                         choices=["json", "markdown", "md", "mermaid"])
-    p_diff.add_argument("--url", default=os.environ.get("THEORIA_URL", DEFAULT_URL))
+    _remote(p_diff)
 
     # sample — print one of the built-in sample traces as JSON
     p_sample = sub.add_parser("sample", help="Print a built-in sample trace as JSON.")
@@ -126,6 +135,7 @@ def _cmd_serve(args: argparse.Namespace, stdout: IO[str]) -> int:
         port=args.port,
         store=store,
         load_samples=not getattr(args, "no_samples", False),
+        secret=getattr(args, "secret", None),
     )
     return 0
 
@@ -137,7 +147,10 @@ def _cmd_post(args: argparse.Namespace, stdout: IO[str]) -> int:
     except json.JSONDecodeError as exc:
         print(f"error: invalid JSON: {exc}", file=sys.stderr)
         return 2
-    status, body = _http(args.url + "/api/traces", method="POST", body=payload)
+    status, body = _http(
+        args.url + "/api/traces", method="POST", body=payload,
+        secret=getattr(args, "secret", None),
+    )
     if status >= 400:
         print(f"error: HTTP {status}: {body}", file=sys.stderr)
         return 1
@@ -153,7 +166,7 @@ def _cmd_export(args: argparse.Namespace, stdout: IO[str]) -> int:
     else:
         url = (f"{args.url}/api/traces/{urllib.parse.quote(args.id)}"
                f"/export?format={urllib.parse.quote(args.format)}")
-    status, body = _http(url)
+    status, body = _http(url, secret=getattr(args, "secret", None))
     if status >= 400:
         print(f"error: HTTP {status}: {body}", file=sys.stderr)
         return 1
@@ -175,7 +188,7 @@ def _cmd_list(args: argparse.Namespace, stdout: IO[str]) -> int:
     if args.limit is not None:
         params.append(("limit", str(args.limit)))
     url = args.url + "/api/traces" + ("?" + urllib.parse.urlencode(params) if params else "")
-    status, body = _http(url)
+    status, body = _http(url, secret=getattr(args, "secret", None))
     if status >= 400:
         print(f"error: HTTP {status}: {body}", file=sys.stderr)
         return 1
@@ -207,8 +220,12 @@ def _cmd_list(args: argparse.Namespace, stdout: IO[str]) -> int:
 
 def _cmd_tail(args: argparse.Namespace, stdout: IO[str]) -> int:
     url = args.url + "/api/stream"
+    req = urllib.request.Request(url)
+    secret = getattr(args, "secret", None)
+    if secret:
+        req.add_header("Authorization", f"Bearer {secret}")
     try:
-        with urllib.request.urlopen(url) as resp:
+        with urllib.request.urlopen(req) as resp:
             for raw in resp:
                 line = raw.decode("utf-8", errors="replace").rstrip()
                 if line:
@@ -225,7 +242,7 @@ def _cmd_tail(args: argparse.Namespace, stdout: IO[str]) -> int:
 def _cmd_diff(args: argparse.Namespace, stdout: IO[str]) -> int:
     url = (f"{args.url}/api/traces/{urllib.parse.quote(args.a_id)}"
            f"/diff/{urllib.parse.quote(args.b_id)}?format={urllib.parse.quote(args.format)}")
-    status, body = _http(url)
+    status, body = _http(url, secret=getattr(args, "secret", None))
     if status >= 400:
         print(f"error: HTTP {status}: {body}", file=sys.stderr)
         return 1
@@ -264,9 +281,12 @@ def _http(
     method: str = "GET",
     body: dict[str, Any] | None = None,
     timeout: float = 10.0,
+    secret: str | None = None,
 ) -> tuple[int, Any]:
     data = json.dumps(body).encode("utf-8") if body is not None else None
-    headers = {"Content-Type": "application/json"} if body is not None else {}
+    headers: dict[str, str] = {"Content-Type": "application/json"} if body is not None else {}
+    if secret:
+        headers["Authorization"] = f"Bearer {secret}"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
