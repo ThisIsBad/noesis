@@ -112,7 +112,7 @@ runnable example.
 | GET | `/health` | Liveness + trace count |
 | GET | `/api/traces` | List all traces (most-recent first) |
 | GET | `/api/traces/{id}` | Single trace |
-| GET | `/api/traces/{id}/export?format=mermaid\|dot` | Render as Mermaid / Graphviz DOT |
+| GET | `/api/traces/{id}/export?format=mermaid\|dot\|markdown` | Render as Mermaid / Graphviz DOT / reviewable Markdown |
 | GET | `/api/stream` | Server-Sent Events — pushes `trace_put` / `trace_delete` / `trace_clear` |
 | POST | `/api/traces` | Ingest a trace (JSON body) |
 | DELETE | `/api/traces/{id}` | Remove a trace |
@@ -138,17 +138,26 @@ with urllib.request.urlopen("http://theoria:8765/api/stream") as resp:
 ### Exporting a trace
 
 ```bash
-curl 'http://theoria:8765/api/traces/my-trace/export?format=mermaid' > trace.mmd
-curl 'http://theoria:8765/api/traces/my-trace/export?format=dot'     > trace.dot
+curl 'http://theoria:8765/api/traces/my-trace/export?format=mermaid'  > trace.mmd
+curl 'http://theoria:8765/api/traces/my-trace/export?format=dot'      > trace.dot
+curl 'http://theoria:8765/api/traces/my-trace/export?format=markdown' > trace.md
 ```
 
 Or programmatically:
 
 ```python
-from theoria.export import to_mermaid, to_graphviz
+from theoria.export import to_mermaid, to_graphviz, to_markdown
 print(to_mermaid(trace))
 print(to_graphviz(trace))
+print(to_markdown(trace))   # embeds a ```mermaid``` block by default
 ```
+
+The Markdown exporter produces a reviewable narrative: a metadata
+table, the question as a blockquote, an embedded Mermaid diagram
+(GitHub/GitLab render it inline), then one section per reasoning step
+in topological order with incoming-edge provenance. Paste the output
+straight into a PR description or issue comment — no server needed
+at the reading end.
 
 ## Decision-trace schema
 
@@ -223,7 +232,7 @@ python -m mypy --strict src/
   connected UIs)
 - [x] Praxis beam-search state adapter
 - [x] Telos alignment / drift adapter
-- [x] Exporter: decision trace → Mermaid / Graphviz DOT
+- [x] Exporter: decision trace → Mermaid / Graphviz DOT / Markdown
 - [ ] Kairos OpenTelemetry span ingestion adapter
 - [ ] MCP-over-HTTP wrapping for uniform Noesis deployment
-- [ ] Markdown exporter (trace → reviewable text)
+- [ ] Trace diff (compare two traces side-by-side)

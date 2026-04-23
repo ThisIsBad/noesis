@@ -151,6 +151,22 @@ def test_export_mermaid(live_server) -> None:
     assert "classDef ok" in body
 
 
+def test_export_markdown(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    with urllib.request.urlopen(
+        f"{base}/api/traces/sample-telos-drift/export?format=markdown"
+    ) as resp:
+        body = resp.read().decode()
+        assert resp.status == 200
+        assert resp.headers.get("Content-Type", "").startswith("text/markdown")
+        cd = resp.headers.get("Content-Disposition", "")
+        assert cd.endswith('.md"') or cd.endswith(".md")
+    assert body.startswith("# ")
+    assert "```mermaid" in body
+    assert "## Outcome" in body
+
+
 def test_export_dot(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
