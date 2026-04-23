@@ -842,6 +842,148 @@ def _plan_step_status(status: Any) -> StepStatus:
 
 
 # ---------------------------------------------------------------------------
+# Kairos / OpenTelemetry span tree → DecisionTrace
+# ---------------------------------------------------------------------------
+
+class _TraceSpan(Protocol):
+    trace_id: str
+    span_id: str
+    parent_span_id: str | None
+    service: str
+    operation: str
+    duration_ms: float | None
+    success: bool | None
+    metadata: Mapping[str, str]
+
+
+def trace_from_trace_spans(
+    spans: Sequence[_TraceSpan],
+    *,
+    trace_id: str | None = None,
+    title: str | None = None,
+    question: str | None = None,
+) -> DecisionTrace:
+    """Build a DecisionTrace from a list of ``noesis_schemas.TraceSpan``.
+
+    Spans sharing a ``trace_id`` naturally form a tree via
+    ``parent_span_id``; we render that tree as a reasoning DAG with a
+    synthetic root question. Each span becomes an ``inference`` step
+    whose status follows ``success`` (OK / FAILED / INFO-for-None).
+    """
+    if not spans:
+        raise ValueError("trace_from_trace_spans requires at least one span")
+
+    resolved_trace_id = trace_id or spans[0].trace_id
+    title = title or f"Kairos trace — {resolved_trace_id[:12]}"
+    question = question or f"What happened in trace {resolved_trace_id}?"
+
+    span_by_id = {s.span_id: s for s in spans}
+    any_failed = False
+    all_success = True
+
+    steps: list[ReasoningStep] = [
+        ReasoningStep(
+            id="q",
+            kind=StepKind.QUESTION,
+            label=question,
+            detail=f"trace_id={resolved_trace_id}",
+            source_ref="kairos/src/kairos/core.py",
+        )
+    ]
+    edges: list[Edge] = []
+
+    for span in spans:
+        status = _span_status(span.success)
+        if status is StepStatus.FAILED:
+            any_failed = True
+        if status is not StepStatus.OK:
+            all_success = False
+
+        label = f"{span.service} · {span.operation}"
+        detail_parts: list[str] = []
+        if span.duration_ms is not None:
+            detail_parts.append(f"{span.duration_ms:.1f} ms")
+        for key, value in sorted(dict(span.metadata or {}).items()):
+            detail_parts.append(f"{key}={value}")
+
+        steps.append(
+            ReasoningStep(
+                id=span.span_id,
+                kind=StepKind.INFERENCE,
+                label=label,
+                detail=" · ".join(detail_parts) or None,
+                status=status,
+                meta={
+                    "service": span.service,
+                    "operation": span.operation,
+                    "duration_ms": span.duration_ms,
+                },
+            )
+        )
+
+    # Wire parent → child edges. Spans with no parent (or whose parent
+    # isn't in the input set) hang off the synthetic question root.
+    for span in spans:
+        parent = span.parent_span_id
+        if parent and parent in span_by_id:
+            edges.append(Edge(parent, span.span_id, EdgeRelation.YIELDS))
+        else:
+            edges.append(Edge("q", span.span_id, EdgeRelation.REQUIRES))
+
+    if any_failed:
+        verdict, concl_status = "failed", StepStatus.FAILED
+        summary = "At least one span failed."
+    elif all_success:
+        verdict, concl_status = "ok", StepStatus.OK
+        summary = f"All {len(spans)} span(s) succeeded."
+    else:
+        verdict, concl_status = "unknown", StepStatus.UNKNOWN
+        summary = "Trace complete but some spans have no success verdict."
+
+    concl_id = "conclusion"
+    steps.append(
+        ReasoningStep(
+            id=concl_id,
+            kind=StepKind.CONCLUSION,
+            label=summary,
+            status=concl_status,
+        )
+    )
+    # Connect conclusion to every leaf span so the DAG renders clearly.
+    has_children = {s.parent_span_id for s in spans if s.parent_span_id in span_by_id}
+    leaves = [s.span_id for s in spans if s.span_id not in has_children]
+    for leaf in leaves:
+        edges.append(Edge(leaf, concl_id, EdgeRelation.IMPLIES))
+
+    trace = DecisionTrace(
+        id=f"kairos-{resolved_trace_id[:12]}",
+        title=title,
+        question=question,
+        source="kairos",
+        kind="trace",
+        root="q",
+        steps=steps,
+        edges=edges,
+        outcome=Outcome(
+            verdict=verdict,
+            summary=summary,
+            meta={"trace_id": resolved_trace_id, "span_count": len(spans)},
+        ),
+        tags=["kairos", "trace", verdict],
+    )
+    trace.validate()
+    return trace
+
+
+def _span_status(success: bool | None) -> StepStatus:
+    if success is True:
+        return StepStatus.OK
+    if success is False:
+        return StepStatus.FAILED
+    return StepStatus.INFO
+
+
+# ---------------------------------------------------------------------------
 # Generic tree → DecisionTrace helper (for lightweight external callers)
 # ---------------------------------------------------------------------------
 
