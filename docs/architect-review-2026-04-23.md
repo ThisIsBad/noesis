@@ -265,12 +265,37 @@ does, when to call which, or error-handling norms. A single
   gateway (Traefik, nginx with `auth_request`, Railway edge) would
   give you per-service tokens + rate limiting + central observability
   without code changes.
-- [ ] **T3.7 Job queue.** Mneme's `consolidate` and Empiria's
-  lesson-mining look like candidates for async jobs (Celery /
-  Dramatiq / Temporal).
-- [ ] **T3.8 LLM-as-judge for eval.** `eval/` is strong on
-  deterministic metrics (ALFWorld success rate, recall@10). Cheap to
-  add LLM-as-judge for regressions that aren't binary pass/fail.
+- [~] **T3.7 Async consolidation — design landed, implementation
+  deferred.** Wrote [`docs/operations/async-consolidation.md`](operations/async-consolidation.md)
+  arguing against a job queue and for in-process
+  `asyncio.create_task` + a polling status endpoint. Two new MCP
+  tools (`consolidate_memories_async`, `get_consolidation_status`)
+  with task state in a new SQLite table, stuck-task sweep on boot,
+  one-task-at-a-time concurrency. Keeps the existing sync
+  `consolidate_memories` tool as-is for back-compat. Recommended
+  sequencing: profile the sync path at 10 k / 100 k memories first,
+  optimise the O(N²) loop (batched Chroma query + union-find) before
+  going async — that alone buys an order of magnitude. Ship async
+  only if the optimised sync path still blocks past 5 s at realistic
+  scale. Implementation deliberately **not** shipped — Mneme is
+  production-deployed and the refactor wants its own reviewed PR.
+  — *designed 2026-04-23*
+- [~] **T3.8 LLM-as-judge for eval — rubric designed, implementation
+  gated on review.** Wrote [`docs/eval/llm-judge-rubric.md`](eval/llm-judge-rubric.md):
+  7 testable invariants (verification before durable writes,
+  backtracking on failure, verify-plan before risky commits,
+  goal-contract on multi-step plans, drift-check on destructive
+  actions, calibration logging on low-confidence claims, skill
+  reuse on repeat work), `{pass, fail, not_applicable}` verdicts
+  per dimension (no aggregate quality score), structured JSON
+  output, Haiku 4.5 with temperature 0, `NOESIS_AB_JUDGE_MAX_BUDGET_USD`
+  cap ($0.50 default per eval invocation), cache by
+  `(trace_id, rubric_version)` hash, 5–10 % sampling.
+  Five open questions at the bottom of the doc for review.
+  Implementation deliberately **not** shipped in this commit —
+  writing the code first would commit us to a rubric we haven't
+  agreed on. Post-review effort estimate: ~1 day judge module +
+  tests, ~½ day CI wiring. — *designed 2026-04-23*
 - [x] **T3.9 Kosmos / Empiria / Techne triage.** Audited all three.
   Every one is an in-memory dict + substring-match MVP with a
   "Production: ChromaDB / pgmpy" TODO comment. Honest status:
