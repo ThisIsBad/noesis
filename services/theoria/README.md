@@ -147,6 +147,7 @@ runnable example.
 | GET | `/api/traces/{a}/diff/{b}?format=json\|markdown\|mermaid` | Structural diff of two traces |
 | GET | `/api/stream` | Server-Sent Events — pushes `trace_put` / `trace_delete` / `trace_clear` |
 | POST | `/api/traces` | Ingest a trace (JSON body) |
+| POST | `/api/traces/search` | Pattern query: step/edge predicates (JSON body) |
 | DELETE | `/api/traces/{id}` | Remove a trace |
 | POST | `/api/samples/load` | Load the built-in sample traces |
 | POST | `/api/clear` | Clear all traces |
@@ -165,6 +166,36 @@ curl 'http://theoria:8765/api/traces?tag=policy,plan&q=auth&limit=5'
 
 Timestamps accept ISO-8601 with `Z` or `+00:00` offsets. Malformed dates are
 silently ignored (the filter becomes no-op for that field).
+
+### Pattern queries
+
+For anything more expressive than the simple query-string filters,
+`POST /api/traces/search` accepts step/edge predicates:
+
+```bash
+# Every trace where a rule_check step triggered with "destroy" in its label:
+curl -X POST http://theoria:8765/api/traces/search \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "any_step": [
+      {"kind": "rule_check", "status": "triggered", "label_contains": "destroy"}
+    ]
+  }'
+
+# Every trace containing a contradicts edge + failed conclusion (AND across lists):
+curl -X POST http://theoria:8765/api/traces/search \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "all_edges": [{"relation": "contradicts"}],
+    "all_steps":  [{"kind": "conclusion", "status": "failed"}]
+  }'
+```
+
+Predicate fields: ``id``, ``kind``, ``status``, ``label_contains``,
+``detail_contains``, ``confidence_gte``, ``confidence_lte``
+(steps); ``source``, ``target``, ``relation``, ``label_contains``
+(edges). Unknown fields → HTTP 400 (typos don't silently match
+everything).
 
 ### Trace diff
 
@@ -264,13 +295,36 @@ A decision trace is a DAG of reasoning steps plus a verdict:
 
 ## Development
 
+The full preflight gates (matching the rest of the monorepo):
+
 ```bash
 cd services/theoria
 pip install -e ".[dev]"
-python -m pytest -q
-python -m ruff check src/ tests/
-python -m mypy --strict src/
+python -m pytest -q                                          # 110 tests
+python -m ruff check src/ tests/                             # lint
+python -m mypy --strict src/                                 # type check
+python -m pytest --cov=src/theoria --cov-fail-under=85       # coverage ≥ 85%
 ```
+
+All four are currently green on this branch.
+
+## Deploying on Railway
+
+Matches the other Noesis services:
+
+1. **New Service → GitHub repo → `ThisIsBad/noesis`**
+2. **Settings → Build**
+   - Root Directory: *(leave empty — repo root)*
+   - Dockerfile Path: `services/theoria/Dockerfile`
+3. **Settings → Variables** (all optional):
+   ```
+   THEORIA_PERSIST=/data/traces.jsonl       # durable trace storage
+   PORT=8000
+   ```
+4. **Settings → Volumes** — mount `/data` if you set `THEORIA_PERSIST`.
+5. Health endpoint: `/health`.
+
+The Dockerfile runs `theoria serve --host 0.0.0.0 --port $PORT`.
 
 ## Design notes
 
@@ -297,5 +351,9 @@ python -m mypy --strict src/
 - [x] Trace diff (compare two traces — added / removed / changed)
 - [x] Filter/search API on `/api/traces`
 - [x] CLI: `post`, `export`, `list`, `tail`, `diff`, `sample`
+- [x] Pattern query API (`POST /api/traces/search`)
+- [x] Native adapters for `noesis_schemas.{ProofCertificate, GoalContract, Plan}`
+- [x] Railway deploy config (`Dockerfile`, `railway.toml`)
+- [x] `ruff` / `mypy --strict` / `coverage ≥ 85%` preflight gates green
 - [ ] Kairos OpenTelemetry span ingestion adapter
 - [ ] MCP-over-HTTP wrapping for uniform Noesis deployment

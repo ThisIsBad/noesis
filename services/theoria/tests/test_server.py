@@ -100,6 +100,27 @@ def test_post_custom_trace_round_trip(live_server) -> None:
     assert body["title"] == "Custom"
 
 
+def test_search_endpoint_with_step_predicate(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    status, body = _post(f"{base}/api/traces/search", {
+        "any_step": [{"kind": "rule_check", "status": "triggered"}],
+    })
+    assert status == 200
+    ids = [t["id"] for t in body["traces"]]
+    assert ids == ["sample-logos-policy-block"]
+
+
+def test_search_endpoint_rejects_unknown_predicate_field(live_server) -> None:
+    base, _ = live_server
+    _post(f"{base}/api/samples/load")
+    status, body = _post(f"{base}/api/traces/search", {
+        "any_step": [{"kind": "note", "bogus": 1}],
+    })
+    assert status == 400
+    assert "unknown" in body["error"]
+
+
 def test_list_accepts_filter_query_params(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")

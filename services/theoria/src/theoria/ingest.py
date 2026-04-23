@@ -493,6 +493,355 @@ def trace_from_telos_drift(
 
 
 # ---------------------------------------------------------------------------
+# noesis-schemas native adapters — duck-typed on the pydantic model shapes
+# ---------------------------------------------------------------------------
+
+class _ProofCertificate(Protocol):
+    schema_version: str
+    claim_type: str
+    claim: Any
+    method: str
+    verified: bool
+    timestamp: str
+    verification_artifact: Mapping[str, Any]
+
+
+def trace_from_proof_certificate(
+    cert: _ProofCertificate,
+    *,
+    title: str | None = None,
+    trace_id: str | None = None,
+) -> DecisionTrace:
+    """Build a DecisionTrace from a ``noesis_schemas.ProofCertificate``.
+
+    The adapter is duck-typed — any object with matching attribute names
+    (including the pydantic model, a Logos frozen dataclass, or a plain
+    ``SimpleNamespace``) works.
+    """
+    trace_id = trace_id or f"cert-{uuid4().hex[:12]}"
+    verified = bool(cert.verified)
+    verdict_word = "verified" if verified else "refuted"
+    title = title or f"Proof certificate — {verdict_word.upper()}"
+
+    claim_text = _format_claim(cert.claim)
+    steps: list[ReasoningStep] = [
+        ReasoningStep(
+            id="q",
+            kind=StepKind.QUESTION,
+            label=f"Is this claim verified? — {claim_text}",
+            detail=f"claim_type={cert.claim_type}",
+            source_ref="schemas/src/noesis_schemas/certificates.py",
+        ),
+        ReasoningStep(
+            id="claim",
+            kind=StepKind.PREMISE,
+            label=claim_text,
+            detail=f"schema_version={cert.schema_version}",
+            status=StepStatus.OK,
+        ),
+        ReasoningStep(
+            id="method",
+            kind=StepKind.INFERENCE,
+            label=f"Method: {cert.method}",
+            status=StepStatus.OK,
+            meta={"timestamp": cert.timestamp},
+        ),
+    ]
+    edges: list[Edge] = [
+        Edge("q", "claim", EdgeRelation.CONSIDERS),
+        Edge("claim", "method", EdgeRelation.REQUIRES),
+    ]
+
+    artifact = dict(cert.verification_artifact or {})
+    if artifact:
+        steps.append(
+            ReasoningStep(
+                id="artifact",
+                kind=StepKind.EVIDENCE,
+                label="Verification artifact",
+                detail=_truncate(_format_artifact(artifact), 400),
+                status=StepStatus.OK,
+                meta=artifact,
+            )
+        )
+        edges.append(Edge("method", "artifact", EdgeRelation.YIELDS))
+
+    concl_id = "conclusion"
+    concl_status = StepStatus.OK if verified else StepStatus.FAILED
+    steps.append(
+        ReasoningStep(
+            id=concl_id,
+            kind=StepKind.CONCLUSION,
+            label="Claim verified" if verified else "Claim refuted",
+            detail=f"Verification ran via {cert.method}.",
+            status=concl_status,
+            confidence=1.0 if verified else 0.0,
+        )
+    )
+    edges.append(Edge("method", concl_id, EdgeRelation.IMPLIES))
+    if artifact:
+        edges.append(Edge("artifact", concl_id, EdgeRelation.SUPPORTS))
+
+    trace = DecisionTrace(
+        id=trace_id,
+        title=title,
+        question="Is the claim verified by the cited method?",
+        source="logos",
+        kind="proof",
+        root="q",
+        steps=steps,
+        edges=edges,
+        outcome=Outcome(
+            verdict=verdict_word,
+            summary=f"{cert.method} → {verdict_word} (claim_type={cert.claim_type})",
+            confidence=1.0 if verified else 0.0,
+            meta={"claim_type": cert.claim_type, "method": cert.method},
+        ),
+        tags=["logos", "proof", verdict_word],
+    )
+    trace.validate()
+    return trace
+
+
+class _GoalConstraint(Protocol):
+    description: str
+    formal: str | None
+
+
+class _GoalContract(Protocol):
+    goal_id: str
+    description: str
+    preconditions: Sequence[_GoalConstraint]
+    postconditions: Sequence[_GoalConstraint]
+    active: bool
+
+
+def trace_from_goal_contract(
+    contract: _GoalContract,
+    *,
+    title: str | None = None,
+    trace_id: str | None = None,
+) -> DecisionTrace:
+    """Build a DecisionTrace visualising a ``noesis_schemas.GoalContract``.
+
+    Each pre/postcondition becomes its own constraint node, giving an
+    at-a-glance view of what a goal requires and forbids.
+    """
+    trace_id = trace_id or f"contract-{contract.goal_id[:12]}"
+    title = title or f"Goal contract — {contract.description}"
+    active_word = "active" if bool(contract.active) else "inactive"
+
+    steps: list[ReasoningStep] = [
+        ReasoningStep(
+            id="q",
+            kind=StepKind.QUESTION,
+            label=f"Goal: {contract.description}",
+            detail=f"goal_id={contract.goal_id} · {active_word}",
+            source_ref="schemas/src/noesis_schemas/contracts.py",
+        )
+    ]
+    edges: list[Edge] = []
+
+    for i, pre in enumerate(contract.preconditions or ()):
+        sid = f"pre.{i}"
+        steps.append(
+            ReasoningStep(
+                id=sid,
+                kind=StepKind.PREMISE,
+                label=f"Precondition: {pre.description}",
+                detail=(f"formal: {pre.formal}" if pre.formal else None),
+                status=StepStatus.OK,
+            )
+        )
+        edges.append(Edge("q", sid, EdgeRelation.REQUIRES, "precondition"))
+
+    for i, post in enumerate(contract.postconditions or ()):
+        sid = f"post.{i}"
+        steps.append(
+            ReasoningStep(
+                id=sid,
+                kind=StepKind.CONSTRAINT,
+                label=f"Postcondition: {post.description}",
+                detail=(f"formal: {post.formal}" if post.formal else None),
+                status=StepStatus.OK,
+            )
+        )
+        edges.append(Edge("q", sid, EdgeRelation.REQUIRES, "postcondition"))
+
+    concl_id = "conclusion"
+    concl_status = StepStatus.OK if bool(contract.active) else StepStatus.REJECTED
+    steps.append(
+        ReasoningStep(
+            id=concl_id,
+            kind=StepKind.CONCLUSION,
+            label=f"Contract {active_word}",
+            status=concl_status,
+        )
+    )
+    edges.append(Edge("q", concl_id, EdgeRelation.YIELDS))
+
+    trace = DecisionTrace(
+        id=trace_id,
+        title=title,
+        question=f"Is the '{contract.description}' goal contract active?",
+        source="telos",
+        kind="goal",
+        root="q",
+        steps=steps,
+        edges=edges,
+        outcome=Outcome(
+            verdict=active_word,
+            summary=(
+                f"{len(contract.preconditions or ())} preconditions, "
+                f"{len(contract.postconditions or ())} postconditions"
+            ),
+            meta={"goal_id": contract.goal_id},
+        ),
+        tags=["telos", "goal", active_word],
+    )
+    trace.validate()
+    return trace
+
+
+class _PlanStep(Protocol):
+    step_id: str
+    description: str
+    tool_call: str | None
+    status: Any            # noesis_schemas.StepStatus or str
+    outcome: str | None
+    risk_score: float
+
+
+class _Plan(Protocol):
+    plan_id: str
+    goal: str
+    steps: Sequence[_PlanStep]
+    depth: int
+
+
+def trace_from_plan(
+    plan: _Plan,
+    *,
+    title: str | None = None,
+    trace_id: str | None = None,
+) -> DecisionTrace:
+    """Build a DecisionTrace from a ``noesis_schemas.Plan``.
+
+    Renders the plan's linear step sequence (Praxis's best_path output,
+    for example). For tree-shaped plan views with competing alternatives,
+    use ``trace_from_praxis_plan`` instead.
+    """
+    trace_id = trace_id or f"plan-{plan.plan_id[:12]}"
+    title = title or f"Plan — {plan.goal}"
+
+    steps: list[ReasoningStep] = [
+        ReasoningStep(
+            id="q",
+            kind=StepKind.QUESTION,
+            label=f"Plan: {plan.goal}",
+            detail=f"depth={plan.depth}",
+            source_ref="schemas/src/noesis_schemas/planning.py",
+        )
+    ]
+    edges: list[Edge] = []
+
+    any_failed = False
+    previous_id = "q"
+    plan_step_ids: list[str] = []
+    for i, plan_step in enumerate(plan.steps or ()):
+        sid = plan_step.step_id or f"step.{i}"
+        plan_step_ids.append(sid)
+        status = _plan_step_status(plan_step.status)
+        if status is StepStatus.FAILED:
+            any_failed = True
+        detail_parts: list[str] = []
+        if plan_step.tool_call:
+            detail_parts.append(f"tool: {plan_step.tool_call}")
+        detail_parts.append(f"risk: {float(plan_step.risk_score):.2f}")
+        if plan_step.outcome:
+            detail_parts.append(f"outcome: {plan_step.outcome}")
+
+        steps.append(
+            ReasoningStep(
+                id=sid,
+                kind=StepKind.INFERENCE,
+                label=plan_step.description,
+                detail=" · ".join(detail_parts),
+                status=status,
+                meta={"tool_call": plan_step.tool_call, "risk_score": plan_step.risk_score},
+            )
+        )
+        rel = EdgeRelation.REQUIRES if previous_id == "q" else EdgeRelation.YIELDS
+        edges.append(Edge(previous_id, sid, rel, f"step {i + 1}"))
+        previous_id = sid
+
+    concl_id = "conclusion"
+    if not plan_step_ids:
+        verdict = "empty-plan"
+        concl_status = StepStatus.PENDING
+        summary = "Plan has no steps yet."
+    elif any_failed:
+        verdict = "plan-failed"
+        concl_status = StepStatus.FAILED
+        summary = "At least one plan step failed."
+    else:
+        verdict = "plan-ok"
+        concl_status = StepStatus.OK
+        summary = f"{len(plan_step_ids)} step(s) — no failures."
+
+    steps.append(
+        ReasoningStep(
+            id=concl_id,
+            kind=StepKind.CONCLUSION,
+            label=summary,
+            status=concl_status,
+        )
+    )
+    edges.append(Edge(previous_id, concl_id, EdgeRelation.YIELDS))
+
+    trace = DecisionTrace(
+        id=trace_id,
+        title=title,
+        question=f"Execution of plan: {plan.goal}",
+        source="praxis",
+        kind="plan",
+        root="q",
+        steps=steps,
+        edges=edges,
+        outcome=Outcome(
+            verdict=verdict,
+            summary=summary,
+            meta={"plan_id": plan.plan_id, "depth": plan.depth, "steps": len(plan_step_ids)},
+        ),
+        tags=["praxis", "plan", verdict],
+    )
+    trace.validate()
+    return trace
+
+
+def _format_claim(claim: Any) -> str:
+    if isinstance(claim, str):
+        return claim
+    if isinstance(claim, Mapping):
+        parts = [f"{k}={v}" for k, v in sorted(claim.items()) if v is not None]
+        return "; ".join(parts) or repr(claim)
+    return repr(claim)
+
+
+def _format_artifact(artifact: Mapping[str, Any]) -> str:
+    return "; ".join(f"{k}={v}" for k, v in sorted(artifact.items()))
+
+
+def _truncate(text: str, limit: int) -> str:
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _plan_step_status(status: Any) -> StepStatus:
+    raw = getattr(status, "value", status)
+    return _PRAXIS_STATUS_MAP.get(str(raw).lower(), StepStatus.INFO)
+
+
+# ---------------------------------------------------------------------------
 # Generic tree → DecisionTrace helper (for lightweight external callers)
 # ---------------------------------------------------------------------------
 

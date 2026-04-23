@@ -8,7 +8,7 @@ DOT, or CommonMark — no Theoria server required at the reading end.
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from typing import Sequence
 
 from theoria.models import DecisionTrace, Edge, EdgeRelation, Outcome, ReasoningStep, StepKind, StepStatus
 
@@ -379,7 +379,7 @@ def _steps_in_topological_order(trace: DecisionTrace) -> list[ReasoningStep]:
 
     # Kahn's algorithm, preserving original step order as tie-breaker.
     insertion = {s.id: i for i, s in enumerate(trace.steps)}
-    ready = sorted((sid for sid, n in indeg.items() if n == 0), key=insertion.get)
+    ready = sorted((sid for sid, n in indeg.items() if n == 0), key=lambda s: insertion[s])
     order: list[str] = []
     seen: set[str] = set()
     while ready:
@@ -452,4 +452,4 @@ def format_for(trace: DecisionTrace, fmt: str) -> str:
     raise ValueError(f"unknown export format: {fmt!r}")
 
 
-__all__: Iterable[str] = ("to_mermaid", "to_graphviz", "to_markdown", "format_for")
+__all__: Sequence[str] = ("to_mermaid", "to_graphviz", "to_markdown", "format_for")
