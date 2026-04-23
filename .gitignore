@@ -14,7 +14,10 @@ build/
 Thumbs.db
 services/*/.coverage
 
-# Local secrets / per-environment overrides
+# Local secrets / per-environment overrides.
+# No whitelist exception — .env.*.example files have historically
+# shipped real URLs/secrets by mistake (see commit b53f99f). If you
+# need a template, put a fake-values block in the service README
+# instead of a dotfile git will track.
 .env
 .env.*
-!.env.*.example
