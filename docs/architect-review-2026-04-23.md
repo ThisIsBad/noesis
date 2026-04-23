@@ -247,9 +247,20 @@ does, when to call which, or error-handling norms. A single
   fans out to Kairos + Jaeger). Kept as a planning artifact, not a
   this-week implementation — the architectural choice needs
   buy-in. — *landed 2026-04-23*
-- [ ] **T3.5 Persistence consolidation.** Every service uses SQLite or
-  embedded Chroma. At scale this is a bottleneck. Postgres with
-  pgvector would consolidate persistence and give replication.
+- [~] **T3.5 Persistence consolidation — prep landed, migration deferred.**
+  My architect's call: **defer the actual Postgres move** until
+  single-node scale starts hurting (currently nowhere near the
+  ROADMAP's 100k-entries @ 200ms p99 target). Cheap prep landed now
+  so the eventual flip is a config change, not a code refactor:
+  `noesis_clients.persistence.resolve_sqlite_path` parses
+  `<SVC>_DATABASE_URL` (SQLAlchemy form, e.g. `sqlite:////data/mneme.db`)
+  with a graceful fallback to the legacy `<SVC>_DATA_DIR` convention
+  and explicit rejection of non-SQLite URLs (don't silently accept
+  a `postgresql://` we can't yet open). 8 contract tests in
+  `clients/tests/test_persistence.py`. Documented in
+  [`docs/operations/persistence.md`](operations/persistence.md) with
+  the adoption checklist (Mneme + Praxis migration to the helper is
+  a separate PR with your eyes on it). — *prep landed 2026-04-23*
 - [ ] **T3.6 Central API gateway / auth proxy.** At 8+ services, a
   gateway (Traefik, nginx with `auth_request`, Railway edge) would
   give you per-service tokens + rate limiting + central observability
