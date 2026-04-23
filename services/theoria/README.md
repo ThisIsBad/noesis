@@ -112,10 +112,43 @@ runnable example.
 | GET | `/health` | Liveness + trace count |
 | GET | `/api/traces` | List all traces (most-recent first) |
 | GET | `/api/traces/{id}` | Single trace |
+| GET | `/api/traces/{id}/export?format=mermaid\|dot` | Render as Mermaid / Graphviz DOT |
+| GET | `/api/stream` | Server-Sent Events — pushes `trace_put` / `trace_delete` / `trace_clear` |
 | POST | `/api/traces` | Ingest a trace (JSON body) |
 | DELETE | `/api/traces/{id}` | Remove a trace |
 | POST | `/api/samples/load` | Load the built-in sample traces |
 | POST | `/api/clear` | Clear all traces |
+
+### Live streaming
+
+The UI subscribes to `/api/stream` on load; any POST of a new trace
+from any client updates every connected browser in place. To consume
+it from your own tooling:
+
+```python
+import json, urllib.request
+with urllib.request.urlopen("http://theoria:8765/api/stream") as resp:
+    for raw in resp:
+        line = raw.decode().rstrip()
+        if line.startswith("data:"):
+            event = json.loads(line[len("data:"):].strip())
+            print(event["type"], event.get("id"))
+```
+
+### Exporting a trace
+
+```bash
+curl 'http://theoria:8765/api/traces/my-trace/export?format=mermaid' > trace.mmd
+curl 'http://theoria:8765/api/traces/my-trace/export?format=dot'     > trace.dot
+```
+
+Or programmatically:
+
+```python
+from theoria.export import to_mermaid, to_graphviz
+print(to_mermaid(trace))
+print(to_graphviz(trace))
+```
 
 ## Decision-trace schema
 
@@ -186,9 +219,11 @@ python -m mypy --strict src/
 
 ## Roadmap
 
-- [ ] Live streaming via Server-Sent Events (new trace → push to all
+- [x] Live streaming via Server-Sent Events (new trace → push to all
   connected UIs)
+- [x] Praxis beam-search state adapter
+- [x] Telos alignment / drift adapter
+- [x] Exporter: decision trace → Mermaid / Graphviz DOT
 - [ ] Kairos OpenTelemetry span ingestion adapter
-- [ ] Praxis beam-search state adapter
-- [ ] Exporter: decision trace → Mermaid / Graphviz / Markdown
 - [ ] MCP-over-HTTP wrapping for uniform Noesis deployment
+- [ ] Markdown exporter (trace → reviewable text)
