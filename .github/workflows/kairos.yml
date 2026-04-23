@@ -1,0 +1,87 @@
+name: kairos
+
+# Kairos is load-bearing for every service (tracing + span store). Run its
+# gates independently so cross-cutting regressions surface immediately, not
+# only through a downstream service workflow.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "kairos/**"
+      - "schemas/**"
+      - ".github/workflows/kairos.yml"
+  pull_request:
+    paths:
+      - "kairos/**"
+      - "schemas/**"
+      - ".github/workflows/kairos.yml"
+
+defaults:
+  run:
+    working-directory: kairos
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            schemas/pyproject.toml
+            kairos/pyproject.toml
+
+      - name: Install schemas
+        working-directory: schemas
+        run: pip install -e .
+
+      - name: Install kairos + dev deps
+        run: pip install -e ".[dev]"
+
+      - name: pytest + coverage
+        run: |
+          python -m pytest \
+            --cov=kairos \
+            --cov-report=term-missing \
+            --cov-fail-under=85 \
+            -v
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            schemas/pyproject.toml
+            kairos/pyproject.toml
+
+      - name: Install schemas
+        working-directory: schemas
+        run: pip install -e .
+
+      - name: Install kairos
+        run: pip install -e .
+
+      - name: Install lint tools
+        run: pip install ruff mypy
+
+      - name: ruff
+        run: python -m ruff check src/ tests/
+
+      - name: mypy
+        run: python -m mypy --strict src/
