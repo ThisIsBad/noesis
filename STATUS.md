@@ -26,7 +26,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
 | **clients** | Shared Python clients for cross-service calls in the Noesis stack | — | — | — | [✓](.github/workflows/clients.yml) | 435 | 405 | 2 | 2026-04-24 |
 | **eval** | Reproducible benchmark harness for the Noesis AGI stack | — | — | — | [✓](.github/workflows/eval.yml) | 3,077 | 4,699 | 15 | 2026-04-24 |
-| **kairos** | Cross-service observability and tracing for the Noesis AGI stack | — | — | ✓ | [✓](.github/workflows/kairos.yml) | 374 | 451 | 3 | 2026-04-21 |
+| **kairos** | Cross-service observability and tracing for the Noesis AGI stack | — | — | ✓ | [✓](.github/workflows/kairos.yml) | 374 | 451 | 3 | 2026-04-24 |
 | **schemas** | Shared data contracts for the Noesis AGI stack | — | — | — | [✓](.github/workflows/schemas.yml) | 332 | 158 | 1 | 2026-04-24 |
 
 ## UI clients
