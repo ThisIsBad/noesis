@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
-import datetime as _dt
 import os
 import subprocess
 import sys
@@ -231,12 +230,11 @@ def _git_last_commit(rel_path: str) -> str:
 
 
 def render(reports: list[Report]) -> str:
-    now = _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines: list[str] = [
         "# Noesis — Component Status",
         "",
         "> **Auto-generated** by `tools/generate_status.py`. Do not edit by hand.",
-        f"> Last regenerated: {now}",
+        "> Regenerated on every push to master by `.github/workflows/status.yml`.",
         "",
         "This report is filesystem-derived: presence of a Dockerfile, "
         "`railway.toml`, an MCP server, a CI workflow, and line-count "
