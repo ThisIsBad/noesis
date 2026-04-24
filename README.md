@@ -32,24 +32,31 @@ noesis/
 
 ## Services
 
+Status legend: ✅ deployed · 🟡 MVP in progress (code + tests, not yet deployed)
+· 🔲 not started. See [STATUS.md](STATUS.md) for the auto-generated
+per-service detail, and [docs/architect-review-2026-04-23.md](docs/architect-review-2026-04-23.md)
+for the most recent architecture review.
+
 | Service | Function | AGI Stage | Status |
 |---------|----------|-----------|--------|
-| **Logos** | Formal verification (Z3/Lean 4), assumption management, goal contracts | Stage 2–3 | ✅ Absorbed into `services/logos/` |
-| **Mneme** | Persistent episodic + semantic memory, verified belief storage | Stage 3–4 | 🔲 Planned |
-| **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🔲 Planned |
-| **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 3 | 🔲 Planned (vorgezogen) |
-| **Episteme** | Metacognition, uncertainty calibration, competence mapping | Stage 3 | 🔲 Planned |
-| **Kosmos** | Causal world model, Do-calculus, interventional reasoning | Stage 3–4 | 🔲 Planned |
-| **Empiria** | Experience accumulation, lesson extraction, pattern mining | Stage 4 | 🔲 Planned |
-| **Techne** | Verified skill library, strategy reuse across sessions | Stage 4 | 🔲 Planned |
+| **Logos** | Formal verification (Z3/Lean 4), assumption management, goal contracts | Stage 2–3 | ✅ Deployed |
+| **Mneme** | Persistent episodic + semantic memory, verified belief storage | Stage 3–4 | ✅ Deployed |
+| **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🟡 MVP (Logos sidecar WIP) |
+| **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 3 | 🟡 MVP |
+| **Episteme** | Metacognition, uncertainty calibration, competence mapping | Stage 3 | 🟡 MVP |
+| **Kosmos** | Causal world model, Do-calculus, interventional reasoning | Stage 3–4 | 🟡 MVP (thin) |
+| **Empiria** | Experience accumulation, lesson extraction, pattern mining | Stage 4 | 🟡 MVP (thin) |
+| **Techne** | Verified skill library, strategy reuse across sessions | Stage 4 | 🟡 MVP (thin) |
 
 ### Cross-cutting
 
 | Component | Function | Status |
 |-----------|----------|--------|
-| **schemas/** | Shared contracts: `ProofCertificate`, `GoalContract`, `Memory`, `Plan`, `Skill`, `Lesson` | ✅ Defined |
-| **eval/** | Reproducible benchmarks: ARC-AGI, ALFWorld, WebArena, ECE, Drift | 🔲 Skeleton |
-| **kairos/** | Cross-service tracing via OpenTelemetry | 🔲 Skeleton |
+| **schemas/** | Shared contracts: `ProofCertificate`, `GoalContract`, `Memory`, `Plan`, `Skill`, `Lesson`, `TraceSpan` | ✅ Defined |
+| **kairos/** | Cross-service tracing via OpenTelemetry | 🟡 MVP (no dedicated CI) |
+| **clients/** | Shared HTTP clients (`LogosClient`, ...) | 🟡 MVP |
+| **eval/** | Reproducible benchmarks + A/B harness (ALFWorld, Mneme recall, MCP agent) | 🟡 MVP |
+| **ui/theoria/** | Decision-logic visualizer (UI client, not a service) | 🟡 MVP |
 
 ## Architecture
 
@@ -62,9 +69,13 @@ idempotent verification (`certify_claim`, `z3_check`, `verify_argument`, etc.)
 to avoid expensive Token-Roundtrips through Claude. State mutations remain
 Claude-orchestrated.
 
-See [docs/architecture.md](docs/architecture.md) for the full architecture and
-[docs/ROADMAP.md](docs/ROADMAP.md) for the stage-by-stage roadmap with
-acceptance criteria.
+See:
+
+- [docs/architecture.md](docs/architecture.md) — full architecture and design rationale
+- [docs/ROADMAP.md](docs/ROADMAP.md) — stage-by-stage roadmap with acceptance criteria
+- [docs/orchestration.md](docs/orchestration.md) — orchestrator's guide (what to call when, per-service MCP-tool index, canonical patterns)
+- [docs/architect-review-2026-04-23.md](docs/architect-review-2026-04-23.md) — most recent repo-wide architecture review + action checklist
+- [STATUS.md](STATUS.md) — auto-generated per-component status (Dockerfile / Railway / MCP / CI / LOC)
 
 ## Getting Started
 

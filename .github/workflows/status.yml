@@ -1,0 +1,64 @@
+name: status
+
+# Regenerate STATUS.md from filesystem state on every push to master.
+# Separately: on pull requests, check that STATUS.md is up to date with
+# the current state of the repo, failing the job if it drifted.
+#
+# The generator is stdlib-only (tools/generate_status.py) — no installs.
+#
+# ``fetch-depth: 0`` is load-bearing: the generator runs
+# ``git log -1 --format=%cs -- <path>`` to populate the "Last commit"
+# column. actions/checkout@v4 defaults to fetch-depth: 1 (shallow),
+# which leaves path-history empty and silently produces a diff against
+# the committed STATUS.md. Full history is cheap at this repo size.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    name: Check STATUS.md is current
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run generator in check mode
+        run: python tools/generate_status.py --check
+
+  regenerate:
+    name: Regenerate STATUS.md
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Regenerate
+        run: python tools/generate_status.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet STATUS.md; then
+            echo "STATUS.md unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name "noesis-bot"
+          git config user.email "noesis-bot@users.noreply.github.com"
+          git add STATUS.md
+          git commit -m "chore: auto-regenerate STATUS.md"
+          git push
