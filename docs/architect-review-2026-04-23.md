@@ -142,23 +142,58 @@ does, when to call which, or error-handling norms. A single
 
 ## Tier 2 — next month
 
-- [ ] **T2.1 Reusable CI workflow.** 10 near-identical workflows →
-  1 matrix workflow with a `service` input. Cuts config ~80 %,
-  makes Python-version bumps one-line changes.
-- [ ] **T2.2 Cross-service E2E gate.** The architecture doc calls
-  for ≥ 3-service E2E per phase. Today that lives in `eval/` and
-  runs on its own schedule. Promote the Phase-1 scenario
-  (`register_goal → decompose_goal → verify_plan → commit_step +
-  store_memory`) to a PR gate using stub/mock services.
-- [ ] **T2.3 Praxis Logos-sidecar wiring.** Commit `6f1f43f` landed
-  the client skeleton; `PraxisCore.verify_plan` still does the
-  basic stub check, not the actual Logos call. Finish the wiring.
-- [ ] **T2.4 Shared test utilities.** Every service has fixtures
-  for "fake Kairos", "fake MCP server", auth-header helpers.
-  Extract into `testing/` or `clients/noesis_testing/` to DRY
-  ~500 lines.
-- [ ] **T2.5 Add schemas + clients CI** (even if they're exercised
-  via consumers) so contract-level regressions surface immediately.
+- [x] **T2.1 Reusable CI workflow.** New
+  `.github/workflows/_python-component.yml` accepts service-path /
+  -name / coverage args / dep-flags / Docker flag /
+  `coverage-fail-under` / extra pytest args / Python versions. Every
+  per-service / per-package workflow is now a 26-line caller.
+  Workflows shrank 1,617 → 938 lines (-42 %). Python-version bumps
+  are now a one-line change. — *landed 2026-04-23*
+- [x] **T2.2 Cross-service E2E gate.** New
+  `eval/tests/test_phase1_inprocess.py` instantiates real
+  `TelosCore` + `PraxisCore` + `MnemeCore` (with tmp-dir storage)
+  + a fake `LogosClient` and drives the canonical Phase-1
+  scenario end-to-end at the tool-call layer:
+  `register_goal → decompose_goal → add_step → verify_plan →
+  commit_step → store → check_alignment`. Plus a counter-test for
+  Logos refutation (blocks commit, Mneme stays empty) and a
+  drift-detection regression. `.github/workflows/e2e.yml` runs on
+  every PR without a paths filter — cross-service orchestration
+  regressions from any participating service fail the PR
+  immediately. Wire-format coverage is deliberately out of scope
+  (already covered by `schemas/tests/test_logos_certificate_round_trip`
+  and `clients/tests/test_logos.py`). —
+  *landed 2026-04-23*
+- [x] **T2.3 Praxis Logos-sidecar wiring.** `PraxisCore.__init__`
+  now accepts an optional `LogosClient`. `verify_plan` runs local
+  fast-fail checks first (no steps / risk ≥ 0.8), then asks Logos
+  to certify the rendered plan: verified ⇒ pass with method noted,
+  refuted ⇒ block, sidecar unreachable ⇒ pass with degraded note
+  (architecture rule: a sidecar outage must not break the primary
+  call). 5 new tests + 21 preexisting tests all green, 67 total
+  Praxis tests pass. The MCP server reads `LOGOS_URL` /
+  `LOGOS_SECRET` via `LogosClient.from_env()`. —
+  *landed 2026-04-23*
+- [x] **T2.4 Shared test utilities.** New
+  `noesis_clients.testing` submodule (inside the existing
+  `noesis-clients` package, so every service that already depends
+  on it gets the fakes for free — no new pyproject plumbing).
+  Exports `FakeLogosClient` (drop-in for the async client, with
+  `.calls` list and `.last_argument` convenience) plus
+  `verified_certificate()` / `refuted_certificate()` factories.
+  Three prior copies of the fake (Mneme, Praxis, Phase-1 E2E) now
+  import from the shared module. Contract tests for the fakes live
+  in `clients/tests/test_testing_helpers.py` so stand-in
+  regressions fail fast. Future extractions (tracing-test
+  parameterization, data-dir conftest) are straightforward follow-
+  ups; deferred until they bite. — *landed 2026-04-23*
+- [x] **T2.5 Add schemas + clients CI.** Both now have dedicated
+  `.github/workflows/{schemas,clients}.yml` callers of the reusable
+  workflow. `schemas` runs at 99.5 % coverage (10 passed, 1 skipped
+  when z3 isn't available — added an `importorskip` guard on the
+  Logos round-trip test). `clients` runs at 68 % coverage with the
+  gate set to 65 % until SSE-transport paths get integration
+  coverage. — *landed 2026-04-23*
 
 ## Tier 3 — backlog
 

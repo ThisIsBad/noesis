@@ -15,8 +15,8 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 | **episteme** | Metacognition and uncertainty calibration for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/episteme.yml) | 368 | 400 | 5 | 2026-04-21 |
 | **kosmos** | Causal world model with Do-calculus for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/kosmos.yml) | 228 | 220 | 4 | 2026-04-21 |
 | **logos** | LLM x Deterministic Logic Verifier — exploiting the P!=NP asymmetry | ✓ | ✓ | ✓ | [✓](.github/workflows/logos.yml) | 11,894 | 10,012 | 74 | 2026-04-21 |
-| **mneme** | Persistent episodic and semantic memory for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/mneme.yml) | 592 | 821 | 6 | 2026-04-22 |
-| **praxis** | Hierarchical planning and Tree-of-Thoughts search for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/praxis.yml) | 602 | 735 | 6 | 2026-04-22 |
+| **mneme** | Persistent episodic and semantic memory for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/mneme.yml) | 592 | 809 | 6 | 2026-04-24 |
+| **praxis** | Hierarchical planning and Tree-of-Thoughts search for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/praxis.yml) | 706 | 809 | 6 | 2026-04-24 |
 | **techne** | Verified skill library and strategy reuse for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/techne.yml) | 272 | 259 | 4 | 2026-04-21 |
 | **telos** | Goal stability monitoring and drift detection for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/telos.yml) | 363 | 480 | 5 | 2026-04-21 |
 
@@ -24,10 +24,10 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
-| **clients** | Shared Python clients for cross-service calls in the Noesis stack | — | — | — | — | 309 | 332 | 1 | 2026-04-22 |
-| **eval** | Reproducible benchmark harness for the Noesis AGI stack | — | — | — | [✓](.github/workflows/eval.yml) | 3,077 | 4,526 | 14 | 2026-04-23 |
+| **clients** | Shared Python clients for cross-service calls in the Noesis stack | — | — | — | [✓](.github/workflows/clients.yml) | 435 | 405 | 2 | 2026-04-24 |
+| **eval** | Reproducible benchmark harness for the Noesis AGI stack | — | — | — | [✓](.github/workflows/eval.yml) | 3,077 | 4,699 | 15 | 2026-04-24 |
 | **kairos** | Cross-service observability and tracing for the Noesis AGI stack | — | — | ✓ | [✓](.github/workflows/kairos.yml) | 374 | 451 | 3 | 2026-04-24 |
-| **schemas** | Shared data contracts for the Noesis AGI stack | — | — | — | — | 332 | 152 | 1 | 2026-04-21 |
+| **schemas** | Shared data contracts for the Noesis AGI stack | — | — | — | [✓](.github/workflows/schemas.yml) | 332 | 158 | 1 | 2026-04-24 |
 
 ## UI clients
 

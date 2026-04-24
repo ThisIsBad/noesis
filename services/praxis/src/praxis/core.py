@@ -1,13 +1,18 @@
+import asyncio
 import sqlite3
 from datetime import datetime
+from typing import Awaitable, TypeVar
 
 import networkx as nx
+from noesis_clients import LogosClient
 from noesis_schemas import Plan, PlanStep, StepStatus
 
 # Scoring weights
 _W_RISK = 0.6
 _W_TOOL = 0.4
 _FAIL_PENALTY = 0.3
+
+_T = TypeVar("_T")
 
 
 def _score(
@@ -29,10 +34,19 @@ class PraxisCore:
     scoring path; backtrack returns siblings of failed steps.
     """
 
-    def __init__(self, db_path: str = "praxis.db") -> None:
+    def __init__(
+        self,
+        db_path: str = "praxis.db",
+        logos_client: LogosClient | None = None,
+    ) -> None:
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._setup_schema()
         self._trees: dict[str, nx.DiGraph] = {}
+        # Optional Logos sidecar for read-only plan certification. None
+        # keeps the legacy local-only behaviour (fast unit tests, dev
+        # without a Logos URL configured). When provided, verify_plan
+        # tries Logos after the local fast-fail checks pass.
+        self._logos_client = logos_client
         self._load_trees()
 
     def _setup_schema(self) -> None:
@@ -278,9 +292,24 @@ class PraxisCore:
         return None  # all steps on best path are completed
 
     def verify_plan(self, plan_id: str) -> tuple[bool, str]:
-        """
-        Basic safety verification (stub for Logos GoalContract integration).
-        Production: POST to Logos /tools/verify_argument with the plan as premise.
+        """Safety-check a plan before execution.
+
+        Two-stage check:
+
+        1. **Local fast-fail.** Reject empty plans and plans containing
+           any step with ``risk_score >= 0.8``. These are deterministic
+           Praxis-only rules that don't need Logos.
+        2. **Logos sidecar (optional).** When a ``LogosClient`` was
+           injected at ``__init__`` time, render the plan as a single
+           argument string and ask Logos to certify it. The verdict is
+           folded into the return tuple:
+
+           - ``cert.verified is True``  → ``(True, "Logos verified ...")``.
+           - ``cert.verified is False`` → ``(False, "Logos refuted ...")``.
+           - ``cert is None`` (sidecar unreachable, parse error, etc.)
+             → ``(True, "...Logos sidecar: <err>")``. A sidecar outage
+             must not break the primary call (architecture rule); we
+             keep the local verdict and surface the failure reason.
         """
         g = self._trees[plan_id]
         step_nodes = [
@@ -293,7 +322,39 @@ class PraxisCore:
         high_risk = [desc for risk, desc in step_nodes if risk >= 0.8]
         if high_risk:
             return False, f"High-risk steps: {high_risk}"
-        return True, "Plan passes basic safety check"
+
+        if self._logos_client is None:
+            return True, "Plan passes basic safety check"
+
+        plan_summary = self._render_plan_for_logos(plan_id, step_nodes)
+        cert = _run_async(self._logos_client.certify_claim(plan_summary))
+        if cert is None:
+            err = self._logos_client.last_error or "no certificate"
+            return True, (
+                f"Plan passes local safety check (Logos sidecar: {err})"
+            )
+        if not cert.verified:
+            return False, f"Logos refuted plan ({cert.method})"
+        return True, f"Plan verified by Logos ({cert.method})"
+
+    def _render_plan_for_logos(
+        self,
+        plan_id: str,
+        step_nodes: list[tuple[float, str]],
+    ) -> str:
+        """Render a plan as a single argument string for Logos.
+
+        Logos parses the input as a propositional / FOL claim. The
+        rendering is intentionally simple — Logos does its own parsing
+        and we don't want to second-guess it. Future PRs may pre-format
+        plans whose step descriptions are too freeform to parse.
+        """
+        g = self._trees[plan_id]
+        goal = g.nodes[plan_id].get("goal", "(unknown goal)")
+        body = "; ".join(
+            f"{desc} (risk={risk:.2f})" for risk, desc in step_nodes
+        )
+        return f"Plan to achieve goal '{goal}': {body}"
 
     def get_plan(self, plan_id: str) -> Plan:
         row = self._conn.execute(
@@ -312,3 +373,33 @@ class PraxisCore:
             steps=paths[0] if paths else [],
             created_at=datetime.fromisoformat(created_at),
         )
+
+
+def _run_async(coro: Awaitable[_T]) -> _T | None:
+    """Run an async coroutine from sync code; return None if blocked.
+
+    PraxisCore.verify_plan is synchronous (called from FastMCP's
+    sync tool wrapper and from sync unit tests). The Logos sidecar
+    client is async because the underlying MCP transport is async.
+    Bridging the two through ``asyncio.run`` works in those contexts
+    but raises ``RuntimeError`` if a loop is already active in the
+    calling thread (e.g. inside an async test). In that case we
+    return None so verify_plan degrades to "local OK" rather than
+    crashing — same handling as a Logos network failure.
+    """
+    try:
+        loop = asyncio.get_event_loop_policy().get_event_loop()
+        if loop.is_running():
+            return None
+    except RuntimeError:
+        pass
+    try:
+        return asyncio.run(coro)  # type: ignore[arg-type]
+    except RuntimeError:
+        return None
+    except Exception:
+        # Defensive: any exception bubbling out of the async layer
+        # gets folded into "Logos unreachable" semantics. Specific
+        # MCP/HTTP failures already map to None inside LogosClient;
+        # this catches anything that escaped that net.
+        return None

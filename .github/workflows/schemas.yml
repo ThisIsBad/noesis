@@ -1,0 +1,30 @@
+name: schemas
+
+# noesis-schemas defines the contracts every other component agrees on
+# (ProofCertificate, GoalContract, Plan, Memory, TraceSpan, ...). It
+# was previously only exercised through downstream service workflows;
+# now it has its own gate so contract regressions surface immediately.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "schemas/**"
+      - ".github/workflows/_python-component.yml"
+      - ".github/workflows/schemas.yml"
+  pull_request:
+    paths:
+      - "schemas/**"
+      - ".github/workflows/_python-component.yml"
+      - ".github/workflows/schemas.yml"
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_python-component.yml
+    with:
+      service-path: schemas
+      service-name: noesis_schemas
+      coverage-args: "--cov=noesis_schemas"
+      needs-schemas: false          # we ARE schemas
+      needs-kairos: false           # schemas has no service deps
+      has-docker: false             # schemas isn't a deployable service
