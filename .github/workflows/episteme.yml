@@ -7,6 +7,7 @@ on:
       - "services/episteme/**"
       - "schemas/**"
       - "kairos/**"
+      - "clients/**"
       - ".github/workflows/_python-component.yml"
       - ".github/workflows/episteme.yml"
   pull_request:
@@ -14,6 +15,7 @@ on:
       - "services/episteme/**"
       - "schemas/**"
       - "kairos/**"
+      - "clients/**"
       - ".github/workflows/_python-component.yml"
       - ".github/workflows/episteme.yml"
 
@@ -24,3 +26,4 @@ jobs:
       service-path: services/episteme
       service-name: episteme
       coverage-args: "--cov=episteme.core"
+      needs-clients: true
