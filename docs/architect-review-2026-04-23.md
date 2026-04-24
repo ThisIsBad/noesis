@@ -197,38 +197,144 @@ does, when to call which, or error-handling norms. A single
 
 ## Tier 3 — backlog
 
-- [ ] **T3.1 Lean 4 reality check.** Architecture claims Z3 + Lean 4;
-  code shows Z3 heavily used, Lean 4 only referenced as a method
-  string. Either wire it up or document it as aspirational.
+- [x] **T3.1 Lean 4 reality check.** **My original finding was wrong**
+  — Lean 4 *is* wired up: `services/logos/src/logos/lean_session.py`
+  (416 lines, REPL wrapper with tactic-by-tactic application),
+  `lean_verifier.py`, `diagnostics.py::LeanDiagnosticParser` (Lean
+  error parser). Tests in `test_lean_session.py` (251 lines) +
+  `test_lean_verifier.py` (73 lines) are guarded with
+  `@pytest.mark.skipif(not is_lean_available())`. Exports are in
+  `logos/__init__.py` tagged "Tier 2 / Provisional". The integration
+  is real, not aspirational. The review claim was a miss — I only
+  saw the method-string references and didn't grep deeper. No code
+  change needed. — *verified 2026-04-23*
 - [ ] **T3.2 ChromaDB consolidation.** Three services (Mneme, Techne,
   Empiria) use Chroma. Either one shared instance with service-scoped
   collections, or document the "each service owns its vector store"
   rationale explicitly.
-- [ ] **T3.3 Secrets story.** Every service has a bearer-token check
-  (`LOGOS_SECRET`, `MNEME_SECRET`, now `THEORIA_SECRET`). No central
-  rotation, no mTLS despite the architecture doc mentioning it.
-- [ ] **T3.4 OTLP receiver story.** Kairos emits OpenTelemetry spans
-  into the void unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Either
-  document the expected deployment or bundle an exporter default.
-- [ ] **T3.5 Persistence consolidation.** Every service uses SQLite or
-  embedded Chroma. At scale this is a bottleneck. Postgres with
-  pgvector would consolidate persistence and give replication.
+- [x] **T3.3 Secrets story.** Documented the current state honestly
+  in [`docs/operations/secrets.md`](operations/secrets.md): nine
+  per-service bearer tokens read from Railway env, no rotation, no
+  granularity, no mTLS despite the architecture doc claiming it,
+  and near-duplicate middleware in every service. Proposed a
+  three-stage forward path.
+
+  **Stages 1 + 2 landed.** `noesis_clients.auth.bearer_middleware`
+  + `BearerAuthMiddleware` (SSE-safe pure ASGI, env-var-driven,
+  configurable exempt paths & prefixes, **rotatable secrets**).
+  Stage 2: reads both `<SVC>_SECRET` (active) and
+  `<SVC>_SECRET_PREV` (grace-period) — the middleware accepts
+  either during rotation. Ops runbook in
+  `docs/operations/secrets.md`. 38 contract tests in
+  `clients/tests/test_auth.py` pin both stages. Clients: ruff
+  clean, mypy --strict clean on 4 source files, 38 tests green.
+  Per-service migration of the non-production services (Telos,
+  Episteme, Kosmos, Empiria, Techne, Praxis) landed in Phase 2 of
+  this push; Logos and Mneme deferred to their own PRs.
+
+  Stage 3 (mTLS or gateway-JWT) remains on the roadmap — planned
+  recommendation: Cloudflare Access in front of the Railway edge.
+  — *documented + Stages 1-2 landed 2026-04-23*
+- [x] **T3.4 OTLP receiver story.** **My review over-stated Kairos's
+  OTEL integration.** Kairos lists `opentelemetry-exporter-otlp` as
+  a dependency but never wires a `TracerProvider` or
+  `OTLPSpanExporter` — services HTTP-POST spans to Kairos's custom
+  JSON API and Kairos stores them in RAM. Documented this honestly
+  in [`docs/operations/observability.md`](operations/observability.md)
+  with the current pipeline, gaps (no OTLP, no persistence, no UI),
+  a local-dev recipe (Jaeger docker-compose), and a forward path
+  with a recommendation (option 2: services emit OTLP, collector
+  fans out to Kairos + Jaeger). Kept as a planning artifact, not a
+  this-week implementation — the architectural choice needs
+  buy-in. — *landed 2026-04-23*
+- [~] **T3.5 Persistence consolidation — prep landed, migration deferred.**
+  My architect's call: **defer the actual Postgres move** until
+  single-node scale starts hurting (currently nowhere near the
+  ROADMAP's 100k-entries @ 200ms p99 target). Cheap prep landed now
+  so the eventual flip is a config change, not a code refactor:
+  `noesis_clients.persistence.resolve_sqlite_path` parses
+  `<SVC>_DATABASE_URL` (SQLAlchemy form, e.g. `sqlite:////data/mneme.db`)
+  with a graceful fallback to the legacy `<SVC>_DATA_DIR` convention
+  and explicit rejection of non-SQLite URLs (don't silently accept
+  a `postgresql://` we can't yet open). 8 contract tests in
+  `clients/tests/test_persistence.py`. Documented in
+  [`docs/operations/persistence.md`](operations/persistence.md) with
+  the adoption checklist (Mneme + Praxis migration to the helper is
+  a separate PR with your eyes on it). — *prep landed 2026-04-23*
 - [ ] **T3.6 Central API gateway / auth proxy.** At 8+ services, a
   gateway (Traefik, nginx with `auth_request`, Railway edge) would
   give you per-service tokens + rate limiting + central observability
   without code changes.
-- [ ] **T3.7 Job queue.** Mneme's `consolidate` and Empiria's
-  lesson-mining look like candidates for async jobs (Celery /
-  Dramatiq / Temporal).
-- [ ] **T3.8 LLM-as-judge for eval.** `eval/` is strong on
-  deterministic metrics (ALFWorld success rate, recall@10). Cheap to
-  add LLM-as-judge for regressions that aren't binary pass/fail.
-- [ ] **T3.9 Kosmos / Empiria / Techne triage.** These services are
-  ~200-300 src lines each. Decide which ship next, which get put on
-  ice. Without a forcing function they'll all drift at 300 lines
-  forever.
-- [ ] **T3.10 Move Theoria persistence to Mneme** once Mneme is
-  promoted to the general durable-store layer.
+- [~] **T3.7 Async consolidation — design landed, implementation
+  deferred.** Wrote [`docs/operations/async-consolidation.md`](operations/async-consolidation.md)
+  arguing against a job queue and for in-process
+  `asyncio.create_task` + a polling status endpoint. Two new MCP
+  tools (`consolidate_memories_async`, `get_consolidation_status`)
+  with task state in a new SQLite table, stuck-task sweep on boot,
+  one-task-at-a-time concurrency. Keeps the existing sync
+  `consolidate_memories` tool as-is for back-compat. Recommended
+  sequencing: profile the sync path at 10 k / 100 k memories first,
+  optimise the O(N²) loop (batched Chroma query + union-find) before
+  going async — that alone buys an order of magnitude. Ship async
+  only if the optimised sync path still blocks past 5 s at realistic
+  scale. Implementation deliberately **not** shipped — Mneme is
+  production-deployed and the refactor wants its own reviewed PR.
+  — *designed 2026-04-23*
+- [~] **T3.8 LLM-as-judge for eval — rubric designed, implementation
+  gated on review.** Wrote [`docs/eval/llm-judge-rubric.md`](eval/llm-judge-rubric.md):
+  7 testable invariants (verification before durable writes,
+  backtracking on failure, verify-plan before risky commits,
+  goal-contract on multi-step plans, drift-check on destructive
+  actions, calibration logging on low-confidence claims, skill
+  reuse on repeat work), `{pass, fail, not_applicable}` verdicts
+  per dimension (no aggregate quality score), structured JSON
+  output, Haiku 4.5 with temperature 0, `NOESIS_AB_JUDGE_MAX_BUDGET_USD`
+  cap ($0.50 default per eval invocation), cache by
+  `(trace_id, rubric_version)` hash, 5–10 % sampling.
+  Five open questions at the bottom of the doc for review.
+  Implementation deliberately **not** shipped in this commit —
+  writing the code first would commit us to a rubric we haven't
+  agreed on. Post-review effort estimate: ~1 day judge module +
+  tests, ~½ day CI wiring. — *designed 2026-04-23*
+- [x] **T3.9 Kosmos / Empiria / Techne triage.** Audited all three.
+  Every one is an in-memory dict + substring-match MVP with a
+  "Production: ChromaDB / pgmpy" TODO comment. Honest status:
+
+  - **Kosmos** (36 LOC core) — adjacency-dict causal graph with
+    weight propagation. `counterfactual()` is a one-line wrapper
+    around `compute_intervention`. No Bayesian network, no real
+    do-calculus. Thinnest of the three.
+  - **Empiria** (55 LOC core) — dict-of-Lesson with substring
+    retrieval sorted by confidence.
+  - **Techne** (51 LOC core) — dict-of-Skill, substring retrieval,
+    plus running-average `success_rate` update. Also accepts a
+    `ProofCertificate` on store so skills can be verified — the
+    most interesting wiring of the three.
+
+  Recommended ship order:
+
+  1. **Techne first** — completes the Stage-4 loop
+     (decompose → verify → commit → memory → skill) and the
+     verified-skill certificate hook is a real differentiator.
+     ChromaDB upgrade is a well-understood lift (Mneme already
+     did it).
+  2. **Empiria second** — same ChromaDB pattern, slightly weaker
+     type story.
+  3. **Kosmos last** — needs pgmpy + thoughtful do-calculus API
+     design *and* a concrete consumer (e.g. Praxis scoring plans
+     with causal priors). Speculative until there's a user.
+
+  No code change needed on the triage itself; recommendation lives
+  here for planning. — *landed 2026-04-23*
+- [x] **T3.10 ~~Move Theoria persistence to Mneme~~** — **retracted**.
+  My original recommendation was wrong: Mneme's schema is "memory +
+  optional certificate"; Theoria's is "DAG of reasoning steps +
+  edges + outcome". Forcing one into the other loses the DAG
+  structure (you'd serialize as JSON in Mneme's ``content`` field
+  and re-parse every query — strictly worse than Theoria's current
+  JSONL). When T3.5 lands, Theoria gets a proper ``decision_traces``
+  Postgres table with JSONB for the DAG. Until then, its own
+  JSONL is correct. — *retracted 2026-04-23*
 
 ## External services / tools — assessment
 
