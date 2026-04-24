@@ -1,7 +1,7 @@
 # Noesis — Component Status
 
 > **Auto-generated** by `tools/generate_status.py`. Do not edit by hand.
-> Last regenerated: 2026-04-24 18:32 UTC
+> Regenerated on every push to master by `.github/workflows/status.yml`.
 
 This report is filesystem-derived: presence of a Dockerfile, `railway.toml`, an MCP server, a CI workflow, and line-count shape. It does NOT speak to live Railway deploy health or CI pass/fail — those require auth. For authoritative status see the `Deployments` tab on Railway and the `Actions` tab on GitHub.
 
