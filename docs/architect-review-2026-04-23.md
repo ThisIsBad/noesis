@@ -324,6 +324,9 @@ does, when to call which, or error-handling norms. A single
      design *and* a concrete consumer (e.g. Praxis scoring plans
      with causal priors). Speculative until there's a user.
 
+  No code change needed on the triage itself; recommendation lives
+  here for planning. — *landed 2026-04-23*
+
   **Techne ChromaDB promotion landed.** `TechneCore` now uses
   SQLite for structured rows + ChromaDB for semantic retrieval,
   mirroring Mneme's split. `store`, `retrieve`, `record_use` keep
