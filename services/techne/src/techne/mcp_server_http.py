@@ -6,6 +6,7 @@ import sys
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from noesis_clients.auth import bearer_middleware
+from noesis_clients.persistence import resolve_sqlite_path
 from noesis_schemas import ProofCertificate
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -21,12 +22,28 @@ logging.basicConfig(
 )
 log = logging.getLogger("techne")
 
+_data_dir = os.getenv("TECHNE_DATA_DIR", "/data")
 _secret_set = bool(os.getenv("TECHNE_SECRET"))
 log.info(
-    "techne boot: port=%s secret_set=%s",
-    os.getenv("PORT", "8000"), _secret_set,
+    "techne boot: data_dir=%s port=%s secret_set=%s",
+    _data_dir, os.getenv("PORT", "8000"), _secret_set,
 )
-_core = TechneCore()
+try:
+    os.makedirs(_data_dir, exist_ok=True)
+    _db_path = resolve_sqlite_path(
+        url_env="TECHNE_DATABASE_URL",
+        data_dir_env="TECHNE_DATA_DIR",
+        default_data_dir="/data",
+        default_filename="techne.db",
+    )
+    _core = TechneCore(
+        db_path=_db_path,
+        chroma_path=os.path.join(_data_dir, "techne_chroma"),
+    )
+    log.info("techne core ready: db=%s chroma=%s/techne_chroma", _db_path, _data_dir)
+except Exception:
+    log.exception("techne core init failed at %s", _data_dir)
+    raise
 
 # FastMCP enables DNS-rebinding protection by default and only allows
 # localhost Host headers. Behind Railway's edge the public host is e.g.
