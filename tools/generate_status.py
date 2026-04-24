@@ -209,12 +209,18 @@ def _pyproject_description(pyproject: Path) -> str:
 
 
 def _git_last_commit(rel_path: str) -> str:
+    """Return the committer date (YYYY-MM-DD) of the most-recent commit
+    touching ``rel_path``. Deliberately does NOT include the commit SHA:
+    rebasing a split PR rewrites SHAs and would cause the
+    ``Check STATUS.md is current`` CI gate to fail spuriously. The date
+    is stable across rebases; the SHA is not.
+    """
     full_path = (REPO_ROOT / rel_path).resolve()
     if not full_path.exists():
         return ""
     try:
         out = subprocess.check_output(
-            ["git", "log", "-1", "--format=%cs %h", "--", rel_path],
+            ["git", "log", "-1", "--format=%cs", "--", rel_path],
             cwd=REPO_ROOT,
             stderr=subprocess.DEVNULL,
             text=True,
