@@ -26,9 +26,14 @@ testpaths = ["tests"]
 pythonpath = [
     "src",
     "../schemas/src",
+    "../clients/src",
     "../services/mneme/src",
     "../services/praxis/src",
     "../services/telos/src",
+    "../services/episteme/src",
+    "../services/kosmos/src",
+    "../services/empiria/src",
+    "../services/techne/src",
 ]
 addopts = "-m 'not slow'"
 markers = [

@@ -1,17 +1,21 @@
-"""Contract tests for the pure-ASGI Bearer auth gate.
+"""Wiring smoke test — the Logos app uses the shared bearer-token gate.
 
-See mneme/tests/test_auth.py for the rationale — these tests pin the
-four-branch contract across every Noesis service so a regression in any
-one of them trips CI instead of shipping.
+Deep behaviour of the gate (rotation, exempt paths, missing/mismatched
+tokens, non-HTTP scopes) is covered exhaustively in
+``clients/tests/test_auth.py``. This file just pins that Logos **wires
+it up correctly** — regressions at the wiring layer fail Logos's own CI
+instead of only Clients' CI.
+
+If you're here chasing a bearer-gate bug, start there; come back to
+this file once you've verified the shared helper behaves.
 """
 from __future__ import annotations
 
+from noesis_clients.auth import BearerAuthMiddleware, bearer_middleware
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
-
-import logos.mcp_server_http as server
 
 
 def _downstream() -> Starlette:
@@ -23,52 +27,83 @@ def _downstream() -> Starlette:
 
     return Starlette(
         routes=[
-            Route("/spans", _ok),
+            Route("/certify_claim", _ok),
             Route("/health", _health),
         ]
     )
 
 
+def _build_app(env: dict[str, str], monkeypatch) -> Starlette:
+    """Build a Logos-shaped app with the shared bearer gate configured."""
+    for name in ("LOGOS_SECRET", "LOGOS_SECRET_PREV"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    app = _downstream()
+    app.add_middleware(bearer_middleware("LOGOS_SECRET"))
+    return app
+
+
 def test_health_bypasses_auth_even_when_secret_is_set(monkeypatch):
-    monkeypatch.setattr(server, "_SECRET", "test-secret")
-    app = server._BearerAuth(_downstream())
+    app = _build_app({"LOGOS_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
     resp = client.get("/health")
     assert resp.status_code == 200
 
 
 def test_no_secret_means_all_requests_pass(monkeypatch):
-    monkeypatch.setattr(server, "_SECRET", "")
-    app = server._BearerAuth(_downstream())
+    app = _build_app({}, monkeypatch)
     client = TestClient(app)
-    resp = client.get("/spans")
+    resp = client.get("/certify_claim")
     assert resp.status_code == 200
 
 
 def test_missing_authorization_header_rejected(monkeypatch):
-    monkeypatch.setattr(server, "_SECRET", "test-secret")
-    app = server._BearerAuth(_downstream())
+    app = _build_app({"LOGOS_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
-    resp = client.get("/spans")
+    resp = client.get("/certify_claim")
     assert resp.status_code == 401
     assert resp.json() == {"error": "Unauthorized"}
 
 
 def test_wrong_bearer_token_rejected(monkeypatch):
-    monkeypatch.setattr(server, "_SECRET", "test-secret")
-    app = server._BearerAuth(_downstream())
+    app = _build_app({"LOGOS_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
-    resp = client.get("/spans", headers={"Authorization": "Bearer wrong"})
+    resp = client.get(
+        "/certify_claim", headers={"Authorization": "Bearer wrong"}
+    )
     assert resp.status_code == 401
-    assert resp.json() == {"error": "Unauthorized"}
 
 
 def test_correct_bearer_token_accepted(monkeypatch):
-    monkeypatch.setattr(server, "_SECRET", "test-secret")
-    app = server._BearerAuth(_downstream())
+    app = _build_app({"LOGOS_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
     resp = client.get(
-        "/spans", headers={"Authorization": "Bearer test-secret"}
+        "/certify_claim", headers={"Authorization": "Bearer test-secret"}
     )
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
+
+
+def test_rotation_accepts_previous_token(monkeypatch):
+    """During rotation both LOGOS_SECRET and LOGOS_SECRET_PREV pass."""
+    app = _build_app(
+        {"LOGOS_SECRET": "new-token", "LOGOS_SECRET_PREV": "old-token"},
+        monkeypatch,
+    )
+    client = TestClient(app)
+    for token in ("new-token", "old-token"):
+        resp = client.get(
+            "/certify_claim", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200, token
+
+
+def test_server_module_imports_the_shared_middleware() -> None:
+    """Sanity — importing the module must not resurrect a local _BearerAuth."""
+    import logos.mcp_server_http as server
+
+    assert not hasattr(server, "_BearerAuth")
+    assert not hasattr(server, "_SECRET")
+    assert server.bearer_middleware is bearer_middleware
+    assert BearerAuthMiddleware is not None

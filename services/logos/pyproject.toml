@@ -27,6 +27,7 @@ http = [
     "starlette>=0.40",
     "uvicorn>=0.30",
     "kairos>=0.1.0,<0.2",
+    "noesis-clients>=0.1.0,<0.2",
 ]
 
 [project.scripts]

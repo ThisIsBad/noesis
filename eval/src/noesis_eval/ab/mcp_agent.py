@@ -177,11 +177,28 @@ def _sse_config(url: str, secret: str) -> McpSSEServerConfig:
     return cast(McpSSEServerConfig, config)
 
 
-NOESIS_SERVICE_NAMES = ("mneme", "praxis", "telos")
-"""Phase-1 services exposed to the treatment agent. Additional services
-(episteme, kosmos, etc.) can be plumbed in by extending this tuple
-once their MCP surface stabilises — for now the A/B focuses on
-Stage-3 foundations."""
+NOESIS_SERVICE_NAMES = (
+    "logos",
+    "mneme",
+    "praxis",
+    "telos",
+    "episteme",
+    "kosmos",
+    "empiria",
+    "techne",
+)
+"""Services exposed to the treatment agent.
+
+The harness reads ``NOESIS_<SVC>_URL`` / ``NOESIS_<SVC>_SECRET`` for
+each name and silently drops services whose URL is unset, so listing
+all eight here lets ``eval/.env.e2e`` (templated in
+``eval/env-template.md``) opt services in or out by setting / clearing
+the URL line. The original Phase-1 trio (``mneme``, ``praxis``,
+``telos``) is preserved by URL presence; Logos joins the treatment
+surface as soon as ``NOESIS_LOGOS_URL`` is set so the A/B can measure
+verification's marginal value directly. Episteme / Kosmos / Empiria /
+Techne join the surface in the same opt-in fashion as their cores
+mature."""
 
 
 def noesis_mcp_servers_from_env(
