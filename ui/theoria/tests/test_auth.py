@@ -114,6 +114,7 @@ def test_missing_authorization_returns_401_header(auth_server) -> None:
 
 def test_server_with_no_secret_permits_everything(monkeypatch) -> None:
     monkeypatch.delenv("THEORIA_SECRET", raising=False)
+    monkeypatch.delenv("THEORIA_SECRET_PREV", raising=False)
     store = TraceStore()
     port = _free_port()
     server, _ = make_server(host="127.0.0.1", port=port, store=store, secret=None)
@@ -123,6 +124,64 @@ def test_server_with_no_secret_permits_everything(monkeypatch) -> None:
     try:
         status, _ = _get(f"http://127.0.0.1:{port}/api/traces")
         assert status == 200
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=1)
+
+
+def test_rotation_accepts_both_active_and_previous_token(monkeypatch) -> None:
+    """During rotation THEORIA_SECRET + THEORIA_SECRET_PREV both pass.
+
+    Mirrors the rotation contract that
+    ``noesis_clients.auth.bearer_middleware`` provides for the ASGI
+    services. Theoria stays stdlib-only so it can't share the middleware
+    code itself, but the wire-level behaviour must match so an operator
+    can rotate Theoria the same way as any other service.
+    """
+    monkeypatch.delenv("THEORIA_SECRET", raising=False)
+    monkeypatch.delenv("THEORIA_SECRET_PREV", raising=False)
+    store = TraceStore()
+    port = _free_port()
+    server, _ = make_server(
+        host="127.0.0.1",
+        port=port,
+        store=store,
+        secret="new-token",
+        previous_secret="old-token",
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    time.sleep(0.05)
+    base = f"http://127.0.0.1:{port}"
+    try:
+        for token in ("new-token", "old-token"):
+            status, _ = _get(f"{base}/api/traces", token=token)
+            assert status == 200, token
+        # An unrelated token still fails.
+        status, _ = _get(f"{base}/api/traces", token="random")
+        assert status == 401
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=1)
+
+
+def test_make_server_reads_previous_secret_from_env(monkeypatch) -> None:
+    """``THEORIA_SECRET_PREV`` env var is honoured when no kwarg passed."""
+    monkeypatch.setenv("THEORIA_SECRET", "active")
+    monkeypatch.setenv("THEORIA_SECRET_PREV", "rotated-out")
+    store = TraceStore()
+    port = _free_port()
+    server, _ = make_server(host="127.0.0.1", port=port, store=store)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    time.sleep(0.05)
+    base = f"http://127.0.0.1:{port}"
+    try:
+        for token in ("active", "rotated-out"):
+            status, _ = _get(f"{base}/api/traces", token=token)
+            assert status == 200, token
     finally:
         server.shutdown()
         server.server_close()
