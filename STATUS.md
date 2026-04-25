@@ -33,7 +33,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
-| **theoria** | Decision-logic visualization UI for the Noesis ecosystem | ✓ | ✓ | — | [✓](.github/workflows/theoria.yml) | 4,123 | 2,549 | 14 | 2026-04-24 |
+| **theoria** | Decision-logic visualization UI for the Noesis ecosystem | ✓ | ✓ | — | [✓](.github/workflows/theoria.yml) | 4,169 | 2,608 | 14 | 2026-04-25 |
 
 ## Legend
 
