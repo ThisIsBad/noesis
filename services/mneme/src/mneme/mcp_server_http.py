@@ -6,6 +6,7 @@ import sys
 from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from noesis_clients import LogosClient
+from noesis_clients.persistence import resolve_sqlite_path
 from noesis_schemas import MemoryType, ProofCertificate
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -30,11 +31,17 @@ log.info(
 )
 try:
     os.makedirs(_data_dir, exist_ok=True)
+    _db_path = resolve_sqlite_path(
+        url_env="MNEME_DATABASE_URL",
+        data_dir_env="MNEME_DATA_DIR",
+        default_data_dir="/data",
+        default_filename="mneme.db",
+    )
     _core = MnemeCore(
-        db_path=os.path.join(_data_dir, "mneme.db"),
+        db_path=_db_path,
         chroma_path=os.path.join(_data_dir, "chroma"),
     )
-    log.info("mneme core ready: db=%s/mneme.db", _data_dir)
+    log.info("mneme core ready: db=%s chroma=%s/chroma", _db_path, _data_dir)
 except Exception:
     log.exception("mneme core init failed at %s", _data_dir)
     raise

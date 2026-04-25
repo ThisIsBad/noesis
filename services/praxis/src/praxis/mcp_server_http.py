@@ -7,6 +7,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 from noesis_clients import LogosClient
 from noesis_clients.auth import bearer_middleware
+from noesis_clients.persistence import resolve_sqlite_path
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
@@ -38,11 +39,17 @@ log.info(
 
 try:
     os.makedirs(_data_dir, exist_ok=True)
+    _db_path = resolve_sqlite_path(
+        url_env="PRAXIS_DATABASE_URL",
+        data_dir_env="PRAXIS_DATA_DIR",
+        default_data_dir="/data",
+        default_filename="praxis.db",
+    )
     _core = PraxisCore(
-        db_path=os.path.join(_data_dir, "praxis.db"),
+        db_path=_db_path,
         logos_client=_logos_client,
     )
-    log.info("praxis core ready: db=%s/praxis.db", _data_dir)
+    log.info("praxis core ready: db=%s", _db_path)
 except Exception:
     log.exception("praxis core init failed at %s", _data_dir)
     raise
