@@ -11,7 +11,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
-| **empiria** | Experience accumulation and lesson extraction for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/empiria.yml) | 242 | 242 | 4 | 2026-04-24 |
+| **empiria** | Experience accumulation and lesson extraction for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/empiria.yml) | 384 | 374 | 4 | 2026-04-25 |
 | **episteme** | Metacognition and uncertainty calibration for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/episteme.yml) | 345 | 424 | 5 | 2026-04-24 |
 | **kosmos** | Causal world model with Do-calculus for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/kosmos.yml) | 205 | 241 | 4 | 2026-04-24 |
 | **logos** | LLM x Deterministic Logic Verifier — exploiting the P!=NP asymmetry | ✓ | ✓ | ✓ | [✓](.github/workflows/logos.yml) | 11,894 | 10,012 | 74 | 2026-04-21 |
