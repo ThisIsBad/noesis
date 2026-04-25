@@ -13,10 +13,18 @@ RUN pip install /schemas
 COPY kairos/ /kairos
 RUN pip install /kairos
 
+# ── Shared service clients (noesis-clients: bearer_middleware, ...) ───────────
+COPY clients/ /clients
+RUN pip install /clients
+
 # ── Service ───────────────────────────────────────────────────────────────────
 COPY services/logos/pyproject.toml .
 COPY services/logos/src/ src/
-RUN pip install ".[http]"
+# Strip file:// URLs from shared-package deps — they're already installed above.
+RUN sed -i \
+    -e 's|noesis-clients @ file://[^"]*|noesis-clients|g' \
+    pyproject.toml \
+ && pip install ".[http]"
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 EXPOSE 8000
