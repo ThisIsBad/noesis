@@ -5,6 +5,7 @@ description = "Experience accumulation and lesson extraction for the Noesis AGI 
 requires-python = ">=3.11"
 dependencies = [
     "noesis-schemas>=0.1.0,<0.2",
+    "noesis-clients>=0.1.0,<0.2",
     "kairos>=0.1.0,<0.2",
     "fastapi>=0.111",
     "uvicorn>=0.30",
@@ -26,7 +27,12 @@ packages = ["src/empiria"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src", "../../schemas/src", "../../kairos/src"]
+pythonpath = [
+    "src",
+    "../../schemas/src",
+    "../../kairos/src",
+    "../../clients/src",
+]
 
 [tool.coverage.run]
 source = ["empiria.core"]
