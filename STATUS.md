@@ -25,7 +25,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
 | **clients** | Shared Python clients for cross-service calls in the Noesis stack | — | — | — | [✓](.github/workflows/clients.yml) | 724 | 737 | 4 | 2026-04-24 |
-| **eval** | Reproducible benchmark harness for the Noesis AGI stack | — | — | — | [✓](.github/workflows/eval.yml) | 3,094 | 4,948 | 16 | 2026-04-25 |
+| **eval** | Reproducible benchmark harness for the Noesis AGI stack | — | — | — | [✓](.github/workflows/eval.yml) | 3,094 | 4,950 | 16 | 2026-04-25 |
 | **kairos** | Cross-service observability and tracing for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/kairos.yml) | 374 | 451 | 3 | 2026-04-25 |
 | **schemas** | Shared data contracts for the Noesis AGI stack | — | — | — | [✓](.github/workflows/schemas.yml) | 332 | 158 | 1 | 2026-04-24 |
 
