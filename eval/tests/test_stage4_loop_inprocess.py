@@ -209,7 +209,9 @@ def test_stage4_full_loop_eight_services(stack) -> None:
     #     the lesson and the skill.
     lessons = empiria.retrieve(context="auth refactor")
     assert len(lessons) >= 1
-    assert any("extracting the parser" in l.lesson_text for l in lessons)
+    assert any(
+        "extracting the parser" in lesson.lesson_text for lesson in lessons
+    )
 
     skills = techne.retrieve(query="auth refactor extract parser", k=3)
     assert len(skills) >= 1
