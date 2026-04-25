@@ -1,6 +1,9 @@
 FROM python:3.11-slim
 WORKDIR /app
 
+# Build tools needed by chromadb/hnswlib native extensions
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
+
 # ── Shared schemas ────────────────────────────────────────────────────────────
 # Build context MUST be the repo root.
 # In Railway: Settings → Build → Root Directory = (empty), Dockerfile Path = services/empiria/Dockerfile
@@ -14,12 +17,24 @@ RUN pip install /schemas
 COPY kairos/ /kairos
 RUN pip install /kairos
 
+# ── Shared HTTP clients + test/auth helpers (bearer middleware, persistence) ──
+COPY clients/ /clients
+RUN pip install /clients
+
 # ── Service ───────────────────────────────────────────────────────────────────
 COPY services/empiria/pyproject.toml .
 COPY services/empiria/src/ src/
-# Strip the file:// URL from noesis-schemas dep — it's already installed above.
-RUN sed -i 's|noesis-schemas @ file://[^"]*|noesis-schemas|g' pyproject.toml && pip install .
+# Strip file:// URLs from shared-package deps — they're already installed above.
+RUN sed -i \
+    -e 's|noesis-schemas @ file://[^"]*|noesis-schemas|g' \
+    -e 's|noesis-clients @ file://[^"]*|noesis-clients|g' \
+    pyproject.toml \
+ && pip install .
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
+# Empiria now has durable state (SQLite + ChromaDB). Railway must mount a
+# volume at $EMPIRIA_DATA_DIR (default /data) for persistence across deploys;
+# alternatively set EMPIRIA_DATABASE_URL=sqlite:///<path> to override the
+# SQLite location (Chroma still uses <EMPIRIA_DATA_DIR>/empiria_chroma).
 EXPOSE 8000
 CMD python -m empiria.mcp_server_http
