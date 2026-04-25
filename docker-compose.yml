@@ -1,0 +1,202 @@
+# Local-stack bootstrap for the full Noesis cognitive architecture.
+#
+# Boots all 8 MCP services + Kairos (tracing) + Theoria (UI) on a single
+# bridge network, with shared dev secrets and persistent volumes for the
+# stateful services. Mirrors the deployment shape Railway will produce so
+# the eval harness can target either with the same env vars.
+#
+#   docker compose up -d --build       # boot the stack
+#   docker compose ps                  # check health
+#   docker compose logs -f praxis      # tail one service
+#   docker compose down                # tear down (volumes preserved)
+#   docker compose down -v             # tear down + wipe volumes
+#
+# Host port assignments (each service binds 8000 internally):
+#   8001 logos   8002 mneme   8003 praxis    8004 telos
+#   8005 episteme 8006 kosmos  8007 empiria  8008 techne
+#   8009 kairos  8765 theoria
+#
+# Dev secrets are intentionally hard-coded — never reuse these in production.
+# To run the eval harness against this stack, copy the local-compose block
+# from `eval/env-template.md` into `eval/.env.e2e` (gitignored); the secrets
+# match the dev defaults set below.
+
+x-service-base: &service-base
+  restart: unless-stopped
+  networks: [noesis-net]
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health',timeout=2).status==200 else 1)"]
+    interval: 10s
+    timeout: 3s
+    retries: 5
+    start_period: 10s
+
+services:
+  # ── Tracing sink (boots first; everyone else points at it) ──────────────────
+  kairos:
+    <<: *service-base
+    container_name: noesis-kairos
+    build:
+      context: .
+      dockerfile: kairos/Dockerfile
+    ports: ["8009:8000"]
+    environment:
+      PORT: "8000"
+
+  # ── Logos: deterministic verifier (Z3 + Lean). Stateless. ───────────────────
+  logos:
+    <<: *service-base
+    container_name: noesis-logos
+    build:
+      context: .
+      dockerfile: services/logos/Dockerfile
+    ports: ["8001:8000"]
+    environment:
+      PORT: "8000"
+      LOGOS_SECRET: dev-logos-secret
+      KAIROS_URL: http://kairos:8000
+    depends_on:
+      kairos: { condition: service_healthy }
+
+  # ── Mneme: persistent memory. Optional Logos sidecar. ──────────────────────
+  mneme:
+    <<: *service-base
+    container_name: noesis-mneme
+    build:
+      context: .
+      dockerfile: services/mneme/Dockerfile
+    ports: ["8002:8000"]
+    environment:
+      PORT: "8000"
+      MNEME_SECRET: dev-mneme-secret
+      MNEME_DATA_DIR: /data
+      LOGOS_URL: http://logos:8000
+      LOGOS_SECRET: dev-logos-secret
+      KAIROS_URL: http://kairos:8000
+    volumes:
+      - mneme_data:/data
+    depends_on:
+      logos: { condition: service_healthy }
+
+  # ── Praxis: hierarchical planning + Logos sidecar. ──────────────────────────
+  praxis:
+    <<: *service-base
+    container_name: noesis-praxis
+    build:
+      context: .
+      dockerfile: services/praxis/Dockerfile
+    ports: ["8003:8000"]
+    environment:
+      PORT: "8000"
+      PRAXIS_SECRET: dev-praxis-secret
+      PRAXIS_DATA_DIR: /data
+      LOGOS_URL: http://logos:8000
+      LOGOS_SECRET: dev-logos-secret
+      KAIROS_URL: http://kairos:8000
+    volumes:
+      - praxis_data:/data
+    depends_on:
+      logos: { condition: service_healthy }
+
+  # ── Telos: goal contracts + drift monitoring. Stateless. ───────────────────
+  telos:
+    <<: *service-base
+    container_name: noesis-telos
+    build:
+      context: .
+      dockerfile: services/telos/Dockerfile
+    ports: ["8004:8000"]
+    environment:
+      PORT: "8000"
+      TELOS_SECRET: dev-telos-secret
+      KAIROS_URL: http://kairos:8000
+    depends_on:
+      kairos: { condition: service_healthy }
+
+  # ── Episteme: metacognition + calibration. Stateless. ──────────────────────
+  episteme:
+    <<: *service-base
+    container_name: noesis-episteme
+    build:
+      context: .
+      dockerfile: services/episteme/Dockerfile
+    ports: ["8005:8000"]
+    environment:
+      PORT: "8000"
+      EPISTEME_SECRET: dev-episteme-secret
+      KAIROS_URL: http://kairos:8000
+    depends_on:
+      kairos: { condition: service_healthy }
+
+  # ── Kosmos: causal world model. Stateless. ─────────────────────────────────
+  kosmos:
+    <<: *service-base
+    container_name: noesis-kosmos
+    build:
+      context: .
+      dockerfile: services/kosmos/Dockerfile
+    ports: ["8006:8000"]
+    environment:
+      PORT: "8000"
+      KOSMOS_SECRET: dev-kosmos-secret
+      KAIROS_URL: http://kairos:8000
+    depends_on:
+      kairos: { condition: service_healthy }
+
+  # ── Empiria: lesson mining. Stateless. ─────────────────────────────────────
+  empiria:
+    <<: *service-base
+    container_name: noesis-empiria
+    build:
+      context: .
+      dockerfile: services/empiria/Dockerfile
+    ports: ["8007:8000"]
+    environment:
+      PORT: "8000"
+      EMPIRIA_SECRET: dev-empiria-secret
+      KAIROS_URL: http://kairos:8000
+    depends_on:
+      kairos: { condition: service_healthy }
+
+  # ── Techne: verified skill library (SQLite + Chroma). ──────────────────────
+  techne:
+    <<: *service-base
+    container_name: noesis-techne
+    build:
+      context: .
+      dockerfile: services/techne/Dockerfile
+    ports: ["8008:8000"]
+    environment:
+      PORT: "8000"
+      TECHNE_SECRET: dev-techne-secret
+      TECHNE_DATA_DIR: /data
+      KAIROS_URL: http://kairos:8000
+    volumes:
+      - techne_data:/data
+    depends_on:
+      kairos: { condition: service_healthy }
+
+  # ── Theoria: decision-DAG visualizer (UI client, not a service). ───────────
+  # PORT=8000 inside the container so the shared healthcheck pattern works.
+  # Mapped to host port 8765 to match Theoria's documented local-dev default.
+  theoria:
+    <<: *service-base
+    container_name: noesis-theoria
+    build:
+      context: .
+      dockerfile: ui/theoria/Dockerfile
+    ports: ["8765:8000"]
+    environment:
+      PORT: "8000"
+      KAIROS_URL: http://kairos:8000
+    depends_on:
+      kairos: { condition: service_healthy }
+
+networks:
+  noesis-net:
+    driver: bridge
+
+volumes:
+  mneme_data:
+  praxis_data:
+  techne_data:

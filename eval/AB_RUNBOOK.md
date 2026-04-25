@@ -20,9 +20,10 @@ unit of "are we building something of value".
    will fail at the first turn. Authenticate it with whatever Claude
    account you want the experiment billed to (Max OAuth, API key,
    etc.) — the SDK inherits its session.
-2. **`eval/.env.e2e` populated.** Copy `eval/.env.e2e.example` to
-   `eval/.env.e2e` and fill in `NOESIS_<SERVICE>_URL` /
-   `NOESIS_<SERVICE>_SECRET` for each Noesis service that should
+2. **`eval/.env.e2e` populated.** Copy the relevant block from
+   [`eval/env-template.md`](env-template.md) (local docker-compose
+   stack or Railway deploys) into `eval/.env.e2e` and fill in the
+   `NOESIS_<SERVICE>_URL` / `NOESIS_<SERVICE>_SECRET` pairs for each Noesis service that should
    appear in treatment. Services with an unset URL are silently
    skipped (so a `NOESIS_LOGOS_URL=` line will exclude Logos from the
    treatment surface). The file is gitignored.
