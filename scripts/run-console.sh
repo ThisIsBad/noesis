@@ -2,8 +2,13 @@
 # Boot Console (port 8010) connected to the local 8-service stack.
 # Linux/macOS/WSL equivalent of run-console.ps1.
 #
-# Reads ANTHROPIC_API_KEY from the current shell; prompts (silently)
-# if unset. Sets all NOESIS_<SVC>_URL/SECRET pairs to the dev defaults
+# Auth: Console drives Claude via claude-agent-sdk, which spawns the
+# `claude` CLI as a subprocess. The CLI uses the same credentials
+# your Claude Code already does (Pro/Max OAuth in ~/.claude/, or
+# ANTHROPIC_API_KEY env var, in that order). YOU DO NOT NEED AN
+# API KEY if you're already logged into Claude Code.
+#
+# Sets all NOESIS_<SVC>_URL/SECRET pairs to the dev defaults
 # scripts/run-stack.sh uses, plus CONSOLE_SECRET=dev-console-secret.
 # Runs Console in the foreground; Ctrl+C cleanly stops it.
 
@@ -11,10 +16,24 @@ set -euo pipefail
 
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
-if [ -z "${ANTHROPIC_API_KEY-}" ]; then
-  read -rsp "ANTHROPIC_API_KEY (hidden): " ANTHROPIC_API_KEY
+# Make sure `claude` is on PATH so the SDK can spawn it. If not, hint
+# at the install path before we crash mid-session with a cryptic error.
+if ! command -v claude >/dev/null 2>&1; then
   echo
-  export ANTHROPIC_API_KEY
+  echo "WARN: 'claude' CLI not found on PATH."
+  echo "Console drives Claude via the claude-agent-sdk, which spawns"
+  echo "the 'claude' CLI as a subprocess. Install Claude Code first,"
+  echo "then log in with your Pro/Max account:"
+  echo "  https://docs.claude.com/en/docs/claude-code/quickstart"
+  echo
+  echo "If you'd prefer to authenticate via raw API key instead, set:"
+  echo "  export ANTHROPIC_API_KEY='sk-ant-...'"
+  echo
+  read -rp "Continue anyway? (y/N) " ans
+  case "$ans" in
+    y|Y) ;;
+    *) exit 1 ;;
+  esac
 fi
 
 export PYTHONPATH="$REPO/schemas/src:$REPO/kairos/src:$REPO/clients/src:$REPO/ui/theoria/src:$REPO/services/console/src"

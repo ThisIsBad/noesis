@@ -26,7 +26,7 @@ chooses.
 |---|:-:|---|---|
 | `CONSOLE_SECRET` | recommended | unset = open mode | bearer token gating `/api/chat` and `/api/stream`. `/health`, `/`, `/index.html`, `/static/*` always exempt so a browser can fetch the chat shell pre-auth. |
 | `CONSOLE_SECRET_PREV` | no | unset | grace-period token during rotation (same model as every other Noesis service). |
-| `ANTHROPIC_API_KEY` | yes | — | the `claude-agent-sdk` spawns the `claude` CLI subprocess, which authenticates via this key (or any other `claude` auth method on the host). |
+| `ANTHROPIC_API_KEY` | **no** if `claude` CLI is logged in; otherwise yes | — | `claude-agent-sdk` spawns the `claude` CLI subprocess, which authenticates via the SAME credentials your Claude Code uses (Pro/Max OAuth in `~/.claude/`, or this env var as a fallback). If you're already logged into Claude Code on the host, set nothing here — the CLI's existing session is reused. |
 | `NOESIS_<SVC>_URL` × 8 | partial | unset → service skipped | per-service base URL. Console silently drops services whose URL is unset, so a partial deploy yields a working Console with fewer tools. |
 | `NOESIS_<SVC>_SECRET` × 8 | partial | empty | per-service bearer for the sidecar MCP connections. |
 | `THEORIA_URL` | recommended | unset = don't post finals | where to POST the finalised `DecisionTrace`; usually the same Theoria instance the dev uses to browse history. |
@@ -40,10 +40,25 @@ chooses.
 
 ## Local boot — bare-metal (no docker)
 
+The simplest path is the wrapper scripts under `scripts/`:
+
+```powershell
+# Windows
+.\scripts\run-stack.ps1
+.\scripts\run-console.ps1     # foreground; Ctrl+C to stop
+```
+
+```bash
+# Linux / WSL / macOS
+scripts/run-stack.sh
+scripts/run-console.sh        # foreground; Ctrl+C to stop
+```
+
+If you'd rather invoke `python` directly:
+
 ```bash
 # Repo root
 PYTHONPATH=schemas/src:kairos/src:clients/src:ui/theoria/src:services/console/src \
-ANTHROPIC_API_KEY=<your-key> \
 CONSOLE_SECRET=dev-console-secret \
 NOESIS_LOGOS_URL=http://localhost:8001    NOESIS_LOGOS_SECRET=dev-logos-secret \
 NOESIS_MNEME_URL=http://localhost:8002    NOESIS_MNEME_SECRET=dev-mneme-secret \
@@ -57,6 +72,11 @@ THEORIA_URL=http://localhost:8765         THEORIA_SECRET=dev-theoria-secret \
 PORT=8010 \
 python -m console.mcp_server_http
 ```
+
+`ANTHROPIC_API_KEY` is intentionally **not** set above — `claude-agent-sdk`
+will spawn the `claude` CLI which auto-uses your existing Claude Code
+auth. Set the env var explicitly only if you want to run with a different
+account.
 
 Then `open http://localhost:8010/`.
 
@@ -78,7 +98,11 @@ membership):
     environment:
       PORT: "8000"
       CONSOLE_SECRET: dev-console-secret
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?required for Claude}
+      # ANTHROPIC_API_KEY is OPTIONAL: claude-agent-sdk uses the same
+      # auth as the `claude` CLI inside the container. If you bake a
+      # logged-in `~/.claude/` into the image (or mount it from host),
+      # leave this unset. Set it only if you want raw-API-key auth.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       NOESIS_LOGOS_URL:    http://logos:8000
       NOESIS_LOGOS_SECRET: dev-logos-secret
       NOESIS_MNEME_URL:    http://mneme:8000
@@ -101,13 +125,21 @@ membership):
       logos: { condition: service_healthy }
 ```
 
-Note `ANTHROPIC_API_KEY` is taken from the host environment so the
-key never touches `docker-compose.yml`. Set it in your shell before
-running `docker compose up`:
+If you do want raw-API-key auth, set `ANTHROPIC_API_KEY` in your shell
+before `docker compose up` so the key never touches the compose file:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 docker compose up -d --build
+```
+
+Otherwise (recommended for a workstation that already has Claude Code
+logged in), leave `ANTHROPIC_API_KEY` unset and mount your host's
+`~/.claude/` into the container:
+
+```yaml
+    volumes:
+      - "${HOME}/.claude:/root/.claude:ro"
 ```
 
 ## Railway deploy
@@ -117,8 +149,12 @@ declares the build + healthcheck, and the env-var checklist above is
 the variables tab. **Two extra Railway-only steps** beyond the
 existing 8-service deploy runbook:
 
-1. Set `ANTHROPIC_API_KEY` as a Railway variable (once; it's a billing
-   secret so do not commit it to any `.env.example`).
+1. **Auth.** Railway containers don't have a logged-in `claude` CLI
+   in `~/.claude/`, so on Railway you DO need an explicit auth method.
+   Either set `ANTHROPIC_API_KEY` as a Railway variable (raw API key),
+   or use the Claude OAuth flow (see Anthropic docs for the long-lived
+   token format). Treat this like any other billing secret — do not
+   commit it.
 2. Set the eight `NOESIS_<SVC>_URL` variables to the **public** Railway
    URLs of each service (not internal `http://logos:8000` because
    Railway services don't share a docker network — they reach each
