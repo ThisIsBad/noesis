@@ -55,11 +55,13 @@ COMPONENTS: list[tuple[str, str, str]] = [
     ("kosmos",         "services/kosmos",       "service"),
     ("empiria",        "services/empiria",      "service"),
     ("techne",         "services/techne",       "service"),
+    ("console",        "services/console",      "service"),
     ("schemas",        "schemas",               "cross-cutting"),
     ("kairos",         "kairos",                "cross-cutting"),
     ("clients",        "clients",               "cross-cutting"),
     ("eval",           "eval",                  "cross-cutting"),
     ("theoria",        "ui/theoria",            "ui"),
+    ("console-ui",     "ui/console",            "ui"),
 ]
 
 
