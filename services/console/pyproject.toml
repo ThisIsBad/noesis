@@ -1,0 +1,69 @@
+[project]
+name = "console"
+version = "0.1.0"
+description = "Interactive recorded chat surface for the Noesis AGI stack"
+requires-python = ">=3.11"
+dependencies = [
+    "noesis-schemas>=0.1.0,<0.2",
+    "noesis-clients>=0.1.0,<0.2",
+    "kairos>=0.1.0,<0.2",
+    "starlette>=0.40",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    "pydantic>=2.0",
+    "claude-agent-sdk>=0.1.64,<0.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "pytest-asyncio>=0.23"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/console"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "src",
+    "../../schemas/src",
+    "../../kairos/src",
+    "../../clients/src",
+    "../../ui/theoria/src",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["console"]
+# mcp_server_http is exercised by the eval harness's test_console_inprocess
+# integration test, not the unit suite. Keeping it in the unit-coverage gate
+# would require a heavy fake-Starlette setup that adds no signal.
+omit = ["src/console/mcp_server_http.py"]
+
+[tool.coverage.report]
+fail_under = 80
+
+[tool.mypy]
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+    "starlette",
+    "starlette.*",
+    "uvicorn",
+    "claude_agent_sdk",
+    "claude_agent_sdk.*",
+    "theoria",
+    "theoria.*",
+]
+ignore_missing_imports = true
+follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = ["console.mcp_server_http"]
+disable_error_code = ["no-any-return"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
