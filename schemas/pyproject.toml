@@ -3,6 +3,7 @@ name = "noesis-schemas"
 version = "0.1.0"
 description = "Shared data contracts for the Noesis AGI stack"
 requires-python = ">=3.11"
+license = "Apache-2.0"
 dependencies = ["pydantic>=2.0"]
 
 [project.optional-dependencies]

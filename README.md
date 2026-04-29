@@ -140,3 +140,9 @@ python -m ruff check src/ tests/
 python -m mypy --strict src/
 python -m pytest --cov=src/<service> --cov-fail-under=85
 ```
+
+## License
+
+Noesis is licensed under the [Apache License, Version 2.0](LICENSE). See
+[`NOTICE`](NOTICE) for attribution and [`SECURITY.md`](SECURITY.md) for
+vulnerability reporting.
