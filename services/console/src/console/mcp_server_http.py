@@ -19,6 +19,7 @@ Security: bearer-middleware-gated like every other Noesis service.
 ``/health`` is exempt; ``/`` and ``/static/*`` are exempt so a browser
 can fetch the chat shell before authenticating.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -67,11 +68,16 @@ _SESSION_MAX_AGE_S = float(os.getenv("CONSOLE_SESSION_MAX_AGE_S", "3600"))
 
 _secret_set = bool(os.getenv("CONSOLE_SECRET"))
 _anthropic_set = bool(os.getenv("ANTHROPIC_API_KEY"))
+_fake_query_on = os.getenv("CONSOLE_FAKE_QUERY") == "1"
 log.info(
     "console boot: port=%s secret_set=%s anthropic_key_set=%s "
-    "max_budget_usd=%s theoria_url_set=%s",
+    "max_budget_usd=%s theoria_url_set=%s fake_query=%s",
     os.getenv("PORT", "8000"),
-    _secret_set, _anthropic_set, _MAX_BUDGET_USD, bool(_THEORIA_URL),
+    _secret_set,
+    _anthropic_set,
+    _MAX_BUDGET_USD,
+    bool(_THEORIA_URL),
+    _fake_query_on,
 )
 
 _SERVICES_AT_BOOT = noesis_mcp_servers_from_env()
@@ -123,7 +129,8 @@ async def index(_: Request) -> Response:
     index_path = _UI_DIR / "index.html"
     if not index_path.exists():
         return JSONResponse(
-            {"error": "ui/index.html missing"}, status_code=404,
+            {"error": "ui/index.html missing"},
+            status_code=404,
         )
     return FileResponse(str(index_path))
 
@@ -138,23 +145,34 @@ async def chat(request: Request) -> JSONResponse:
         budget = float(max_budget) if max_budget is not None else _MAX_BUDGET_USD
     except (TypeError, ValueError):
         return JSONResponse(
-            {"error": "max_budget_usd must be a number"}, status_code=400,
+            {"error": "max_budget_usd must be a number"},
+            status_code=400,
         )
 
     session = await _REGISTRY.create(prompt=prompt)
     log.info(
         "console session started: %s prompt_len=%d budget_usd=%s",
-        session.session_id, len(prompt), budget,
+        session.session_id,
+        len(prompt),
+        budget,
     )
 
     # Refresh the MCP-server map at session-start time (not at boot)
     # so a service URL that came online late picks up automatically.
     servers = noesis_mcp_servers_from_env()
+    # Only pass query_fn when fake-query mode is on. Passing query_fn=None
+    # would override the monkeypatched default in test_console_inprocess.
+    extra: dict[str, Any] = {}
+    if _fake_query_on:
+        from ._fake_query import fake_query
+
+        extra["query_fn"] = fake_query
     agent = StreamingMCPAgent(
         model=_MODEL,
         mcp_servers=servers,
         max_turns=_MAX_TURNS,
         max_budget_usd=budget,
+        **extra,
     )
     builder = TraceBuilder(session_id=session.session_id, user_prompt=prompt)
     session.task = asyncio.create_task(
@@ -171,12 +189,14 @@ async def stream(request: Request) -> Response:
     session_id = request.query_params.get("session_id", "")
     if not session_id:
         return JSONResponse(
-            {"error": "session_id query param required"}, status_code=400,
+            {"error": "session_id query param required"},
+            status_code=400,
         )
     session = await _REGISTRY.get(session_id)
     if session is None:
         return JSONResponse(
-            {"error": f"unknown session_id {session_id}"}, status_code=404,
+            {"error": f"unknown session_id {session_id}"},
+            status_code=404,
         )
 
     async def event_stream() -> AsyncIterator[bytes]:
@@ -186,7 +206,8 @@ async def stream(request: Request) -> Response:
             while True:
                 try:
                     event = await asyncio.wait_for(
-                        session.queue.get(), timeout=15.0,
+                        session.queue.get(),
+                        timeout=15.0,
                     )
                 except asyncio.TimeoutError:
                     yield b": keepalive\n\n"
@@ -203,7 +224,8 @@ async def stream(request: Request) -> Response:
         finally:
             log.info(
                 "console sse stream closed: %s (emitted=%d)",
-                session_id, emitted,
+                session_id,
+                emitted,
             )
 
     headers = {
@@ -238,23 +260,22 @@ async def _run_session(
             for event in builder.ingest(msg):
                 await session.queue.put(event)
     except asyncio.CancelledError:
-        await session.queue.put(
-            {"type": "session.error", "error": "cancelled"}
-        )
+        await session.queue.put({"type": "session.error", "error": "cancelled"})
         raise
     except Exception as exc:
         log.exception("console session crashed: %s", session.session_id)
         session.error = f"{type(exc).__name__}: {exc}"
-        await session.queue.put(
-            {"type": "session.error", "error": session.error}
-        )
+        await session.queue.put({"type": "session.error", "error": session.error})
     finally:
         session.finished = True
         session.final_trace = builder.to_dict()
         # Best-effort: post the final trace to Theoria for browse/diff.
         if _THEORIA_URL:
             await asyncio.to_thread(
-                _post_to_theoria, builder.to_dict(), _THEORIA_URL, _THEORIA_SECRET,
+                _post_to_theoria,
+                builder.to_dict(),
+                _THEORIA_URL,
+                _THEORIA_SECRET,
             )
 
 
@@ -270,7 +291,8 @@ def _post_to_theoria(trace: dict[str, Any], theoria_url: str, secret: str) -> No
             if resp.status >= 400:
                 log.warning(
                     "console: theoria refused trace (%s): %s",
-                    resp.status, resp.read()[:200],
+                    resp.status,
+                    resp.read()[:200],
                 )
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
         # Don't crash the session if Theoria is down; the trace is still
@@ -294,9 +316,7 @@ if _UI_DIR is not None:
         # mimetypes.init() doesn't recognise modern extensions.
         mimetypes.add_type("application/javascript", ".js")
         mimetypes.add_type("text/css", ".css")
-        routes.append(
-            Mount("/static", app=StaticFiles(directory=str(static_dir)))
-        )
+        routes.append(Mount("/static", app=StaticFiles(directory=str(static_dir))))
 
 app = Starlette(routes=routes)
 # Bearer-token gate — reads CONSOLE_SECRET + CONSOLE_SECRET_PREV for
