@@ -29,21 +29,33 @@ from theoria.store import TraceStore
 
 _SPANS_FIXTURE: list[dict] = [
     {
-        "trace_id": "t-real", "span_id": "a", "parent_span_id": None,
-        "service": "logos", "operation": "certify_claim",
-        "duration_ms": 12.3, "success": True,
+        "trace_id": "t-real",
+        "span_id": "a",
+        "parent_span_id": None,
+        "service": "logos",
+        "operation": "certify_claim",
+        "duration_ms": 12.3,
+        "success": True,
         "metadata": {"claim_type": "propositional"},
     },
     {
-        "trace_id": "t-real", "span_id": "b", "parent_span_id": "a",
-        "service": "mneme", "operation": "recall",
-        "duration_ms": 4.1, "success": True,
+        "trace_id": "t-real",
+        "span_id": "b",
+        "parent_span_id": "a",
+        "service": "mneme",
+        "operation": "recall",
+        "duration_ms": 4.1,
+        "success": True,
         "metadata": {"hits": "3"},
     },
     {
-        "trace_id": "t-real", "span_id": "c", "parent_span_id": "b",
-        "service": "praxis", "operation": "commit_step",
-        "duration_ms": 30.0, "success": False,
+        "trace_id": "t-real",
+        "span_id": "c",
+        "parent_span_id": "b",
+        "service": "praxis",
+        "operation": "commit_step",
+        "duration_ms": 30.0,
+        "success": False,
         "metadata": {"err": "timeout"},
     },
 ]
@@ -97,6 +109,7 @@ def stub_kairos():
 # KairosClient
 # ---------------------------------------------------------------------------
 
+
 def test_client_fetch_trace_parses_spans(stub_kairos) -> None:
     client = KairosClient(stub_kairos)
     spans = client.fetch_trace("t-real")
@@ -131,12 +144,15 @@ def test_client_raises_on_connection_refused() -> None:
 # End-to-end: Theoria /api/kairos/traces/{id}
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def theoria_server(stub_kairos):
     store = TraceStore()
     port = _free_port()
     server, _ = make_server(
-        host="127.0.0.1", port=port, store=store,
+        host="127.0.0.1",
+        port=port,
+        store=store,
         kairos=KairosClient(stub_kairos),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -155,7 +171,7 @@ def test_live_kairos_endpoint_returns_decision_trace(theoria_server) -> None:
     with urllib.request.urlopen(f"{base}/api/kairos/traces/t-real") as resp:
         payload = json.loads(resp.read())
     assert payload["source"] == "kairos"
-    assert payload["outcome"]["verdict"] == "failed"   # c succeeded=False
+    assert payload["outcome"]["verdict"] == "failed"  # c succeeded=False
     # The live fetch MUST NOT persist into Theoria's store.
     assert len(store) == 0
 
@@ -177,9 +193,13 @@ def test_live_kairos_endpoint_502_on_kairos_failure(theoria_server) -> None:
     dead = KairosClient(f"http://127.0.0.1:{port}", timeout=0.5)
     store = TraceStore()
     server, _ = make_server(
-        host="127.0.0.1", port=_free_port(), store=store, kairos=dead,
+        host="127.0.0.1",
+        port=_free_port(),
+        store=store,
+        kairos=dead,
     )
     import threading as _t
+
     th = _t.Thread(target=server.serve_forever, daemon=True)
     th.start()
     time.sleep(0.05)

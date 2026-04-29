@@ -26,6 +26,7 @@ from theoria.models import (
 # Logos ActionPolicyResult → DecisionTrace
 # ---------------------------------------------------------------------------
 
+
 class _PolicyViolation(Protocol):
     policy_name: str
     severity: str
@@ -35,7 +36,7 @@ class _PolicyViolation(Protocol):
 
 
 class _PolicyResult(Protocol):
-    decision: Any                  # PolicyDecision enum
+    decision: Any  # PolicyDecision enum
     violations: list[_PolicyViolation]
     remediation_hints: list[str]
     solver_status: str | None
@@ -147,10 +148,7 @@ def trace_from_logos_policy(
 
     outcome = Outcome(
         verdict=decision_name,
-        summary=(
-            result.reason
-            or f"{len(result.violations)} violation(s); decision={decision_name}"
-        ),
+        summary=(result.reason or f"{len(result.violations)} violation(s); decision={decision_name}"),
         confidence=1.0 if result.solver_status == "sat" else None,
         meta={"solver_status": result.solver_status},
     )
@@ -179,10 +177,10 @@ def trace_from_logos_policy(
 # services/praxis/src/praxis/core.py). Kept as strings so we don't
 # import noesis_schemas here — the adapter remains duck-typed.
 _PRAXIS_STATUS_MAP: Mapping[str, StepStatus] = {
-    "pending":   StepStatus.PENDING,
+    "pending": StepStatus.PENDING,
     "completed": StepStatus.OK,
-    "failed":    StepStatus.FAILED,
-    "skipped":   StepStatus.REJECTED,
+    "failed": StepStatus.FAILED,
+    "skipped": StepStatus.REJECTED,
 }
 
 
@@ -349,6 +347,7 @@ def trace_from_praxis_plan(
 # Telos AlignmentResult → DecisionTrace
 # ---------------------------------------------------------------------------
 
+
 class _AlignmentResult(Protocol):
     aligned: bool
     drift_score: float
@@ -460,8 +459,11 @@ def trace_from_telos_drift(
         ReasoningStep(
             id=concl_id,
             kind=StepKind.CONCLUSION,
-            label=("Aligned — action is consistent with goals"
-                   if result.aligned else "Drift detected — escalate to operator"),
+            label=(
+                "Aligned — action is consistent with goals"
+                if result.aligned
+                else "Drift detected — escalate to operator"
+            ),
             status=concl_status,
             detail=result.reason,
         )
@@ -479,10 +481,8 @@ def trace_from_telos_drift(
         edges=edges,
         outcome=Outcome(
             verdict="aligned" if result.aligned else "drift",
-            summary=result.reason or (
-                "No drift detected." if result.aligned
-                else f"Drift score {result.drift_score:.2f} exceeds threshold."
-            ),
+            summary=result.reason
+            or ("No drift detected." if result.aligned else f"Drift score {result.drift_score:.2f} exceeds threshold."),
             confidence=result.drift_score,
             meta={"threshold": threshold, "drift_score": result.drift_score},
         ),
@@ -495,6 +495,7 @@ def trace_from_telos_drift(
 # ---------------------------------------------------------------------------
 # noesis-schemas native adapters — duck-typed on the pydantic model shapes
 # ---------------------------------------------------------------------------
+
 
 class _ProofCertificate(Protocol):
     schema_version: str
@@ -707,7 +708,7 @@ class _PlanStep(Protocol):
     step_id: str
     description: str
     tool_call: str | None
-    status: Any            # noesis_schemas.StepStatus or str
+    status: Any  # noesis_schemas.StepStatus or str
     outcome: str | None
     risk_score: float
 
@@ -844,6 +845,7 @@ def _plan_step_status(status: Any) -> StepStatus:
 # ---------------------------------------------------------------------------
 # Kairos / OpenTelemetry span tree → DecisionTrace
 # ---------------------------------------------------------------------------
+
 
 class _TraceSpan(Protocol):
     trace_id: str
@@ -987,6 +989,7 @@ def _span_status(success: bool | None) -> StepStatus:
 # Generic tree → DecisionTrace helper (for lightweight external callers)
 # ---------------------------------------------------------------------------
 
+
 def trace_from_tree(
     *,
     trace_id: str,
@@ -1000,11 +1003,11 @@ def trace_from_tree(
 ) -> DecisionTrace:
     """Build a ``DecisionTrace`` from a nested dict of the shape::
 
-        {
-          "id": "q", "kind": "question", "label": "...",
-          "status": "info",
-          "children": [ { ... }, ... ]
-        }
+    {
+      "id": "q", "kind": "question", "label": "...",
+      "status": "info",
+      "children": [ { ... }, ... ]
+    }
     """
     steps: list[ReasoningStep] = []
     edges: list[Edge] = []
@@ -1053,6 +1056,7 @@ def _walk_tree(
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
+
 
 def _enum_name(value: Any) -> str:
     name = getattr(value, "name", None)

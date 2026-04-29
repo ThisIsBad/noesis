@@ -1,4 +1,5 @@
 """Kosmos tracing wiring tests (no network — disabled mode only)."""
+
 import kosmos.tracing as tracing_mod
 from kosmos.tracing import get_tracer, reset_tracer_for_tests
 

@@ -123,13 +123,14 @@ class BearerAuthMiddleware:
         headers = dict(scope.get("headers") or [])
         got = headers.get(b"authorization")
         if got not in self._expected:
-            if JSONResponse is None:   # pragma: no cover - starlette missing
+            if JSONResponse is None:  # pragma: no cover - starlette missing
                 raise RuntimeError(
                     "starlette is required to emit 401 responses; install "
                     "starlette or wrap this middleware yourself."
                 )
             await JSONResponse(
-                {"error": "Unauthorized"}, status_code=401,
+                {"error": "Unauthorized"},
+                status_code=401,
                 headers={"WWW-Authenticate": 'Bearer realm="noesis"'},
             )(scope, receive, send)
             return

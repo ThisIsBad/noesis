@@ -1,11 +1,12 @@
+import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field
-import uuid
 
-from .contracts import GoalContract
+from pydantic import BaseModel, Field
+
 from .certificates import ProofCertificate
+from .contracts import GoalContract
 
 
 class StepStatus(str, Enum):

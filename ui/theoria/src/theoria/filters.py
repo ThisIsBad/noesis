@@ -26,9 +26,9 @@ class TraceFilter:
     kind: str | None = None
     verdict: str | None = None
     tags: Sequence[str] = ()
-    text: str | None = None           # case-insensitive substring search
-    since: datetime | None = None     # created_at >= since
-    until: datetime | None = None     # created_at <= until
+    text: str | None = None  # case-insensitive substring search
+    since: datetime | None = None  # created_at >= since
+    until: datetime | None = None  # created_at <= until
 
     def matches(self, trace: DecisionTrace) -> bool:
         if self.source and trace.source != self.source:
@@ -88,6 +88,7 @@ def filter_from_query(query: dict[str, list[str]]) -> tuple[TraceFilter, int | N
     list. We take the first value for scalar fields and keep all values for
     list-valued fields (``tag``).
     """
+
     def first(name: str) -> str | None:
         values = query.get(name)
         return values[0] if values else None

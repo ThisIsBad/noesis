@@ -44,8 +44,16 @@ class TestProblemGenerator:
     def test_generated_problems_have_required_keys(self):
         gen = ProblemGenerator(GeneratorConfig(seed=42))
         batch = gen.generate_batch(3)
-        required = {"id", "difficulty", "natural_language", "formal",
-                     "ground_truth_valid", "rule", "explanation", "argument"}
+        required = {
+            "id",
+            "difficulty",
+            "natural_language",
+            "formal",
+            "ground_truth_valid",
+            "rule",
+            "explanation",
+            "argument",
+        }
         for problem in batch:
             assert required.issubset(problem.keys()), f"Missing keys in {problem['id']}"
 

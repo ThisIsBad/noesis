@@ -1,7 +1,8 @@
+import uuid
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, Field
-import uuid
 
 
 class Prediction(BaseModel):
@@ -17,9 +18,9 @@ class Prediction(BaseModel):
 class CalibrationReport(BaseModel):
     domain: Optional[str] = None
     sample_size: int
-    ece: float       # Expected Calibration Error
+    ece: float  # Expected Calibration Error
     brier_score: float
-    bias: float      # positive = overconfident
+    bias: float  # positive = overconfident
     sharpness: float
     computed_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -29,13 +30,13 @@ class DomainCompetence(BaseModel):
     sample_size: int
     accuracy: float
     avg_confidence: float
-    confidence_gap: float   # avg_confidence - accuracy; >0 = overconfident
+    confidence_gap: float  # avg_confidence - accuracy; >0 = overconfident
     brier_score: float
 
 
 class CompetenceMap(BaseModel):
     total_predictions: int
     domains: list[DomainCompetence]
-    weaknesses: list[str]   # domain names ranked by |confidence_gap| desc
-    strengths: list[str]    # domain names with small gap + high accuracy
+    weaknesses: list[str]  # domain names ranked by |confidence_gap| desc
+    strengths: list[str]  # domain names with small gap + high accuracy
     computed_at: datetime = Field(default_factory=datetime.utcnow)

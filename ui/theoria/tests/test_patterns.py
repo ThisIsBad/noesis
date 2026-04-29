@@ -37,10 +37,12 @@ def test_step_predicate_confidence_range(samples) -> None:
 
 
 def test_all_steps_requires_every_predicate_to_have_a_witness(samples) -> None:
-    q = TraceQuery(all_steps=(
-        StepPredicate(kind="question"),
-        StepPredicate(kind="conclusion", status="failed"),
-    ))
+    q = TraceQuery(
+        all_steps=(
+            StepPredicate(kind="question"),
+            StepPredicate(kind="conclusion", status="failed"),
+        )
+    )
     ids = {t.id for t in run_query(samples, q)}
     # Only Logos-block and Telos-drift end in FAILED conclusions.
     assert ids == {"sample-logos-policy-block", "sample-telos-drift"}
@@ -71,12 +73,14 @@ def test_run_query_respects_limit(samples) -> None:
 
 
 def test_parse_query_handles_mixed_fields() -> None:
-    q = parse_query({
-        "source": "logos",
-        "tags": ["policy", "block"],
-        "any_step": [{"kind": "rule_check", "label_contains": "destroy"}],
-        "any_edge": [{"relation": "contradicts"}],
-    })
+    q = parse_query(
+        {
+            "source": "logos",
+            "tags": ["policy", "block"],
+            "any_step": [{"kind": "rule_check", "label_contains": "destroy"}],
+            "any_edge": [{"relation": "contradicts"}],
+        }
+    )
     assert q.base.source == "logos"
     assert set(q.base.tags) == {"policy", "block"}
     assert len(q.any_step) == 1 and q.any_step[0].label_contains == "destroy"

@@ -97,9 +97,7 @@ class ProofOrchestrator:
         referenced_ids = _collect_identifiers(parsed)
         unknown = sorted(referenced_ids - set(claim.sub_claim_ids))
         if unknown:
-            raise ValueError(
-                "Composition rule references unknown sub-claims: " + ", ".join(unknown)
-            )
+            raise ValueError("Composition rule references unknown sub-claims: " + ", ".join(unknown))
         claim.composition_rule = normalized_rule
 
     def verify_leaf(self, claim_id: str, expression: str) -> ProofCertificate:
@@ -264,9 +262,7 @@ class ProofOrchestrator:
             )
 
         evaluation = _evaluate_rule(parsed_rule, status_map)
-        all_referenced_verified = all(
-            status_map[claim_id] is ClaimStatus.VERIFIED for claim_id in referenced_ids
-        )
+        all_referenced_verified = all(status_map[claim_id] is ClaimStatus.VERIFIED for claim_id in referenced_ids)
         if evaluation is True and all_referenced_verified:
             claim.status = ClaimStatus.VERIFIED
             claim.failure_reason = ""
@@ -280,8 +276,7 @@ class ProofOrchestrator:
             return
 
         if any(
-            sub_claim.status
-            in {ClaimStatus.VERIFIED, ClaimStatus.FAILED, ClaimStatus.PARTIAL}
+            sub_claim.status in {ClaimStatus.VERIFIED, ClaimStatus.FAILED, ClaimStatus.PARTIAL}
             for sub_claim in sub_claims
         ):
             claim.status = ClaimStatus.PARTIAL
@@ -315,25 +310,17 @@ class ProofOrchestrator:
 
         for claim in self._claims.values():
             if claim.parent_id is not None and claim.parent_id not in self._claims:
-                raise ValueError(
-                    f"Claim '{claim.claim_id}' references unknown parent '{claim.parent_id}'"
-                )
+                raise ValueError(f"Claim '{claim.claim_id}' references unknown parent '{claim.parent_id}'")
             for sub_id in claim.sub_claim_ids:
                 if sub_id not in self._claims:
-                    raise ValueError(
-                        f"Claim '{claim.claim_id}' references unknown sub-claim '{sub_id}'"
-                    )
+                    raise ValueError(f"Claim '{claim.claim_id}' references unknown sub-claim '{sub_id}'")
                 if self._claims[sub_id].parent_id != claim.claim_id:
-                    raise ValueError(
-                        f"Claim '{sub_id}' parent mismatch for parent '{claim.claim_id}'"
-                    )
+                    raise ValueError(f"Claim '{sub_id}' parent mismatch for parent '{claim.claim_id}'")
             if claim.composition_rule is not None:
                 referenced_ids = _collect_identifiers(_parse_rule(claim.composition_rule))
                 unknown = sorted(referenced_ids - set(claim.sub_claim_ids))
                 if unknown:
-                    raise ValueError(
-                        "Composition rule references unknown sub-claims: " + ", ".join(unknown)
-                    )
+                    raise ValueError("Composition rule references unknown sub-claims: " + ", ".join(unknown))
 
     @staticmethod
     def _require_non_empty_value(value: object, field_name: str) -> str:
@@ -413,9 +400,7 @@ def _compose_certificate(
         if sub_claim.claim_id not in referenced_ids:
             continue
         if sub_claim.status is not ClaimStatus.VERIFIED or sub_claim.certificate is None:
-            raise ValueError(
-                f"Verified claim '{claim.claim_id}' requires certificates for verified sub-claims"
-            )
+            raise ValueError(f"Verified claim '{claim.claim_id}' requires certificates for verified sub-claims")
         sub_certificates.append(sub_claim.certificate.to_dict())
 
     timestamp = datetime.now(timezone.utc).isoformat()

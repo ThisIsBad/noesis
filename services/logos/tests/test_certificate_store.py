@@ -151,10 +151,9 @@ def test_query_filters_by_claim_pattern_since_and_descending_order() -> None:
     store = _store_from_entries(older, newer)
 
     assert [entry.store_id for entry in store.query(claim_pattern="budget", include_invalidated=True)] == ["newer"]
-    assert [
-        entry.store_id
-        for entry in store.query(since="2026-03-21T01:30:00+00:00", include_invalidated=True)
-    ] == ["newer"]
+    assert [entry.store_id for entry in store.query(since="2026-03-21T01:30:00+00:00", include_invalidated=True)] == [
+        "newer"
+    ]
     assert [entry.store_id for entry in store.query(include_invalidated=True)] == ["newer", "older"]
 
 
@@ -326,9 +325,7 @@ def test_compact_removes_redundant_certificates() -> None:
     assert result.removed_count > 0
     assert result.verification_passed is True
     remaining = [
-        str(entry.certificate.claim)
-        for entry in store.query(limit=20)
-        if isinstance(entry.certificate.claim, str)
+        str(entry.certificate.claim) for entry in store.query(limit=20) if isinstance(entry.certificate.claim, str)
     ]
     assert len(remaining) < 5
     for original in ["P |- P", "Q |- Q", "P & Q |- (P & Q)", "R |- R", "P | R |- (P | R)"]:

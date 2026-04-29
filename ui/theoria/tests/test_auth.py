@@ -51,9 +51,7 @@ def _post(url: str, body: dict, token: str | None = None) -> tuple[int, bytes]:
     headers = {"Content-Type": "application/json"}
     if token is not None:
         headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(
-        url, data=json.dumps(body).encode(), headers=headers, method="POST"
-    )
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req) as resp:
             return resp.status, resp.read()
@@ -92,8 +90,12 @@ def test_api_accepts_correct_token(auth_server) -> None:
 
 def test_post_requires_token(auth_server) -> None:
     trace = {
-        "id": "t-auth", "title": "t", "question": "?",
-        "source": "test", "kind": "custom", "root": "q",
+        "id": "t-auth",
+        "title": "t",
+        "question": "?",
+        "source": "test",
+        "kind": "custom",
+        "root": "q",
         "steps": [{"id": "q", "kind": "question", "label": "Q", "status": "info"}],
     }
     status, _ = _post(f"{auth_server}/api/traces", trace)

@@ -3,6 +3,7 @@
 Deep behaviour is covered in ``clients/tests/test_auth.py``. This file
 pins that Praxis wires the shared helper correctly.
 """
+
 from __future__ import annotations
 
 from noesis_clients.auth import BearerAuthMiddleware, bearer_middleware
@@ -67,9 +68,7 @@ def test_wrong_bearer_token_rejected(monkeypatch):
 def test_correct_bearer_token_accepted(monkeypatch):
     app = _build_app({"PRAXIS_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
-    resp = client.get(
-        "/spans", headers={"Authorization": "Bearer test-secret"}
-    )
+    resp = client.get("/spans", headers={"Authorization": "Bearer test-secret"})
     assert resp.status_code == 200
 
 
@@ -80,9 +79,7 @@ def test_rotation_accepts_previous_token(monkeypatch):
     )
     client = TestClient(app)
     for token in ("new-token", "old-token"):
-        resp = client.get(
-            "/spans", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = client.get("/spans", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200, token
 
 

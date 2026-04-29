@@ -6,6 +6,7 @@ behaviour of the gate (rotation, exempt paths, …) is covered in
 wires the helper up correctly with the right exempt paths so a
 regression in the wiring trips Console's own CI.
 """
+
 from __future__ import annotations
 
 from noesis_clients.auth import BearerAuthMiddleware, bearer_middleware
@@ -82,17 +83,16 @@ def test_missing_authorization_header_rejected(monkeypatch):
 def test_wrong_bearer_token_rejected(monkeypatch):
     app = _build_app({"CONSOLE_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
-    assert client.get(
-        "/api/chat", headers={"Authorization": "Bearer wrong"}
-    ).status_code == 401
+    assert (
+        client.get("/api/chat", headers={"Authorization": "Bearer wrong"}).status_code
+        == 401
+    )
 
 
 def test_correct_bearer_token_accepted(monkeypatch):
     app = _build_app({"CONSOLE_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
-    resp = client.get(
-        "/api/chat", headers={"Authorization": "Bearer test-secret"}
-    )
+    resp = client.get("/api/chat", headers={"Authorization": "Bearer test-secret"})
     assert resp.status_code == 200
 
 
@@ -104,7 +104,8 @@ def test_rotation_accepts_previous_token(monkeypatch):
     client = TestClient(app)
     for token in ("new-token", "old-token"):
         resp = client.get(
-            "/api/chat", headers={"Authorization": f"Bearer {token}"},
+            "/api/chat",
+            headers={"Authorization": f"Bearer {token}"},
         )
         assert resp.status_code == 200, token
 
@@ -116,11 +117,13 @@ def test_static_prefix_is_public(monkeypatch):
     async def _asset(_req: object) -> JSONResponse:
         return JSONResponse({"asset": True})
 
-    app2 = _Star(routes=[
-        Route("/health", lambda _r: JSONResponse({"status": "ok"})),
-        Route("/static/chat.js", _asset),
-        Route("/api/chat", lambda _r: JSONResponse({"ok": True})),
-    ])
+    app2 = _Star(
+        routes=[
+            Route("/health", lambda _r: JSONResponse({"status": "ok"})),
+            Route("/static/chat.js", _asset),
+            Route("/api/chat", lambda _r: JSONResponse({"ok": True})),
+        ]
+    )
     monkeypatch.setenv("CONSOLE_SECRET", "tok")
     app2.add_middleware(
         bearer_middleware(

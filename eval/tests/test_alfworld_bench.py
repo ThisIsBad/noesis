@@ -5,6 +5,7 @@ the ScriptedPlanner reference implementation. A future PR plugs the
 Praxis core into the Planner Protocol and asserts the same metrics
 against the same task suite, so the acceptance numbers stay comparable.
 """
+
 import pytest
 
 from noesis_eval.alfworld_bench import (
@@ -267,17 +268,23 @@ def test_action_matches_exact_string_still_accepted():
 def test_action_matches_accepts_paraphrase_with_added_fillers():
     """The memory-suite regression: agent adds 'from the lobby' ahead
     of the canonical phrasing and the env must still accept it."""
-    assert _action_matches(
-        "walk from the lobby to the conference room",
-        "walk to conference room",
-    ) is True
+    assert (
+        _action_matches(
+            "walk from the lobby to the conference room",
+            "walk to conference room",
+        )
+        is True
+    )
 
 
 def test_action_matches_accepts_reordered_prepositions():
-    assert _action_matches(
-        "place the flasks back on the shelf",
-        "place flasks on shelf",
-    ) is True
+    assert (
+        _action_matches(
+            "place the flasks back on the shelf",
+            "place flasks on shelf",
+        )
+        is True
+    )
 
 
 def test_action_matches_rejects_unrelated_action():

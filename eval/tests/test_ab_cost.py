@@ -21,6 +21,7 @@ Agents with telemetry are tested via a small ``_TelemetryAgent`` fake
 rather than the real MCPAgent, because MCPAgent lives on a separate
 branch and because cost accounting shouldn't depend on SDK plumbing.
 """
+
 from __future__ import annotations
 
 import json
@@ -196,10 +197,14 @@ def test_cost_fields_round_trip_through_jsonl() -> None:
 
 def test_suite_results_summary_exposes_cost_means() -> None:
     r = SuiteResults(agent="t")
-    r.record(_ep("t", "a", True, tokens_in=100, tokens_out=20,
-                 tool_calls=2, wall_time_s=0.5))
-    r.record(_ep("t", "b", False, tokens_in=200, tokens_out=40,
-                 tool_calls=4, wall_time_s=1.0))
+    r.record(
+        _ep("t", "a", True, tokens_in=100, tokens_out=20, tool_calls=2, wall_time_s=0.5)
+    )
+    r.record(
+        _ep(
+            "t", "b", False, tokens_in=200, tokens_out=40, tool_calls=4, wall_time_s=1.0
+        )
+    )
 
     summary = r.summary()
     # Per-episode means: total tokens 120+240=360 over 2 eps → 180.0
@@ -226,12 +231,28 @@ def test_suitedelta_reports_tokens_per_episode_both_sides() -> None:
     t = SuiteResults(agent="treatment")
     b = SuiteResults(agent="baseline")
     for tid in ("a", "b"):
-        t.record(_ep("treatment", tid, True,
-                     tokens_in=800, tokens_out=200, tool_calls=5,
-                     wall_time_s=2.0))
-        b.record(_ep("baseline", tid, False,
-                     tokens_in=200, tokens_out=50, tool_calls=1,
-                     wall_time_s=0.5))
+        t.record(
+            _ep(
+                "treatment",
+                tid,
+                True,
+                tokens_in=800,
+                tokens_out=200,
+                tool_calls=5,
+                wall_time_s=2.0,
+            )
+        )
+        b.record(
+            _ep(
+                "baseline",
+                tid,
+                False,
+                tokens_in=200,
+                tokens_out=50,
+                tool_calls=1,
+                wall_time_s=0.5,
+            )
+        )
 
     delta = t.diff(b)
     assert delta.treatment_tokens_per_episode == pytest.approx(1000.0)
@@ -306,10 +327,8 @@ def test_success_per_1k_tokens_is_finite_when_telemetry_present() -> None:
 def test_suitedelta_summary_has_economics_fields() -> None:
     t = SuiteResults(agent="t")
     b = SuiteResults(agent="b")
-    t.record(_ep("t", "a", True, tokens_in=400, tokens_out=100,
-                 wall_time_s=1.0))
-    b.record(_ep("b", "a", False, tokens_in=200, tokens_out=50,
-                 wall_time_s=0.4))
+    t.record(_ep("t", "a", True, tokens_in=400, tokens_out=100, wall_time_s=1.0))
+    b.record(_ep("b", "a", False, tokens_in=200, tokens_out=50, wall_time_s=0.4))
     summary = t.diff(b).summary()
     assert "treatment_tokens_per_episode" in summary
     assert "baseline_tokens_per_episode" in summary

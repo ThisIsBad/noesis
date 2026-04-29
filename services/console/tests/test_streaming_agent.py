@@ -10,6 +10,7 @@ Verifies that the wrapper:
 The Claude SDK is dependency-injected via ``query_fn``, so these
 tests don't spawn the real ``claude`` CLI subprocess.
 """
+
 from __future__ import annotations
 
 from typing import Any, AsyncIterator
@@ -105,6 +106,12 @@ def test_noesis_mcp_servers_from_env_skips_unset() -> None:
 
 def test_noesis_mcp_servers_default_names_cover_all_eight() -> None:
     assert set(NOESIS_SERVICE_NAMES) == {
-        "logos", "mneme", "praxis", "telos",
-        "episteme", "kosmos", "empiria", "techne",
+        "logos",
+        "mneme",
+        "praxis",
+        "telos",
+        "episteme",
+        "kosmos",
+        "empiria",
+        "techne",
     }

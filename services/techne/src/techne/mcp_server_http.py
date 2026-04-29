@@ -26,7 +26,9 @@ _data_dir = os.getenv("TECHNE_DATA_DIR", "/data")
 _secret_set = bool(os.getenv("TECHNE_SECRET"))
 log.info(
     "techne boot: data_dir=%s port=%s secret_set=%s",
-    _data_dir, os.getenv("PORT", "8000"), _secret_set,
+    _data_dir,
+    os.getenv("PORT", "8000"),
+    _secret_set,
 )
 try:
     os.makedirs(_data_dir, exist_ok=True)
@@ -51,14 +53,11 @@ except Exception:
 # TECHNE_ALLOWED_HOSTS is a comma-separated list of extra allowed Hosts;
 # defaults keep localhost working for local dev.
 _allowed_hosts = [
-    h.strip()
-    for h in os.getenv("TECHNE_ALLOWED_HOSTS", "").split(",")
-    if h.strip()
+    h.strip() for h in os.getenv("TECHNE_ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
 _transport_security = TransportSecuritySettings(
     enable_dns_rebinding_protection=bool(_allowed_hosts),
-    allowed_hosts=_allowed_hosts
-    + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
+    allowed_hosts=_allowed_hosts + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
     allowed_origins=[f"https://{h}" for h in _allowed_hosts]
     + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
 )
@@ -156,6 +155,7 @@ def record_use(skill_id: str, success: bool) -> str:
 
 # ── HTTP app ──────────────────────────────────────────────────────────────────
 
+
 async def _health(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "service": "techne"})
 
@@ -168,5 +168,6 @@ app.add_middleware(bearer_middleware("TECHNE_SECRET"))
 
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

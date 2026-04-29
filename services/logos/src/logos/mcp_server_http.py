@@ -16,6 +16,7 @@ Environment variables:
     LOGOS_TRACE_ENABLED   "0"/"false" to disable Kairos span emission.
     KAIROS_URL            Base URL of the Kairos tracing service.
 """
+
 from __future__ import annotations
 
 import json
@@ -61,15 +62,10 @@ log.info(
     bool(_SECRET),
 )
 
-_allowed_hosts = [
-    h.strip()
-    for h in os.getenv("LOGOS_ALLOWED_HOSTS", "").split(",")
-    if h.strip()
-]
+_allowed_hosts = [h.strip() for h in os.getenv("LOGOS_ALLOWED_HOSTS", "").split(",") if h.strip()]
 _transport_security = TransportSecuritySettings(
     enable_dns_rebinding_protection=bool(_allowed_hosts),
-    allowed_hosts=_allowed_hosts
-    + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
+    allowed_hosts=_allowed_hosts + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
     allowed_origins=[f"https://{h}" for h in _allowed_hosts]
     + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
 )
@@ -358,9 +354,7 @@ class _BearerAuth:
         headers = dict(scope.get("headers") or [])
         expected = f"Bearer {_SECRET}".encode()
         if headers.get(b"authorization") != expected:
-            await JSONResponse({"error": "Unauthorized"}, status_code=401)(
-                scope, receive, send
-            )
+            await JSONResponse({"error": "Unauthorized"}, status_code=401)(scope, receive, send)
             return
         await self.app(scope, receive, send)
 

@@ -15,6 +15,7 @@ All tests use plain ``object()`` stand-ins for the SDK message
 classes; TraceBuilder dispatches on ``type(msg).__name__`` so the
 real classes aren't required.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -116,13 +117,15 @@ def test_assistant_text_block_emits_event_but_no_step() -> None:
 
 def test_tool_use_adds_pending_inference_step() -> None:
     b = TraceBuilder(session_id="s", user_prompt="p")
-    msg = AssistantMessage(content=[
-        ToolUseBlock(
-            id="tu_1",
-            name="mcp__logos__certify_claim",
-            input={"argument": "all swans are white"},
-        ),
-    ])
+    msg = AssistantMessage(
+        content=[
+            ToolUseBlock(
+                id="tu_1",
+                name="mcp__logos__certify_claim",
+                input={"argument": "all swans are white"},
+            ),
+        ]
+    )
     events = b.ingest(msg)
     steps = b.trace.steps
     # root + the new tool_use step
@@ -145,23 +148,28 @@ def test_tool_use_adds_pending_inference_step() -> None:
 
 def test_tool_result_links_to_use_and_updates_status_ok() -> None:
     b = TraceBuilder(session_id="s", user_prompt="p")
-    use = AssistantMessage(content=[
-        ToolUseBlock(
-            id="tu_1",
-            name="mcp__mneme__store_memory",
-            input={"content": "x"},
-        ),
-    ])
+    use = AssistantMessage(
+        content=[
+            ToolUseBlock(
+                id="tu_1",
+                name="mcp__mneme__store_memory",
+                input={"content": "x"},
+            ),
+        ]
+    )
     b.ingest(use)
-    res = UserMessage(content=[
-        ToolResultBlock(tool_use_id="tu_1", content="ok", is_error=False),
-    ])
+    res = UserMessage(
+        content=[
+            ToolResultBlock(tool_use_id="tu_1", content="ok", is_error=False),
+        ]
+    )
     events = b.ingest(res)
     steps = b.trace.steps
     # root + tool_use + tool_result
     assert len(steps) == 3
     use_step = next(
-        s for s in steps
+        s
+        for s in steps
         if s.meta.get("tool_use_id") == "tu_1" and s.kind.value == "inference"
     )
     res_step = next(s for s in steps if s.kind.value == "observation")
@@ -170,8 +178,7 @@ def test_tool_result_links_to_use_and_updates_status_ok() -> None:
     # Edge use_step → res_step with relation YIELDS
     edges = b.trace.edges
     yields_edges = [
-        e for e in edges
-        if e.source == use_step.id and e.target == res_step.id
+        e for e in edges if e.source == use_step.id and e.target == res_step.id
     ]
     assert len(yields_edges) == 1
     assert yields_edges[0].relation.value == "yields"
@@ -181,22 +188,26 @@ def test_tool_result_links_to_use_and_updates_status_ok() -> None:
 
 def test_tool_result_with_is_error_marks_failed() -> None:
     b = TraceBuilder(session_id="s", user_prompt="p")
-    b.ingest(AssistantMessage(content=[
-        ToolUseBlock(
-            id="tu_1",
-            name="mcp__logos__certify_claim",
-            input={"argument": "P"},
-        ),
-    ]))
-    b.ingest(UserMessage(content=[
-        ToolResultBlock(tool_use_id="tu_1", content="refuted", is_error=True),
-    ]))
-    use_step = next(
-        s for s in b.trace.steps if s.kind.value == "inference"
+    b.ingest(
+        AssistantMessage(
+            content=[
+                ToolUseBlock(
+                    id="tu_1",
+                    name="mcp__logos__certify_claim",
+                    input={"argument": "P"},
+                ),
+            ]
+        )
     )
-    res_step = next(
-        s for s in b.trace.steps if s.kind.value == "observation"
+    b.ingest(
+        UserMessage(
+            content=[
+                ToolResultBlock(tool_use_id="tu_1", content="refuted", is_error=True),
+            ]
+        )
     )
+    use_step = next(s for s in b.trace.steps if s.kind.value == "inference")
+    res_step = next(s for s in b.trace.steps if s.kind.value == "observation")
     assert use_step.status.value == "failed"
     assert res_step.status.value == "failed"
     assert res_step.meta["is_error"] is True
@@ -204,9 +215,11 @@ def test_tool_result_with_is_error_marks_failed() -> None:
 
 def test_thinking_block_adds_note_step() -> None:
     b = TraceBuilder(session_id="s", user_prompt="p")
-    msg = AssistantMessage(content=[
-        ThinkingBlock(thinking="hmm, swans …"),
-    ])
+    msg = AssistantMessage(
+        content=[
+            ThinkingBlock(thinking="hmm, swans …"),
+        ]
+    )
     events = b.ingest(msg)
     steps = b.trace.steps
     assert len(steps) == 2
@@ -235,10 +248,12 @@ def test_result_message_is_error_marks_outcome_error() -> None:
 
 def test_system_error_message_appends_failed_step() -> None:
     b = TraceBuilder(session_id="s", user_prompt="p")
-    events = b.ingest(SystemMessage(
-        subtype="error",
-        data={"error": "rate limited"},
-    ))
+    events = b.ingest(
+        SystemMessage(
+            subtype="error",
+            data={"error": "rate limited"},
+        )
+    )
     types = [e["type"] for e in events]
     assert "session.error" in types
     err_steps = [s for s in b.trace.steps if s.label == "system error"]
@@ -258,13 +273,17 @@ def test_unknown_message_type_is_silently_ignored() -> None:
 
 def test_to_dict_returns_serialisable_trace() -> None:
     b = TraceBuilder(session_id="s", user_prompt="hi")
-    b.ingest(AssistantMessage(content=[
-        ToolUseBlock(
-            id="tu_1",
-            name="mcp__telos__register_goal",
-            input={"contract_json": "{}"},
-        ),
-    ]))
+    b.ingest(
+        AssistantMessage(
+            content=[
+                ToolUseBlock(
+                    id="tu_1",
+                    name="mcp__telos__register_goal",
+                    input={"contract_json": "{}"},
+                ),
+            ]
+        )
+    )
     d = b.to_dict()
     assert d["source"] == "console"
     assert d["kind"] == "chat"

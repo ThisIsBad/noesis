@@ -16,6 +16,7 @@ The MCP-tool tests monkey-patch ``mneme.mcp_server_http._logos_client``
 to a fake ``LogosClient`` so no network is needed and we can drive
 every status branch deterministically.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -51,9 +52,7 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
 def core(tmp_path: Any) -> MnemeCore:
     return MnemeCore(
         db_path=str(tmp_path / "test.db"),
-        _chroma_client=chromadb.PersistentClient(
-            path=str(tmp_path / "chroma")
-        ),
+        _chroma_client=chromadb.PersistentClient(path=str(tmp_path / "chroma")),
     )
 
 
@@ -163,9 +162,7 @@ def test_attach_certificate_is_visible_to_retrieve(core: MnemeCore) -> None:
 
 
 @pytest.fixture
-def patched_module(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
-) -> Any:
+def patched_module(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     """Import the MCP module and rewire its ``_core`` + ``_logos_client``
     to a per-test pair so each test starts on a clean store and a
     fresh fake Logos."""
@@ -173,9 +170,7 @@ def patched_module(
 
     fresh_core = MnemeCore(
         db_path=str(tmp_path / "core.db"),
-        _chroma_client=chromadb.PersistentClient(
-            path=str(tmp_path / "chroma")
-        ),
+        _chroma_client=chromadb.PersistentClient(path=str(tmp_path / "chroma")),
     )
     monkeypatch.setattr(mod, "_core", fresh_core)
     return mod
@@ -190,11 +185,13 @@ def test_certify_memory_returns_certified_status_on_success(
     fake = FakeLogosClient(_verified_cert())
     monkeypatch.setattr(patched_module, "_logos_client", fake)
 
-    raw = _run(patched_module._certify_memory_impl(
-        memory_id=mem.memory_id,
-        core=patched_module._core,
-        logos_client=patched_module._logos_client,
-    ))
+    raw = _run(
+        patched_module._certify_memory_impl(
+            memory_id=mem.memory_id,
+            core=patched_module._core,
+            logos_client=patched_module._logos_client,
+        )
+    )
     payload = json.loads(raw)
     assert payload["status"] == "certified"
     assert payload["memory_id"] == mem.memory_id
@@ -204,10 +201,7 @@ def test_certify_memory_returns_certified_status_on_success(
     # Mneme passed the memory's content (not the ID or the goal) to Logos.
     assert fake.last_argument == "rain implies wet"
     # Side effect: the memory is now in list_proven.
-    assert any(
-        m.memory_id == mem.memory_id
-        for m in patched_module._core.list_proven()
-    )
+    assert any(m.memory_id == mem.memory_id for m in patched_module._core.list_proven())
 
 
 def test_certify_memory_status_refuted_on_unverified_cert(
@@ -220,11 +214,13 @@ def test_certify_memory_status_refuted_on_unverified_cert(
     monkeypatch.setattr(
         patched_module, "_logos_client", FakeLogosClient(_refuted_cert())
     )
-    raw = _run(patched_module._certify_memory_impl(
-        memory_id=mem.memory_id,
-        core=patched_module._core,
-        logos_client=patched_module._logos_client,
-    ))
+    raw = _run(
+        patched_module._certify_memory_impl(
+            memory_id=mem.memory_id,
+            core=patched_module._core,
+            logos_client=patched_module._logos_client,
+        )
+    )
     payload = json.loads(raw)
     assert payload["status"] == "refuted"
     assert payload["verified"] is False
@@ -240,11 +236,13 @@ def test_certify_memory_status_not_found_for_unknown_id(
     waste a Z3 invocation."""
     fake = FakeLogosClient(_verified_cert())
     monkeypatch.setattr(patched_module, "_logos_client", fake)
-    raw = _run(patched_module._certify_memory_impl(
-        memory_id="nope",
-        core=patched_module._core,
-        logos_client=patched_module._logos_client,
-    ))
+    raw = _run(
+        patched_module._certify_memory_impl(
+            memory_id="nope",
+            core=patched_module._core,
+            logos_client=patched_module._logos_client,
+        )
+    )
     payload = json.loads(raw)
     assert payload["status"] == "not_found"
     assert payload["memory_id"] == "nope"
@@ -260,11 +258,13 @@ def test_certify_memory_status_unconfigured_when_logos_unset(
     issue" from "network blip"."""
     mem = patched_module._core.store("rain implies wet", MemoryType.SEMANTIC)
     monkeypatch.setattr(patched_module, "_logos_client", None)
-    raw = _run(patched_module._certify_memory_impl(
-        memory_id=mem.memory_id,
-        core=patched_module._core,
-        logos_client=patched_module._logos_client,
-    ))
+    raw = _run(
+        patched_module._certify_memory_impl(
+            memory_id=mem.memory_id,
+            core=patched_module._core,
+            logos_client=patched_module._logos_client,
+        )
+    )
     payload = json.loads(raw)
     assert payload["status"] == "logos_unconfigured"
 
@@ -277,15 +277,15 @@ def test_certify_memory_status_unreachable_with_error(
     ``LogosClient.last_error`` for diagnostics. Memory stays
     un-graduated; the run continues."""
     mem = patched_module._core.store("rain implies wet", MemoryType.SEMANTIC)
-    fake = FakeLogosClient(
-        None, last_error="ConnectError: connection refused"
-    )
+    fake = FakeLogosClient(None, last_error="ConnectError: connection refused")
     monkeypatch.setattr(patched_module, "_logos_client", fake)
-    raw = _run(patched_module._certify_memory_impl(
-        memory_id=mem.memory_id,
-        core=patched_module._core,
-        logos_client=patched_module._logos_client,
-    ))
+    raw = _run(
+        patched_module._certify_memory_impl(
+            memory_id=mem.memory_id,
+            core=patched_module._core,
+            logos_client=patched_module._logos_client,
+        )
+    )
     payload = json.loads(raw)
     assert payload["status"] == "logos_unreachable"
     assert payload["memory_id"] == mem.memory_id
@@ -306,11 +306,13 @@ def test_certify_memory_unreachable_falls_back_to_unknown_error(
     mem = patched_module._core.store("rain implies wet", MemoryType.SEMANTIC)
     fake = FakeLogosClient(None, last_error=None)
     monkeypatch.setattr(patched_module, "_logos_client", fake)
-    raw = _run(patched_module._certify_memory_impl(
-        memory_id=mem.memory_id,
-        core=patched_module._core,
-        logos_client=patched_module._logos_client,
-    ))
+    raw = _run(
+        patched_module._certify_memory_impl(
+            memory_id=mem.memory_id,
+            core=patched_module._core,
+            logos_client=patched_module._logos_client,
+        )
+    )
     payload = json.loads(raw)
     assert payload["status"] == "logos_unreachable"
     assert payload["error"] == "unknown"

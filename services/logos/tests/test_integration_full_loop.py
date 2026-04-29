@@ -24,7 +24,7 @@ def test_full_reasoning_loop_example_runs_in_pytest(capsys: pytest.CaptureFixtur
     assert "Assumptions consistent (Z3): True" in output
     assert "After adding x > 200:  consistent (Z3): False" in output
     assert "After retraction:      consistent (Z3): True" in output
-    assert "Z3-detected contradictions: ((\'b1\', \'b3\'),)" in output
+    assert "Z3-detected contradictions: (('b1', 'b3'),)" in output
 
     assert "conservative: sat (sat=True)" in output
     assert "aggressive:   sat (sat=True)" in output

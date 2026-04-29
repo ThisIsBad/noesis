@@ -61,9 +61,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     def _remote(p: argparse.ArgumentParser) -> None:
         p.add_argument("--url", default=os.environ.get("THEORIA_URL", DEFAULT_URL))
-        p.add_argument("--secret", default=os.environ.get("THEORIA_SECRET"),
-                       help="Bearer token sent as Authorization header. "
-                            "Falls back to THEORIA_SECRET.")
+        p.add_argument(
+            "--secret",
+            default=os.environ.get("THEORIA_SECRET"),
+            help="Bearer token sent as Authorization header. Falls back to THEORIA_SECRET.",
+        )
 
     # serve
     p_serve = sub.add_parser("serve", help="Run the Theoria HTTP server (default).")
@@ -71,9 +73,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_serve.add_argument("--port", type=int, default=int(os.environ.get("THEORIA_PORT", "8765")))
     p_serve.add_argument("--persist", default=os.environ.get("THEORIA_PERSIST"))
     p_serve.add_argument("--no-samples", action="store_true")
-    p_serve.add_argument("--secret", default=os.environ.get("THEORIA_SECRET"),
-                         help="Require this Bearer token on non-public requests. "
-                              "Falls back to THEORIA_SECRET; unset = open.")
+    p_serve.add_argument(
+        "--secret",
+        default=os.environ.get("THEORIA_SECRET"),
+        help="Require this Bearer token on non-public requests. Falls back to THEORIA_SECRET; unset = open.",
+    )
     p_serve.add_argument("--log-level", default=os.environ.get("THEORIA_LOG_LEVEL", "INFO"))
 
     # post
@@ -84,8 +88,9 @@ def _build_parser() -> argparse.ArgumentParser:
     # export
     p_export = sub.add_parser("export", help="Fetch + render a trace as text.")
     p_export.add_argument("--id", required=True, help="Trace id.")
-    p_export.add_argument("--format", default="markdown",
-                          choices=["json", "mermaid", "dot", "graphviz", "markdown", "md"])
+    p_export.add_argument(
+        "--format", default="markdown", choices=["json", "mermaid", "dot", "graphviz", "markdown", "md"]
+    )
     _remote(p_export)
 
     # list
@@ -107,14 +112,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p_diff = sub.add_parser("diff", help="Diff two traces.")
     p_diff.add_argument("a_id")
     p_diff.add_argument("b_id")
-    p_diff.add_argument("--format", default="markdown",
-                        choices=["json", "markdown", "md", "mermaid"])
+    p_diff.add_argument("--format", default="markdown", choices=["json", "markdown", "md", "mermaid"])
     _remote(p_diff)
 
     # sample — print one of the built-in sample traces as JSON
     p_sample = sub.add_parser("sample", help="Print a built-in sample trace as JSON.")
-    p_sample.add_argument("--index", type=int, default=0,
-                          help="Index into build_samples() (default: 0).")
+    p_sample.add_argument("--index", type=int, default=0, help="Index into build_samples() (default: 0).")
 
     return parser
 
@@ -122,6 +125,7 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 # subcommand handlers
 # ---------------------------------------------------------------------------
+
 
 def _cmd_serve(args: argparse.Namespace, stdout: IO[str]) -> int:
     logging.basicConfig(
@@ -148,7 +152,9 @@ def _cmd_post(args: argparse.Namespace, stdout: IO[str]) -> int:
         print(f"error: invalid JSON: {exc}", file=sys.stderr)
         return 2
     status, body = _http(
-        args.url + "/api/traces", method="POST", body=payload,
+        args.url + "/api/traces",
+        method="POST",
+        body=payload,
         secret=getattr(args, "secret", None),
     )
     if status >= 400:
@@ -164,8 +170,7 @@ def _cmd_export(args: argparse.Namespace, stdout: IO[str]) -> int:
     if args.format == "json":
         url = f"{args.url}/api/traces/{urllib.parse.quote(args.id)}"
     else:
-        url = (f"{args.url}/api/traces/{urllib.parse.quote(args.id)}"
-               f"/export?format={urllib.parse.quote(args.format)}")
+        url = f"{args.url}/api/traces/{urllib.parse.quote(args.id)}/export?format={urllib.parse.quote(args.format)}"
     status, body = _http(url, secret=getattr(args, "secret", None))
     if status >= 400:
         print(f"error: HTTP {status}: {body}", file=sys.stderr)
@@ -240,8 +245,10 @@ def _cmd_tail(args: argparse.Namespace, stdout: IO[str]) -> int:
 
 
 def _cmd_diff(args: argparse.Namespace, stdout: IO[str]) -> int:
-    url = (f"{args.url}/api/traces/{urllib.parse.quote(args.a_id)}"
-           f"/diff/{urllib.parse.quote(args.b_id)}?format={urllib.parse.quote(args.format)}")
+    url = (
+        f"{args.url}/api/traces/{urllib.parse.quote(args.a_id)}"
+        f"/diff/{urllib.parse.quote(args.b_id)}?format={urllib.parse.quote(args.format)}"
+    )
     status, body = _http(url, secret=getattr(args, "secret", None))
     if status >= 400:
         print(f"error: HTTP {status}: {body}", file=sys.stderr)
@@ -274,6 +281,7 @@ _COMMANDS = {
 # ---------------------------------------------------------------------------
 # minimal HTTP helper (stdlib only)
 # ---------------------------------------------------------------------------
+
 
 def _http(
     url: str,

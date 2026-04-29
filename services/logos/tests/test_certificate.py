@@ -100,7 +100,7 @@ def test_certificate_from_json_rejects_missing_fields() -> None:
 
 def test_certificate_from_json_rejects_unsupported_schema_version() -> None:
     payload = (
-        '{'
+        "{"
         '"schema_version":"2.0",'
         '"claim_type":"propositional",'
         '"claim":"P |- P",'
@@ -108,7 +108,7 @@ def test_certificate_from_json_rejects_unsupported_schema_version() -> None:
         '"verified":true,'
         '"timestamp":"2026-01-01T00:00:00+00:00",'
         '"verification_artifact":{}'
-        '}'
+        "}"
     )
     with pytest.raises(ValueError, match="Unsupported certificate schema version"):
         ProofCertificate.from_json(payload)

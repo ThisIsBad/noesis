@@ -354,28 +354,16 @@ class TestCheckResult:
     """CheckResult dataclass tests."""
 
     def test_sat_result(self):
-        result = CheckResult(
-            status="sat",
-            satisfiable=True,
-            model={"x": 5}
-        )
+        result = CheckResult(status="sat", satisfiable=True, model={"x": 5})
         assert result.satisfiable
         assert result.model["x"] == 5
 
     def test_unsat_result(self):
-        result = CheckResult(
-            status="unsat",
-            satisfiable=False,
-            unsat_core=["c1", "c2"]
-        )
+        result = CheckResult(status="unsat", satisfiable=False, unsat_core=["c1", "c2"])
         assert not result.satisfiable
         assert result.unsat_core == ["c1", "c2"]
 
     def test_unknown_result(self):
-        result = CheckResult(
-            status="unknown",
-            satisfiable=None,
-            reason="timeout"
-        )
+        result = CheckResult(status="unknown", satisfiable=None, reason="timeout")
         assert result.satisfiable is None
         assert result.reason == "timeout"

@@ -138,10 +138,7 @@ class AssumptionSet:
 
     def belief_payload(self) -> list[dict[str, str]]:
         """Export active assumptions as belief-style labeled assertions."""
-        return [
-            {"label": entry.assumption_id, "assertion": entry.statement}
-            for entry in self.active_entries()
-        ]
+        return [{"label": entry.assumption_id, "assertion": entry.statement} for entry in self.active_entries()]
 
     def check_consistency(
         self,

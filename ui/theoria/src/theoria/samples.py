@@ -31,6 +31,7 @@ def build_samples() -> list[DecisionTrace]:
 # Sample 1 — Logos pre-action policy decision
 # ---------------------------------------------------------------------------
 
+
 def _logos_policy_sample() -> DecisionTrace:
     steps = [
         ReasoningStep(
@@ -125,6 +126,7 @@ def _logos_policy_sample() -> DecisionTrace:
 # ---------------------------------------------------------------------------
 # Sample 2 — Praxis hierarchical planning with beam-search pruning
 # ---------------------------------------------------------------------------
+
 
 def _praxis_plan_sample() -> DecisionTrace:
     steps = [
@@ -234,6 +236,7 @@ def _praxis_plan_sample() -> DecisionTrace:
 # Sample 3 — Z3 constraint proof
 # ---------------------------------------------------------------------------
 
+
 def _z3_proof_sample() -> DecisionTrace:
     steps = [
         ReasoningStep(
@@ -315,6 +318,7 @@ def _z3_proof_sample() -> DecisionTrace:
 # ---------------------------------------------------------------------------
 # Sample 4 — Telos goal-drift detection
 # ---------------------------------------------------------------------------
+
 
 def _telos_drift_sample() -> DecisionTrace:
     steps = [

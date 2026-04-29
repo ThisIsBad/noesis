@@ -18,6 +18,7 @@ harness can be pinned without a running CLI. The live integration
 lives behind ``pytest.mark.slow`` and expects ``claude`` on PATH plus
 ``NOESIS_*_URL`` env vars for the services.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -94,14 +95,10 @@ class MCPAgent:
         self._system_prompt = system_prompt
         self._query_fn: QueryFn = query_fn if query_fn is not None else query
         if max_budget_usd is not None and max_budget_usd <= 0:
-            raise ValueError(
-                f"max_budget_usd must be positive, got {max_budget_usd}"
-            )
+            raise ValueError(f"max_budget_usd must be positive, got {max_budget_usd}")
         self._max_budget_usd = max_budget_usd
 
-    def act(
-        self, goal: str, observation: str, history: Sequence[ActionOutcome]
-    ) -> str:
+    def act(self, goal: str, observation: str, history: Sequence[ActionOutcome]) -> str:
         return asyncio.run(self._act_async(goal, observation, history))
 
     async def _act_async(
@@ -116,15 +113,9 @@ class MCPAgent:
         )
         async def emit_action(args: dict[str, Any]) -> dict[str, Any]:
             captured["action"] = str(args.get("action", ""))
-            return {
-                "content": [
-                    {"type": "text", "text": "action recorded"}
-                ]
-            }
+            return {"content": [{"type": "text", "text": "action recorded"}]}
 
-        ab_server = create_sdk_mcp_server(
-            name="ab_harness", tools=[emit_action]
-        )
+        ab_server = create_sdk_mcp_server(name="ab_harness", tools=[emit_action])
 
         servers: dict[str, McpServerConfig] = dict(self._mcp_servers)
         servers["ab_harness"] = ab_server
@@ -159,14 +150,10 @@ def _format_prompt(
     if history:
         lines.append("History (most recent last):")
         for i, h in enumerate(history, start=1):
-            lines.append(
-                f"  {i}. action={h.action!r} -> obs={h.observation!r}"
-            )
+            lines.append(f"  {i}. action={h.action!r} -> obs={h.observation!r}")
     else:
         lines.append("History: (empty — this is the first turn)")
-    lines.append(
-        "Call the emit_action tool with the next action string."
-    )
+    lines.append("Call the emit_action tool with the next action string.")
     return "\n".join(lines)
 
 
@@ -222,13 +209,9 @@ def _max_budget_from_env() -> float | None:
     try:
         value = float(raw)
     except ValueError as exc:
-        raise RuntimeError(
-            f"{_BUDGET_ENV_VAR}={raw!r} is not a valid float"
-        ) from exc
+        raise RuntimeError(f"{_BUDGET_ENV_VAR}={raw!r} is not a valid float") from exc
     if value <= 0:
-        raise RuntimeError(
-            f"{_BUDGET_ENV_VAR}={raw!r} must be positive"
-        )
+        raise RuntimeError(f"{_BUDGET_ENV_VAR}={raw!r} must be positive")
     return value
 
 
@@ -265,8 +248,7 @@ def build_treatment_agent(
         max_turns=max_turns,
         query_fn=query_fn,
         max_budget_usd=(
-            max_budget_usd if max_budget_usd is not None
-            else _max_budget_from_env()
+            max_budget_usd if max_budget_usd is not None else _max_budget_from_env()
         ),
     )
 
@@ -291,8 +273,7 @@ def build_baseline_agent(
         max_turns=max_turns,
         query_fn=query_fn,
         max_budget_usd=(
-            max_budget_usd if max_budget_usd is not None
-            else _max_budget_from_env()
+            max_budget_usd if max_budget_usd is not None else _max_budget_from_env()
         ),
     )
 

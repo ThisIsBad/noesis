@@ -99,12 +99,15 @@ def test_praxis_plan_marks_selected_path_and_prunes_alternatives() -> None:
         "plan_id": "plan-abc",
         "goal": "Migrate users table",
         "nodes": {
-            "s1":     {"description": "dump data",    "status": "completed",
-                       "risk_score": 0.1, "score": 0.9, "tool_call": "pg_dump"},
-            "s2":     {"description": "alter schema", "status": "pending",
-                       "risk_score": 0.2, "score": 0.8},
-            "s2_alt": {"description": "drop+recreate","status": "pending",
-                       "risk_score": 0.9, "score": 0.2},
+            "s1": {
+                "description": "dump data",
+                "status": "completed",
+                "risk_score": 0.1,
+                "score": 0.9,
+                "tool_call": "pg_dump",
+            },
+            "s2": {"description": "alter schema", "status": "pending", "risk_score": 0.2, "score": 0.8},
+            "s2_alt": {"description": "drop+recreate", "status": "pending", "risk_score": 0.9, "score": 0.2},
         },
         "edges": [
             ("plan-abc", "s1"),
@@ -117,8 +120,8 @@ def test_praxis_plan_marks_selected_path_and_prunes_alternatives() -> None:
     trace.validate()
 
     statuses = {s.id: s.status for s in trace.steps}
-    assert statuses["s1"] is StepStatus.OK            # on path + completed
-    assert statuses["s2"] is StepStatus.PENDING       # on path, still pending
+    assert statuses["s1"] is StepStatus.OK  # on path + completed
+    assert statuses["s2"] is StepStatus.PENDING  # on path, still pending
     assert statuses["s2_alt"] is StepStatus.REJECTED  # off path → pruned
 
     assert trace.source == "praxis"
@@ -279,8 +282,11 @@ def test_goal_contract_renders_each_constraint() -> None:
 
 def test_inactive_goal_contract_concludes_rejected() -> None:
     contract = _FakeContract(
-        goal_id="g-old", description="retired goal",
-        preconditions=[], postconditions=[], active=False,
+        goal_id="g-old",
+        description="retired goal",
+        preconditions=[],
+        postconditions=[],
+        active=False,
     )
     trace = trace_from_goal_contract(contract)
     concl = next(s for s in trace.steps if s.id == "conclusion")
@@ -313,7 +319,8 @@ class _FakePlan:
 
 def test_plan_ok_when_every_step_completed() -> None:
     plan = _FakePlan(
-        plan_id="p-123", goal="Migrate users",
+        plan_id="p-123",
+        goal="Migrate users",
         steps=[
             _FakePlanStep("s1", "dump data", "pg_dump", _PlanStatusEnum.COMPLETED, "ok", 0.1),
             _FakePlanStep("s2", "alter schema", None, _PlanStatusEnum.COMPLETED, "ok", 0.2),
@@ -327,7 +334,8 @@ def test_plan_ok_when_every_step_completed() -> None:
 
 def test_plan_fails_when_any_step_failed() -> None:
     plan = _FakePlan(
-        plan_id="p-124", goal="Migrate users",
+        plan_id="p-124",
+        goal="Migrate users",
         steps=[
             _FakePlanStep("s1", "dump data", "pg_dump", _PlanStatusEnum.COMPLETED, "ok", 0.1),
             _FakePlanStep("s2", "alter schema", None, _PlanStatusEnum.FAILED, "lock timeout", 0.8),
@@ -426,10 +434,7 @@ def test_trace_from_tree_walks_children() -> None:
                 "id": "b",
                 "kind": "inference",
                 "label": "B",
-                "children": [
-                    {"id": "c", "kind": "conclusion", "label": "C", "status": "ok",
-                     "relation": "yields"}
-                ],
+                "children": [{"id": "c", "kind": "conclusion", "label": "C", "status": "ok", "relation": "yields"}],
             },
         ],
     }

@@ -20,10 +20,10 @@ Supported syntax:
         &   or  ^       Conjunction (and)
         |   or  v       Disjunction (or)
         ~   or  !       Negation (not)
-    
+
     Turnstile:
         |-              Separates premises from conclusion
-    
+
     Premises are separated by commas.
     Parentheses are supported for grouping.
     Atoms are single uppercase letters (A-Z).
@@ -63,12 +63,14 @@ __all__ = [
 
 class ParseError(LogicBrainError):
     """Raised when parsing fails."""
+
     pass
 
 
 @dataclass
 class _Token:
     """A lexical token (internal)."""
+
     type: str
     value: str
     pos: int
@@ -79,22 +81,22 @@ class _Lexer:
 
     # _Token patterns (order matters - longer patterns first)
     PATTERNS = [
-        (r'\s+', None),           # Whitespace (skip)
-        (r'<->', 'IFF'),          # Biconditional
-        (r'<=>', 'IFF'),          # Biconditional (alt)
-        (r'->', 'IMPLIES'),       # Implication
-        (r'=>', 'IMPLIES'),       # Implication (alt)
-        (r'\|-', 'TURNSTILE'),    # Turnstile
-        (r'&', 'AND'),            # Conjunction
-        (r'\^', 'AND'),           # Conjunction (alt)
-        (r'\|', 'OR'),            # Disjunction
-        (r'v(?![a-zA-Z])', 'OR'), # Disjunction (alt, not followed by letter)
-        (r'~', 'NOT'),            # Negation
-        (r'!', 'NOT'),            # Negation (alt)
-        (r'\(', 'LPAREN'),        # Left paren
-        (r'\)', 'RPAREN'),        # Right paren
-        (r',', 'COMMA'),          # Comma
-        (r'[A-Z]', 'ATOM'),       # Atomic proposition
+        (r"\s+", None),  # Whitespace (skip)
+        (r"<->", "IFF"),  # Biconditional
+        (r"<=>", "IFF"),  # Biconditional (alt)
+        (r"->", "IMPLIES"),  # Implication
+        (r"=>", "IMPLIES"),  # Implication (alt)
+        (r"\|-", "TURNSTILE"),  # Turnstile
+        (r"&", "AND"),  # Conjunction
+        (r"\^", "AND"),  # Conjunction (alt)
+        (r"\|", "OR"),  # Disjunction
+        (r"v(?![a-zA-Z])", "OR"),  # Disjunction (alt, not followed by letter)
+        (r"~", "NOT"),  # Negation
+        (r"!", "NOT"),  # Negation (alt)
+        (r"\(", "LPAREN"),  # Left paren
+        (r"\)", "RPAREN"),  # Right paren
+        (r",", "COMMA"),  # Comma
+        (r"[A-Z]", "ATOM"),  # Atomic proposition
     ]
 
     def __init__(self, text: str):
@@ -119,16 +121,14 @@ class _Lexer:
                     break
 
             if not match_found:
-                raise ParseError(
-                    f"Unexpected character '{self.text[self.pos]}' at position {self.pos}"
-                )
+                raise ParseError(f"Unexpected character '{self.text[self.pos]}' at position {self.pos}")
 
         return tokens
 
 
 class _Parser:
     """Recursive descent parser for propositional logic (internal).
-    
+
     Grammar (precedence low to high):
         argument    := premises TURNSTILE expr
         premises    := expr (COMMA expr)*
@@ -154,7 +154,7 @@ class _Parser:
             raise ParseError("Empty input")
 
         # Check for empty premises (just "|- conclusion")
-        if self.current().type == 'TURNSTILE':
+        if self.current().type == "TURNSTILE":
             self.advance()
             conclusion = self.parse_expr()
             return Argument(premises=[], conclusion=conclusion)
@@ -162,12 +162,12 @@ class _Parser:
         # Parse premises
         premises.append(self.parse_expr())
 
-        while self.pos < len(self.tokens) and self.current().type == 'COMMA':
+        while self.pos < len(self.tokens) and self.current().type == "COMMA":
             self.advance()  # consume comma
             premises.append(self.parse_expr())
 
         # Expect turnstile
-        if self.pos >= len(self.tokens) or self.current().type != 'TURNSTILE':
+        if self.pos >= len(self.tokens) or self.current().type != "TURNSTILE":
             raise ParseError(
                 f"Expected '|-' (turnstile) after premises. "
                 f"Got: {self.current().value if self.pos < len(self.tokens) else 'end of input'}"
@@ -179,9 +179,7 @@ class _Parser:
 
         # Check for leftover tokens
         if self.pos < len(self.tokens):
-            raise ParseError(
-                f"Unexpected token after conclusion: '{self.current().value}'"
-            )
+            raise ParseError(f"Unexpected token after conclusion: '{self.current().value}'")
 
         return Argument(premises=premises, conclusion=conclusion)
 
@@ -193,7 +191,7 @@ class _Parser:
         """Parse biconditional (lowest precedence binary)."""
         left = self.parse_impl()
 
-        while self.pos < len(self.tokens) and self.current().type == 'IFF':
+        while self.pos < len(self.tokens) and self.current().type == "IFF":
             self.advance()
             right = self.parse_impl()
             left = LogicalExpression(Connective.IFF, left, right)
@@ -204,7 +202,7 @@ class _Parser:
         """Parse implication (right-associative)."""
         left = self.parse_or()
 
-        if self.pos < len(self.tokens) and self.current().type == 'IMPLIES':
+        if self.pos < len(self.tokens) and self.current().type == "IMPLIES":
             self.advance()
             right = self.parse_impl()  # Right-associative
             return LogicalExpression(Connective.IMPLIES, left, right)
@@ -215,7 +213,7 @@ class _Parser:
         """Parse disjunction."""
         left = self.parse_and()
 
-        while self.pos < len(self.tokens) and self.current().type == 'OR':
+        while self.pos < len(self.tokens) and self.current().type == "OR":
             self.advance()
             right = self.parse_and()
             left = LogicalExpression(Connective.OR, left, right)
@@ -226,7 +224,7 @@ class _Parser:
         """Parse conjunction."""
         left = self.parse_not()
 
-        while self.pos < len(self.tokens) and self.current().type == 'AND':
+        while self.pos < len(self.tokens) and self.current().type == "AND":
             self.advance()
             right = self.parse_not()
             left = LogicalExpression(Connective.AND, left, right)
@@ -235,7 +233,7 @@ class _Parser:
 
     def parse_not(self) -> Expr:
         """Parse negation (prefix, highest precedence)."""
-        if self.pos < len(self.tokens) and self.current().type == 'NOT':
+        if self.pos < len(self.tokens) and self.current().type == "NOT":
             self.advance()
             operand = self.parse_not()  # Allow chained negation: ~~P
             return LogicalExpression(Connective.NOT, operand)
@@ -249,15 +247,15 @@ class _Parser:
 
         token = self.current()
 
-        if token.type == 'ATOM':
+        if token.type == "ATOM":
             self.advance()
             return Proposition(token.value)
 
-        if token.type == 'LPAREN':
+        if token.type == "LPAREN":
             self.advance()
             expr = self.parse_expr()
 
-            if self.pos >= len(self.tokens) or self.current().type != 'RPAREN':
+            if self.pos >= len(self.tokens) or self.current().type != "RPAREN":
                 raise ParseError("Missing closing parenthesis")
             self.advance()
             return expr
@@ -275,13 +273,13 @@ class _Parser:
 
 def parse_expression(text: str) -> Expr:
     """Parse a single logical expression.
-    
+
     Args:
         text: Expression string like "P -> Q" or "(A & B) | C"
-    
+
     Returns:
         Parsed expression tree.
-    
+
     Raises:
         ParseError: If parsing fails.
     """
@@ -297,13 +295,13 @@ def parse_expression(text: str) -> Expr:
 
 def parse_argument(text: str) -> Argument:
     """Parse a full argument with premises and conclusion.
-    
+
     Args:
         text: Argument string like "P -> Q, P |- Q"
-    
+
     Returns:
         Parsed Argument object.
-    
+
     Raises:
         ParseError: If parsing fails.
     """
@@ -319,25 +317,25 @@ def parse_argument(text: str) -> Argument:
 
 def verify(text: str) -> VerificationResult:
     """Parse and verify a logical argument in one step.
-    
+
     This is the main convenience function for quick verification.
-    
+
     Args:
         text: Argument string like "P -> Q, P |- Q"
-    
+
     Returns:
         VerificationResult with valid/invalid status, rule, and explanation.
-    
+
     Raises:
         ParseError: If parsing fails.
-    
+
     Examples:
         >>> result = verify("P -> Q, P |- Q")
         >>> result.valid
         True
         >>> result.rule
         'Modus Ponens'
-        
+
         >>> result = verify("P -> Q, Q |- P")
         >>> result.valid
         False
@@ -351,10 +349,10 @@ def verify(text: str) -> VerificationResult:
 
 def is_tautology(text: str) -> VerificationResult:
     """Check if an expression is a tautology.
-    
+
     Args:
         text: Expression string like "P | ~P"
-    
+
     Returns:
         VerificationResult indicating if the expression is always true.
     """
@@ -365,10 +363,10 @@ def is_tautology(text: str) -> VerificationResult:
 
 def is_contradiction(text: str) -> VerificationResult:
     """Check if an expression is a contradiction.
-    
+
     Args:
         text: Expression string like "P & ~P"
-    
+
     Returns:
         VerificationResult indicating if the expression is always false.
     """
@@ -379,11 +377,11 @@ def is_contradiction(text: str) -> VerificationResult:
 
 def are_equivalent(text_a: str, text_b: str) -> VerificationResult:
     """Check if two expressions are logically equivalent.
-    
+
     Args:
         text_a: First expression
         text_b: Second expression
-    
+
     Returns:
         VerificationResult indicating equivalence.
     """

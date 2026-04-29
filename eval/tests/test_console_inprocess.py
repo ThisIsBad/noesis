@@ -23,6 +23,7 @@ Mirrors the shape of ``test_phase1_inprocess.py`` (in-process, no
 HTTP to external services, deterministic) but at the Starlette HTTP
 layer rather than the bare core layer.
 """
+
 from __future__ import annotations
 
 import json
@@ -113,35 +114,43 @@ class ResultMessage:
 
 def _scripted_messages() -> list[Any]:
     return [
-        AssistantMessage(content=[
-            TextBlock(text="I'll register the goal first."),
-            ToolUseBlock(
-                id="tu_1",
-                name="mcp__telos__register_goal",
-                input={"contract_json": "{}"},
-            ),
-        ]),
-        UserMessage(content=[
-            ToolResultBlock(
-                tool_use_id="tu_1",
-                content="goal registered",
-                is_error=False,
-            ),
-        ]),
-        AssistantMessage(content=[
-            ToolUseBlock(
-                id="tu_2",
-                name="mcp__praxis__decompose_goal",
-                input={"goal": "refactor auth"},
-            ),
-        ]),
-        UserMessage(content=[
-            ToolResultBlock(
-                tool_use_id="tu_2",
-                content="plan ready",
-                is_error=False,
-            ),
-        ]),
+        AssistantMessage(
+            content=[
+                TextBlock(text="I'll register the goal first."),
+                ToolUseBlock(
+                    id="tu_1",
+                    name="mcp__telos__register_goal",
+                    input={"contract_json": "{}"},
+                ),
+            ]
+        ),
+        UserMessage(
+            content=[
+                ToolResultBlock(
+                    tool_use_id="tu_1",
+                    content="goal registered",
+                    is_error=False,
+                ),
+            ]
+        ),
+        AssistantMessage(
+            content=[
+                ToolUseBlock(
+                    id="tu_2",
+                    name="mcp__praxis__decompose_goal",
+                    input={"goal": "refactor auth"},
+                ),
+            ]
+        ),
+        UserMessage(
+            content=[
+                ToolResultBlock(
+                    tool_use_id="tu_2",
+                    content="plan ready",
+                    is_error=False,
+                ),
+            ]
+        ),
         ResultMessage(
             result="registered the goal and verified the plan",
             total_cost_usd=0.07,
@@ -188,9 +197,9 @@ def _parse_sse_events(text: str) -> list[dict[str, Any]]:
         data_line = None
         for line in chunk.splitlines():
             if line.startswith("event:"):
-                event_line = line[len("event:"):].strip()
+                event_line = line[len("event:") :].strip()
             elif line.startswith("data:"):
-                data_line = line[len("data:"):].strip()
+                data_line = line[len("data:") :].strip()
         if data_line is None:
             continue
         try:
@@ -243,7 +252,8 @@ async def test_chat_post_returns_session_id_and_streams_full_sequence(
         assert session_id and trace_id == f"console-{session_id}"
 
         async with client.stream(
-            "GET", f"/api/stream?session_id={session_id}",
+            "GET",
+            f"/api/stream?session_id={session_id}",
         ) as stream_resp:
             assert stream_resp.status_code == 200
             chunks: list[bytes] = []
@@ -273,8 +283,10 @@ async def test_chat_post_returns_session_id_and_streams_full_sequence(
     assert len(trace["steps"]) == 5
     kinds = sorted(s["kind"] for s in trace["steps"])
     assert kinds == [
-        "inference", "inference",
-        "observation", "observation",
+        "inference",
+        "inference",
+        "observation",
+        "observation",
         "question",
     ]
     # session.done event isn't always last across SSE chunk boundaries —
@@ -390,7 +402,8 @@ async def test_session_error_event_emitted_on_sdk_failure(monkeypatch) -> None:
         sid = resp.json()["session_id"]
 
         async with client.stream(
-            "GET", f"/api/stream?session_id={sid}",
+            "GET",
+            f"/api/stream?session_id={sid}",
         ) as stream_resp:
             chunks: list[bytes] = []
             async for chunk in stream_resp.aiter_bytes():

@@ -161,12 +161,14 @@ def test_phase1_drift_detection_catches_forbidden_action(cores) -> None:
     """Telos.check_alignment must flag actions violating forbidding postconditions."""
     telos, _praxis, _mneme, _logos = cores
 
-    telos.register(GoalContract(
-        description="Keep audit log append-only",
-        postconditions=[
-            GoalConstraint(description="never delete audit log entries"),
-        ],
-    ))
+    telos.register(
+        GoalContract(
+            description="Keep audit log append-only",
+            postconditions=[
+                GoalConstraint(description="never delete audit log entries"),
+            ],
+        )
+    )
     drift = telos.check_alignment("delete audit log entries from database")
     assert drift.aligned is False
     assert drift.drift_score > 0.0

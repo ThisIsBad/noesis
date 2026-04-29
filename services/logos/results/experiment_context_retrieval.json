@@ -1,19 +1,19 @@
 {
   "aggregates": {
-    "mean_applicability_check_seconds": 0.035631,
+    "mean_applicability_check_seconds": 0.050082,
     "mean_applicability_precision": 0.388889,
-    "mean_consistency_check_seconds": 0.116129,
+    "mean_consistency_check_seconds": 0.151716,
     "mean_consistency_reduction": 0.697832,
-    "total_wall_time_seconds": 3.419537
+    "total_wall_time_seconds": 4.552394
   },
   "experiment": "context_retrieval",
   "knowledge_base_size": 82,
   "queries": [
     {
-      "applicability_check_seconds": 0.106311,
+      "applicability_check_seconds": 0.148874,
       "applicability_precision": 1.0,
       "applicable_count": 65,
-      "consistency_check_seconds": 0.13534,
+      "consistency_check_seconds": 0.181811,
       "consistency_reduction": 0.207317,
       "consistent_count": 65,
       "query_claim": "((C  ->  C)  ->  D), (A  <->  D), ((A  <->  D)  &  (D  <->  C)), (C  ->  D), (B  |  (A  |  A))  |- ((B  &  A)  <->  (D  <->  B))",
@@ -21,10 +21,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.074192,
+      "consistency_check_seconds": 0.102473,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "B, (A  <->  D), ~(C  <->  C), A, A  |- ((D  |  C)  |  A)",
@@ -32,10 +32,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.09144,
+      "consistency_check_seconds": 0.139469,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "C, ((C  &  B)  |  (B  <->  C)), D, (A  <->  ~B), ~C  |- ((B  ->  D)  |  D)",
@@ -43,10 +43,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.076504,
+      "consistency_check_seconds": 0.109327,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "(~D  &  D), C, D, A, A  |- B",
@@ -54,10 +54,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.124271,
+      "consistency_check_seconds": 0.172949,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "((B  &  B)  <->  (B  |  D)), (C  <->  C), (D  ->  (A  |  A)), ~(B  ->  A), ~(A  |  B)  |- ~(C  <->  C)",
@@ -65,10 +65,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 0.084068,
+      "applicability_check_seconds": 0.125426,
       "applicability_precision": 1.0,
       "applicable_count": 71,
-      "consistency_check_seconds": 0.09849,
+      "consistency_check_seconds": 0.136973,
       "consistency_reduction": 0.134146,
       "consistent_count": 71,
       "query_claim": "B, C, C, C, ((A  <->  B)  |  ~B)  |- (C  &  C)",
@@ -76,10 +76,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 3e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.146511,
+      "consistency_check_seconds": 0.168219,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "~B, C, ((D  &  A)  |  (C  |  B)), ((B  <->  C)  &  (A  &  C)), ~A  |- A",
@@ -87,10 +87,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 0.083513,
+      "applicability_check_seconds": 0.121011,
       "applicability_precision": 1.0,
       "applicable_count": 47,
-      "consistency_check_seconds": 0.139668,
+      "consistency_check_seconds": 0.182333,
       "consistency_reduction": 0.426829,
       "consistent_count": 47,
       "query_claim": "A, ((B  ->  D)  &  D), ((D  ->  A)  <->  ~B), ((B  ->  C)  <->  C), (C  &  (B  <->  B))  |- ((D  &  D)  <->  (C  |  A))",
@@ -98,10 +98,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.139247,
+      "consistency_check_seconds": 0.164616,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "((D  |  D)  &  (C  &  B)), (~D  ->  B), ~C, ~B, (~D  &  ~C)  |- (A  |  B)",
@@ -109,10 +109,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 0.110081,
+      "applicability_check_seconds": 0.15001,
       "applicability_precision": 1.0,
       "applicable_count": 77,
-      "consistency_check_seconds": 0.164455,
+      "consistency_check_seconds": 0.186663,
       "consistency_reduction": 0.060976,
       "consistent_count": 77,
       "query_claim": "((D  |  B)  |  B), ((B  &  A)  <->  D), C, C, ((C  &  C)  ->  C)  |- B",
@@ -120,10 +120,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.112272,
+      "consistency_check_seconds": 0.124803,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "C, (D  &  A), ~(C  |  A), ((C  |  A)  ->  ~D), A  |- ~(D  &  A)",
@@ -134,7 +134,7 @@
       "applicability_check_seconds": 1e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.109478,
+      "consistency_check_seconds": 0.141639,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "((C  &  A)  <->  (D  &  D)), B, ~D, ((A  <->  C)  &  (D  &  B)), A  |- ~B",
@@ -142,10 +142,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.116102,
+      "consistency_check_seconds": 0.154987,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "(~C  <->  (C  ->  C)), (A  ->  C), (~B  |  (B  &  C)), (~B  &  B), A  |- ~(~B  |  (B  &  C))",
@@ -153,10 +153,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 0.067919,
+      "applicability_check_seconds": 0.093884,
       "applicability_precision": 1.0,
       "applicable_count": 62,
-      "consistency_check_seconds": 0.106476,
+      "consistency_check_seconds": 0.140149,
       "consistency_reduction": 0.243902,
       "consistent_count": 62,
       "query_claim": "((B  &  A)  <->  (C  &  D)), D, A, B, (C  <->  B)  |- D",
@@ -164,10 +164,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 0.087042,
+      "applicability_check_seconds": 0.118592,
       "applicability_precision": 1.0,
       "applicable_count": 62,
-      "consistency_check_seconds": 0.110598,
+      "consistency_check_seconds": 0.138333,
       "consistency_reduction": 0.243902,
       "consistent_count": 62,
       "query_claim": "((C  <->  B)  &  A), (D  &  (D  ->  A)), C, C, B  |- (A  <->  (D  <->  B))",
@@ -175,10 +175,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 0.102416,
+      "applicability_check_seconds": 0.143647,
       "applicability_precision": 1.0,
       "applicable_count": 62,
-      "consistency_check_seconds": 0.123028,
+      "consistency_check_seconds": 0.174309,
       "consistency_reduction": 0.243902,
       "consistent_count": 62,
       "query_claim": "B, (A  &  (A  ->  D)), B, ((A  &  B)  ->  (C  <->  D)), (B  |  ~D)  |- ((D  |  C)  <->  (B  &  D))",
@@ -186,10 +186,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.089915,
+      "consistency_check_seconds": 0.125209,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "~A, C, B, D, (B  <->  (A  &  D))  |- (A  &  (C  |  B))",
@@ -197,10 +197,10 @@
       "unfiltered_count": 82
     },
     {
-      "applicability_check_seconds": 1e-06,
+      "applicability_check_seconds": 2e-06,
       "applicability_precision": 0.0,
       "applicable_count": 0,
-      "consistency_check_seconds": 0.132332,
+      "consistency_check_seconds": 0.186631,
       "consistency_reduction": 1.0,
       "consistent_count": 0,
       "query_claim": "~(D  ->  C), ~(B  ->  D), ((D  &  B)  <->  (D  |  A)), ~(D  <->  D), (D  |  (A  |  D))  |- C",

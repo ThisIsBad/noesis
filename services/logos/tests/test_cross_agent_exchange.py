@@ -78,9 +78,7 @@ def test_cross_agent_exchange_happy_path_roundtrip_trust_and_action_execution() 
     assert verification.complete is True
     assert verification.invalid_nodes == []
 
-    ledger = FederatedProofLedger(
-        TrustPolicy(domain_id="production", trusted_domains=("research-lab",))
-    )
+    ledger = FederatedProofLedger(TrustPolicy(domain_id="production", trusted_domains=("research-lab",)))
     record = ledger.evaluate_bundle(
         bundle_id="exchange-1",
         remote_domain_id="research-lab",
@@ -128,9 +126,7 @@ def test_cross_agent_exchange_detects_tampered_bundle_node() -> None:
     assert verification.complete is True
     assert verification.invalid_nodes == ["prop"]
 
-    ledger = FederatedProofLedger(
-        TrustPolicy(domain_id="production", trusted_domains=("research-lab",))
-    )
+    ledger = FederatedProofLedger(TrustPolicy(domain_id="production", trusted_domains=("research-lab",)))
     record = ledger.evaluate_bundle(
         bundle_id="exchange-2",
         remote_domain_id="research-lab",
@@ -149,9 +145,7 @@ def test_cross_agent_exchange_rejects_untrusted_domain_despite_valid_bundle() ->
     assert verification.valid_bundle is True
     assert verification.complete is True
 
-    ledger = FederatedProofLedger(
-        TrustPolicy(domain_id="production", trusted_domains=("research-lab",))
-    )
+    ledger = FederatedProofLedger(TrustPolicy(domain_id="production", trusted_domains=("research-lab",)))
     record = ledger.evaluate_bundle(
         bundle_id="exchange-3",
         remote_domain_id="untrusted-lab",
@@ -178,9 +172,7 @@ def test_cross_agent_exchange_reports_missing_dependency_in_incomplete_bundle() 
     assert verification.complete is False
     assert verification.missing_dependencies == ["composed->z3"]
 
-    ledger = FederatedProofLedger(
-        TrustPolicy(domain_id="production", trusted_domains=("research-lab",))
-    )
+    ledger = FederatedProofLedger(TrustPolicy(domain_id="production", trusted_domains=("research-lab",)))
     record = ledger.evaluate_bundle(
         bundle_id="exchange-4",
         remote_domain_id="research-lab",

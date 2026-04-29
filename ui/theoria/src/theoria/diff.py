@@ -21,7 +21,13 @@ from theoria.models import DecisionTrace, Edge, EdgeRelation, ReasoningStep, Ste
 
 # Fields on a ReasoningStep that, when they differ, count as a "change".
 _STEP_COMPARE_FIELDS: tuple[str, ...] = (
-    "kind", "label", "detail", "status", "confidence", "source_ref", "meta",
+    "kind",
+    "label",
+    "detail",
+    "status",
+    "confidence",
+    "source_ref",
+    "meta",
 )
 
 
@@ -39,9 +45,7 @@ class StepChange:
             "id": self.id,
             "old": self.old.to_dict(),
             "new": self.new.to_dict(),
-            "field_changes": {
-                k: [_scalar(v[0]), _scalar(v[1])] for k, v in self.field_changes.items()
-            },
+            "field_changes": {k: [_scalar(v[0]), _scalar(v[1])] for k, v in self.field_changes.items()},
         }
 
 
@@ -177,6 +181,7 @@ def _outcome_change_payload(
 # Markdown rendering of a diff
 # ---------------------------------------------------------------------------
 
+
 def diff_to_markdown(diff: TraceDiff, *, embed_mermaid: bool = True) -> str:
     lines: list[str] = [
         f"# Trace diff: {_md_escape(diff.a_title or diff.a_id)} → {_md_escape(diff.b_title or diff.b_id)}",
@@ -198,21 +203,22 @@ def diff_to_markdown(diff: TraceDiff, *, embed_mermaid: bool = True) -> str:
         return "\n".join(lines).rstrip() + "\n"
 
     if embed_mermaid:
-        lines.extend(["## Merged diff graph", "", "```mermaid", diff_to_mermaid(diff).rstrip(),
-                      "```", ""])
+        lines.extend(["## Merged diff graph", "", "```mermaid", diff_to_mermaid(diff).rstrip(), "```", ""])
 
     if diff.added_steps:
         lines.extend(["## Added steps", ""])
         for step in diff.added_steps:
-            lines.append(f"- {_md_code(step.id)} — **{step.kind.value}** "
-                         f"({step.status.value}) — {_md_escape(step.label)}")
+            lines.append(
+                f"- {_md_code(step.id)} — **{step.kind.value}** ({step.status.value}) — {_md_escape(step.label)}"
+            )
         lines.append("")
 
     if diff.removed_steps:
         lines.extend(["## Removed steps", ""])
         for step in diff.removed_steps:
-            lines.append(f"- {_md_code(step.id)} — **{step.kind.value}** "
-                         f"({step.status.value}) — {_md_escape(step.label)}")
+            lines.append(
+                f"- {_md_code(step.id)} — **{step.kind.value}** ({step.status.value}) — {_md_escape(step.label)}"
+            )
         lines.append("")
 
     if diff.changed_steps:
@@ -223,10 +229,7 @@ def diff_to_markdown(diff: TraceDiff, *, embed_mermaid: bool = True) -> str:
             lines.append("| Field | Before | After |")
             lines.append("|-------|--------|-------|")
             for fname, (old_v, new_v) in change.field_changes.items():
-                lines.append(
-                    f"| {_md_escape(fname)} | {_md_code(_stringify(old_v))} | "
-                    f"{_md_code(_stringify(new_v))} |"
-                )
+                lines.append(f"| {_md_escape(fname)} | {_md_code(_stringify(old_v))} | {_md_code(_stringify(new_v))} |")
             lines.append("")
 
     if diff.added_edges:
@@ -234,8 +237,7 @@ def diff_to_markdown(diff: TraceDiff, *, embed_mermaid: bool = True) -> str:
         for edge in diff.added_edges:
             lines.append(
                 f"- {_md_code(edge.source)} → {_md_code(edge.target)} "
-                f"({edge.relation.value})"
-                + (f" — *{_md_escape(edge.label)}*" if edge.label else "")
+                f"({edge.relation.value})" + (f" — *{_md_escape(edge.label)}*" if edge.label else "")
             )
         lines.append("")
 
@@ -244,8 +246,7 @@ def diff_to_markdown(diff: TraceDiff, *, embed_mermaid: bool = True) -> str:
         for edge in diff.removed_edges:
             lines.append(
                 f"- {_md_code(edge.source)} → {_md_code(edge.target)} "
-                f"({edge.relation.value})"
-                + (f" — *{_md_escape(edge.label)}*" if edge.label else "")
+                f"({edge.relation.value})" + (f" — *{_md_escape(edge.label)}*" if edge.label else "")
             )
         lines.append("")
 
@@ -266,6 +267,7 @@ def _stringify(value: Any) -> str:
         return "true" if value else "false"
     if isinstance(value, (dict, list, tuple)):
         import json as _json
+
         return _json.dumps(_scalar(value), sort_keys=True)
     return str(value)
 
@@ -298,7 +300,8 @@ def diff_to_mermaid(diff: TraceDiff) -> str:
     # render against the merged graph using the 'same' class.). We skip them
     # to keep the diff graph focused on what changed.
     unchanged_seed = {
-        sid: None for sid in diff.unchanged_step_ids
+        sid: None
+        for sid in diff.unchanged_step_ids
         # skip — no ReasoningStep to render; unchanged stuff is visual clutter
     }
     _ = unchanged_seed
@@ -336,11 +339,7 @@ def _mermaid_id(raw: str) -> str:
 
 
 def _mermaid_escape(text: str) -> str:
-    return (text.replace("\\", "\\\\")
-                .replace('"', "&quot;")
-                .replace("|", "&#124;")
-                .replace("\n", " "))
+    return text.replace("\\", "\\\\").replace('"', "&quot;").replace("|", "&#124;").replace("\n", " ")
 
 
-__all__: Sequence[str] = ("diff_traces", "diff_to_markdown", "diff_to_mermaid",
-                          "TraceDiff", "StepChange")
+__all__: Sequence[str] = ("diff_traces", "diff_to_markdown", "diff_to_mermaid", "TraceDiff", "StepChange")

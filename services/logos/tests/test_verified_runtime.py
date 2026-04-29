@@ -171,15 +171,11 @@ def test_runtime_long_horizon_sequence_keeps_all_actions_verified() -> None:
         ),
     ]
 
-    outcomes = [
-        runtime.run(request, adapters={"verify_argument": _valid_adapter})
-        for request in requests
-    ]
+    outcomes = [runtime.run(request, adapters={"verify_argument": _valid_adapter}) for request in requests]
 
     assert all(outcome.completed for outcome in outcomes)
     assert all(
-        outcome.action_result is not None and outcome.action_result.status == "completed"
-        for outcome in outcomes
+        outcome.action_result is not None and outcome.action_result.status == "completed" for outcome in outcomes
     )
 
 

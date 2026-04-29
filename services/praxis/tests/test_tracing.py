@@ -1,4 +1,5 @@
 """Praxis tracing wiring tests (no network — disabled mode only)."""
+
 import praxis.tracing as tracing_mod
 from praxis.tracing import get_tracer, reset_tracer_for_tests
 

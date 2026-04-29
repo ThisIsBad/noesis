@@ -11,6 +11,7 @@ The critical invariant (from PR #49): any parameter whose name ends in
 declared annotation is not *exactly* ``str``, which silently turns a
 serialised payload into a ``dict`` before Pydantic validation.
 """
+
 from __future__ import annotations
 
 import praxis.mcp_server_http as server
@@ -18,8 +19,11 @@ import praxis.mcp_server_http as server
 EXPECTED_TOOLS: dict[str, set[str]] = {
     "decompose_goal": {"goal", "parent_plan_id"},
     "evaluate_step": {
-        "plan_id", "description", "tool_call",
-        "risk_score", "parent_step_id",
+        "plan_id",
+        "description",
+        "tool_call",
+        "risk_score",
+        "parent_step_id",
     },
     "commit_step": {"plan_id", "step_id", "outcome", "success"},
     "backtrack": {"plan_id"},

@@ -5,6 +5,6 @@
   "expected_invalid": 100,
   "expected_valid": 100,
   "experiment": "memory_consistency_mixed_accumulation",
-  "invalid_query_seconds": 5e-05,
-  "valid_query_seconds": 7.1e-05
+  "invalid_query_seconds": 5.1e-05,
+  "valid_query_seconds": 0.000125
 }

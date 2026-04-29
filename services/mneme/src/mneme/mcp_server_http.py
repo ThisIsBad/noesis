@@ -26,7 +26,9 @@ _data_dir = os.getenv("MNEME_DATA_DIR", "/data")
 _secret_set = bool(os.getenv("MNEME_SECRET"))
 log.info(
     "mneme boot: data_dir=%s port=%s secret_set=%s",
-    _data_dir, os.getenv("PORT", "8000"), _secret_set,
+    _data_dir,
+    os.getenv("PORT", "8000"),
+    _secret_set,
 )
 try:
     os.makedirs(_data_dir, exist_ok=True)
@@ -52,14 +54,11 @@ log.info("mneme logos sidecar: configured=%s", _logos_client is not None)
 # MNEME_ALLOWED_HOSTS is a comma-separated list of extra allowed Hosts;
 # defaults keep localhost working for local dev.
 _allowed_hosts = [
-    h.strip()
-    for h in os.getenv("MNEME_ALLOWED_HOSTS", "").split(",")
-    if h.strip()
+    h.strip() for h in os.getenv("MNEME_ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
 _transport_security = TransportSecuritySettings(
     enable_dns_rebinding_protection=bool(_allowed_hosts),
-    allowed_hosts=_allowed_hosts
-    + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
+    allowed_hosts=_allowed_hosts + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
     allowed_origins=[f"https://{h}" for h in _allowed_hosts]
     + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
 )
@@ -185,23 +184,27 @@ async def _certify_memory_impl(
 
     cert = await logos_client.certify_claim(memory.content)
     if cert is None:
-        return json.dumps({
-            "status": "logos_unreachable",
-            "memory_id": memory_id,
-            "error": logos_client.last_error or "unknown",
-        })
+        return json.dumps(
+            {
+                "status": "logos_unreachable",
+                "memory_id": memory_id,
+                "error": logos_client.last_error or "unknown",
+            }
+        )
 
     updated = core.attach_certificate(memory_id, cert)
     if updated is None:  # pragma: no cover — forget-race after the get()
         return json.dumps({"status": "not_found", "memory_id": memory_id})
 
-    return json.dumps({
-        "status": "certified" if cert.verified else "refuted",
-        "memory_id": memory_id,
-        "verified": cert.verified,
-        "method": cert.method,
-        "proven": updated.proven,
-    })
+    return json.dumps(
+        {
+            "status": "certified" if cert.verified else "refuted",
+            "memory_id": memory_id,
+            "verified": cert.verified,
+            "method": cert.method,
+            "proven": updated.proven,
+        }
+    )
 
 
 @mcp.tool()
@@ -227,9 +230,7 @@ async def certify_memory(memory_id: str) -> str:
     parse. ``last_error`` from the underlying client is surfaced in
     the ``error`` field so logs stay diagnostic.
     """
-    with get_tracer().span(
-        "certify_memory", metadata={"memory_id": memory_id}
-    ):
+    with get_tracer().span("certify_memory", metadata={"memory_id": memory_id}):
         return await _certify_memory_impl(memory_id, _core, _logos_client)
 
 
@@ -286,5 +287,6 @@ app.add_middleware(_BearerAuth)
 
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

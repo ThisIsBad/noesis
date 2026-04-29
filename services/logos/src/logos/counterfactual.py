@@ -333,10 +333,7 @@ def _evaluate_safety(
             and utility_model.execution_cost > safety_bounds.max_execution_cost
         ):
             violations.append("execution_cost_exceeds_cap")
-        if (
-            safety_bounds.max_risk_penalty is not None
-            and utility_model.risk_penalty > safety_bounds.max_risk_penalty
-        ):
+        if safety_bounds.max_risk_penalty is not None and utility_model.risk_penalty > safety_bounds.max_risk_penalty:
             violations.append("risk_penalty_exceeds_cap")
         if (
             safety_bounds.min_confidence_weight is not None

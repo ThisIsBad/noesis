@@ -5,6 +5,7 @@ and ``replan(observation)`` (recovery plan after a failed step). The
 runner is generic so a Praxis-backed planner can plug in by adapting
 ``PraxisCore.decompose`` + ``backtrack`` to this interface.
 """
+
 from __future__ import annotations
 
 from typing import Iterable, Protocol

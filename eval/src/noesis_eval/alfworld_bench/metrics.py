@@ -5,6 +5,7 @@ Tracks the three Praxis Stage 3 acceptance signals:
     * backtrack-recovery rate (fraction of injected failures recovered)
     * max plan depth observed (proxy for hallucination risk)
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

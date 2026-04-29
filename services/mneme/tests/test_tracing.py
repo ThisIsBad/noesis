@@ -4,6 +4,7 @@ These tests cover the get_tracer() factory in isolation — they do not
 import the full FastMCP server module, which touches the filesystem at
 import time and would require MNEME_DATA_DIR plumbing.
 """
+
 import mneme.tracing as tracing_mod
 from mneme.tracing import get_tracer, reset_tracer_for_tests
 

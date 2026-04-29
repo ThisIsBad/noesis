@@ -12,9 +12,10 @@ Round-trip guarantee:
 """
 
 from typing import Any, Literal
+
 from pydantic import BaseModel, Field
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION: Literal["1.0"] = "1.0"
 
 # Claim types — match logos.certificate constants.
 PROPOSITIONAL_CLAIM = "propositional"

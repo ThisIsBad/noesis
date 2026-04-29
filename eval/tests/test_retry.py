@@ -15,6 +15,7 @@ These tests pin the new contract:
 4. Non-retryable exceptions (404, ValueError, mypy-style logic bugs)
    stay non-retryable even when wrapped.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -30,9 +31,7 @@ pytestmark = pytest.mark.unit
 def _status_error(code: int) -> httpx.HTTPStatusError:
     request = httpx.Request("GET", "https://example.test/sse")
     response = httpx.Response(code, request=request)
-    return httpx.HTTPStatusError(
-        f"HTTP {code}", request=request, response=response
-    )
+    return httpx.HTTPStatusError(f"HTTP {code}", request=request, response=response)
 
 
 @pytest.mark.parametrize("code", [502, 503, 504])
@@ -63,16 +62,12 @@ def test_bare_value_error_is_not_retryable() -> None:
 
 def test_exception_group_with_retryable_leaf_is_retryable() -> None:
     """The original bug: sse_client wraps the 502 in a TaskGroup exception."""
-    group = BaseExceptionGroup(
-        "handshake failed", [_status_error(502)]
-    )
+    group = BaseExceptionGroup("handshake failed", [_status_error(502)])
     assert _is_retryable(group)
 
 
 def test_exception_group_with_connect_timeout_is_retryable() -> None:
-    group = BaseExceptionGroup(
-        "handshake failed", [httpx.ConnectTimeout("timed out")]
-    )
+    group = BaseExceptionGroup("handshake failed", [httpx.ConnectTimeout("timed out")])
     assert _is_retryable(group)
 
 
@@ -91,7 +86,5 @@ def test_exception_group_with_only_non_retryable_is_not_retryable() -> None:
 
 def test_exception_group_is_retryable_if_any_leaf_matches() -> None:
     """Mixed group: one ValueError, one 502 — still retryable."""
-    group = BaseExceptionGroup(
-        "mixed", [ValueError("oops"), _status_error(502)]
-    )
+    group = BaseExceptionGroup("mixed", [ValueError("oops"), _status_error(502)])
     assert _is_retryable(group)

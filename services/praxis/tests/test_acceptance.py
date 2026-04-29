@@ -7,6 +7,7 @@ Sourced from docs/ROADMAP.md:
 These tests assert the numeric thresholds from the roadmap and double as
 regression guards on the underlying algorithms.
 """
+
 from __future__ import annotations
 
 import random

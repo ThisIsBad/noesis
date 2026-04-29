@@ -20,6 +20,7 @@ Pins:
   agent names across the tree — each surfaces a usable message
   instead of a silent zero-row output.
 """
+
 from __future__ import annotations
 
 import json
@@ -100,7 +101,10 @@ def test_history_prints_one_row_per_run(
     only; format-details live in the column-header test below."""
     for i in (1, 2, 3):
         _write_run(
-            tmp_path, f"run-{i}", "oracle", "null",
+            tmp_path,
+            f"run-{i}",
+            "oracle",
+            "null",
             [(f"t{j}", j < 4, False) for j in range(5)],
         )
 
@@ -124,7 +128,10 @@ def test_history_pooled_row_uses_majority_treatment(
     per-run rows."""
     for i in (1, 2, 3):
         _write_run(
-            tmp_path, f"run-{i}", "oracle", "null",
+            tmp_path,
+            f"run-{i}",
+            "oracle",
+            "null",
             [(f"t{j}", j < 4, False) for j in range(5)],
         )
 
@@ -145,7 +152,10 @@ def test_history_pooled_episode_count_reflects_all_runs(
     — pin it so a refactor can't silently drop pooling."""
     for i in (1, 2, 3):
         _write_run(
-            tmp_path, f"run-{i}", "oracle", "null",
+            tmp_path,
+            f"run-{i}",
+            "oracle",
+            "null",
             [(f"t{j}", j < 4, False) for j in range(5)],
         )
 
@@ -167,7 +177,10 @@ def test_history_skips_subdirs_without_two_jsonls(
     skipped, not crash the command — but the user needs to see
     *which* dir was skipped so they can investigate."""
     _write_run(
-        tmp_path, "good", "oracle", "null",
+        tmp_path,
+        "good",
+        "oracle",
+        "null",
         [(f"t{i}", True, False) for i in range(3)],
     )
     (tmp_path / "broken").mkdir()
@@ -204,11 +217,17 @@ def test_history_skips_pooled_row_when_too_many_agents(
     mcp-treatment vs mcp-baseline) — pooling would mix apples and
     oranges. Must refuse to emit a pooled delta, and say why."""
     _write_run(
-        tmp_path, "week1", "oracle", "null",
+        tmp_path,
+        "week1",
+        "oracle",
+        "null",
         [(f"t{i}", i < 4, False) for i in range(5)],
     )
     _write_run(
-        tmp_path, "week2", "mcp-treatment", "mcp-baseline",
+        tmp_path,
+        "week2",
+        "mcp-treatment",
+        "mcp-baseline",
         [(f"t{i}", i < 3, False) for i in range(5)],
     )
 
@@ -236,7 +255,10 @@ def test_history_uses_delta_json_to_choose_treatment_side(
     hint the per-run row would label null as treatment. Pin that
     the hint is read and respected."""
     _write_run(
-        tmp_path, "run-1", "oracle", "null",
+        tmp_path,
+        "run-1",
+        "oracle",
+        "null",
         [(f"t{i}", i < 4, False) for i in range(5)],
     )
 
@@ -258,7 +280,10 @@ def test_history_falls_back_to_alphabetical_when_delta_json_missing(
     concatenated JSONLs) fall back to alphabetical filename order.
     Documented behaviour — not ideal, but predictable."""
     _write_run(
-        tmp_path, "run-1", "oracle", "null",
+        tmp_path,
+        "run-1",
+        "oracle",
+        "null",
         [(f"t{i}", i < 4, False) for i in range(5)],
         drop_delta_json=True,
     )

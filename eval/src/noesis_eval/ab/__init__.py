@@ -24,6 +24,7 @@ Four reference agents ship:
       baseline (no Noesis servers) so the only variable in the A/B is
       the MCP surface.
 """
+
 from .agent import (
     ActionOutcome,
     Agent,

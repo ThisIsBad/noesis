@@ -171,10 +171,12 @@ def test_certificate_store_query_consistent_filters_by_premises() -> None:
     certificate_store({"action": "store", "certificate": certify("P -> Q, P |- Q").to_dict()})
     certificate_store({"action": "store", "certificate": certify("A -> B, A |- B").to_dict()})
 
-    result = certificate_store({
-        "action": "query_consistent",
-        "premises": ["~Q"],
-    })
+    result = certificate_store(
+        {
+            "action": "query_consistent",
+            "premises": ["~Q"],
+        }
+    )
 
     assert result["premises_contradictory"] is False
     assert isinstance(result["consistent_count"], int)
@@ -187,10 +189,12 @@ def test_certificate_store_query_consistent_filters_by_premises() -> None:
 def test_certificate_store_query_consistent_detects_contradictory_premises() -> None:
     certificate_store({"action": "store", "certificate": certify("P -> Q, P |- Q").to_dict()})
 
-    result = certificate_store({
-        "action": "query_consistent",
-        "premises": ["P", "~P"],
-    })
+    result = certificate_store(
+        {
+            "action": "query_consistent",
+            "premises": ["P", "~P"],
+        }
+    )
 
     assert result["premises_contradictory"] is True
     assert result["consistent_count"] == 0
@@ -200,10 +204,12 @@ def test_certificate_store_query_consistent_detects_contradictory_premises() -> 
 def test_certificate_store_query_consistent_with_empty_premises() -> None:
     certificate_store({"action": "store", "certificate": certify("P -> Q, P |- Q").to_dict()})
 
-    result = certificate_store({
-        "action": "query_consistent",
-        "premises": [],
-    })
+    result = certificate_store(
+        {
+            "action": "query_consistent",
+            "premises": [],
+        }
+    )
 
     assert result["premises_contradictory"] is False
     assert result["consistent_count"] >= 1
@@ -219,10 +225,12 @@ def test_certificate_store_query_ranked_returns_scored_entries() -> None:
     certificate_store({"action": "store", "certificate": certify("P -> Q, P |- Q").to_dict()})
     certificate_store({"action": "store", "certificate": certify("A -> B, A |- B").to_dict()})
 
-    result = certificate_store({
-        "action": "query_ranked",
-        "query": "P implies Q",
-    })
+    result = certificate_store(
+        {
+            "action": "query_ranked",
+            "query": "P implies Q",
+        }
+    )
 
     assert isinstance(result["count"], int)
     assert isinstance(result["total_candidates"], int)
@@ -239,10 +247,12 @@ def test_certificate_store_query_ranked_sorts_by_descending_score() -> None:
     certificate_store({"action": "store", "certificate": certify("A -> B, A |- B").to_dict()})
     certificate_store({"action": "store", "certificate": certify("P |- P").to_dict()})
 
-    result = certificate_store({
-        "action": "query_ranked",
-        "query": "P Q",
-    })
+    result = certificate_store(
+        {
+            "action": "query_ranked",
+            "query": "P Q",
+        }
+    )
 
     entries = result["entries"]
     if len(entries) >= 2:
@@ -255,11 +265,13 @@ def test_certificate_store_query_ranked_respects_limit() -> None:
     certificate_store({"action": "store", "certificate": certify("P -> Q, P |- Q").to_dict()})
     certificate_store({"action": "store", "certificate": certify("A -> B, A |- B").to_dict()})
 
-    result = certificate_store({
-        "action": "query_ranked",
-        "query": "P Q A B",
-        "limit": 1,
-    })
+    result = certificate_store(
+        {
+            "action": "query_ranked",
+            "query": "P Q A B",
+            "limit": 1,
+        }
+    )
 
     assert result["count"] <= 1
 

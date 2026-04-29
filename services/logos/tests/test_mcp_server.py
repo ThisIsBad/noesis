@@ -58,7 +58,7 @@ def test_module_import_fails_cleanly_without_mcp_dependency() -> None:
             return real_import(name, globals, locals, fromlist, level)
 
         builtins.__import__ = fake_import
-        runpy.run_path(r"{PKG_ROOT / 'logos' / 'mcp_server.py'}", run_name="logos.mcp_server")
+        runpy.run_path(r"{PKG_ROOT / "logos" / "mcp_server.py"}", run_name="logos.mcp_server")
         """
     )
     result = subprocess.run(
@@ -174,9 +174,7 @@ def test_stdio_server_lists_tools_and_handles_calls() -> None:
                         "description": "Main claim",
                     },
                 )
-                structured_orchestration = cast(
-                    dict[str, object], orchestration_result.structuredContent
-                )
+                structured_orchestration = cast(dict[str, object], orchestration_result.structuredContent)
                 assert structured_orchestration["status"] == "created"
 
                 bus_result = await session.call_tool(

@@ -71,14 +71,14 @@ class CheckResult:
 @dataclass
 class Z3Session:
     """Interactive Z3 session for incremental constraint solving.
-    
+
     This class wraps Z3's incremental solving capabilities, providing:
     - Variable declaration with type inference
     - Constraint assertion with optional naming
     - Push/pop for backtracking (exploration of different branches)
     - Model extraction for satisfiable results
     - Unsat core extraction for debugging
-    
+
     Example
     -------
     >>> session = Z3Session()
@@ -109,14 +109,9 @@ class Z3Session:
         if self.track_unsat_core:
             self._solver.set("unsat_core", True)
 
-    def declare(
-        self,
-        name: str,
-        sort: str,
-        size: int | None = None
-    ) -> None:
+    def declare(self, name: str, sort: str, size: int | None = None) -> None:
         """Declare a variable with the given name and sort.
-        
+
         Parameters
         ----------
         name : str
@@ -125,12 +120,12 @@ class Z3Session:
             Type of variable: "Int", "Real", "Bool", or "BitVec".
         size : int, optional
             Bit width for BitVec sort.
-        
+
         Raises
         ------
         ValueError
             If the sort is unknown or BitVec without size.
-        
+
         Example
         -------
         >>> session.declare("x", "Int")
@@ -153,17 +148,11 @@ class Z3Session:
                 raise ValueError("BitVec requires size parameter")
             self._variables[name] = z3.BitVec(name, size)
         else:
-            raise ValueError(
-                f"Unknown sort '{sort}'. Supported: Int, Real, Bool, BitVec"
-            )
+            raise ValueError(f"Unknown sort '{sort}'. Supported: Int, Real, Bool, BitVec")
 
-    def assert_constraint(
-        self,
-        constraint: str,
-        name: str | None = None
-    ) -> None:
+    def assert_constraint(self, constraint: str, name: str | None = None) -> None:
         """Assert a constraint in the current scope.
-        
+
         Parameters
         ----------
         constraint : str
@@ -171,7 +160,7 @@ class Z3Session:
             Supports: +, -, *, /, >, <, >=, <=, ==, !=, and, or, not, =>
         name : str, optional
             Name for tracking in unsat core.
-        
+
         Example
         -------
         >>> session.assert_constraint("x > 0")
@@ -198,7 +187,7 @@ class Z3Session:
 
     def check(self) -> CheckResult:
         """Check satisfiability of current constraints.
-        
+
         Returns
         -------
         CheckResult
@@ -209,11 +198,7 @@ class Z3Session:
         if result == z3.sat:
             model = self._solver.model()
             model_dict = self._extract_model(model)
-            return CheckResult(
-                status="sat",
-                satisfiable=True,
-                model=model_dict
-            )
+            return CheckResult(status="sat", satisfiable=True, model=model_dict)
         elif result == z3.unsat:
             from logos.diagnostics import Z3DiagnosticParser
 
@@ -254,9 +239,9 @@ class Z3Session:
 
     def push(self) -> None:
         """Create a new scope for backtracking.
-        
+
         All assertions made after push() can be undone with pop().
-        
+
         Example
         -------
         >>> session.assert_constraint("x > 0")
@@ -271,21 +256,19 @@ class Z3Session:
 
     def pop(self, n: int = 1) -> None:
         """Pop n scopes, removing all assertions made in those scopes.
-        
+
         Parameters
         ----------
         n : int
             Number of scopes to pop. Default is 1.
-        
+
         Raises
         ------
         ValueError
             If trying to pop more scopes than pushed.
         """
         if n > self._scope_depth:
-            raise ValueError(
-                f"Cannot pop {n} scopes; only {self._scope_depth} active"
-            )
+            raise ValueError(f"Cannot pop {n} scopes; only {self._scope_depth} active")
         self._solver.pop(n)
         self._scope_depth -= n
 
@@ -329,9 +312,7 @@ class Z3Session:
             if isinstance(result, bool):
                 result = z3.BoolVal(result)
             if not isinstance(result, z3.BoolRef):
-                raise ConstraintError(
-                    f"Constraint '{constraint}' did not evaluate to a boolean expression"
-                )
+                raise ConstraintError(f"Constraint '{constraint}' did not evaluate to a boolean expression")
             return result
         except ConstraintError:
             raise
@@ -345,7 +326,7 @@ class Z3Session:
         expr_str = expr_str.replace("||", " or ")
         expr_str = re.sub(r"(?<![=!<>])!(?!=)", " not ", expr_str)
         expr_str = self._rewrite_implication(expr_str)
-        expr_str = re.sub(r'(?<![<>=!])=(?![=])', '==', expr_str)
+        expr_str = re.sub(r"(?<![<>=!])=(?![=])", "==", expr_str)
         return expr_str
 
     def _rewrite_implication(self, expr: str) -> str:

@@ -4,6 +4,7 @@ Covers SQLite + ChromaDB storage: store → retrieve → record-use.
 Uses an ephemeral Chroma client + tmp-file SQLite so tests have no
 filesystem side effects.
 """
+
 from __future__ import annotations
 
 import chromadb

@@ -36,6 +36,7 @@ from logos.verifier import PropositionalVerifier
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class GeneratorConfig:
     """Controls difficulty of generated problems."""
@@ -68,6 +69,7 @@ EXTREME = GeneratorConfig(num_variables=6, num_premises=8, max_depth=3)
 # Problem generator
 # ---------------------------------------------------------------------------
 
+
 class ProblemGenerator:
     """Generates fresh, unique propositional logic problems.
 
@@ -95,9 +97,7 @@ class ProblemGenerator:
             problems.append(problem)
         return problems
 
-    def generate_exam(
-        self, count: int, output_path: Path | None = None
-    ) -> dict[str, Any]:
+    def generate_exam(self, count: int, output_path: Path | None = None) -> dict[str, Any]:
         """Generate a complete exam with metadata.
 
         Returns a dict that can be serialized to JSON. The exam includes:
@@ -118,12 +118,14 @@ class ProblemGenerator:
         answer_key = {}
 
         for p in problems:
-            exam_problems.append({
-                "id": p["id"],
-                "difficulty": p["difficulty"],
-                "natural_language": p["natural_language"],
-                "formal": p["formal"],
-            })
+            exam_problems.append(
+                {
+                    "id": p["id"],
+                    "difficulty": p["difficulty"],
+                    "natural_language": p["natural_language"],
+                    "formal": p["formal"],
+                }
+            )
             answer_key[p["id"]] = {
                 "valid": p["ground_truth_valid"],
                 "rule": p["rule"],
@@ -155,10 +157,7 @@ class ProblemGenerator:
 
     def _generate_one(self, index: int) -> dict[str, Any]:
         """Generate a single problem with verified ground truth."""
-        variables = [
-            Proposition(name)
-            for name in self.VARIABLE_NAMES[: self.config.num_variables]
-        ]
+        variables = [Proposition(name) for name in self.VARIABLE_NAMES[: self.config.num_variables]]
 
         # Decide if we want a valid or invalid argument
         want_valid = self.rng.random() < self.config.valid_probability
@@ -181,7 +180,7 @@ class ProblemGenerator:
         nl = self._to_natural_language(premises, conclusion)
         formal = str(argument)
 
-        problem_id = f"GEN-{index+1:03d}"
+        problem_id = f"GEN-{index + 1:03d}"
 
         return {
             "id": problem_id,
@@ -195,9 +194,7 @@ class ProblemGenerator:
             "argument": argument,
         }
 
-    def _generate_premises(
-        self, variables: list[Proposition]
-    ) -> list[Proposition | LogicalExpression]:
+    def _generate_premises(self, variables: list[Proposition]) -> list[Proposition | LogicalExpression]:
         """Generate a set of random premises."""
         premises: list[Proposition | LogicalExpression] = []
 
@@ -207,9 +204,7 @@ class ProblemGenerator:
 
         return premises
 
-    def _random_expression(
-        self, variables: list[Proposition], depth: int
-    ) -> Proposition | LogicalExpression:
+    def _random_expression(self, variables: list[Proposition], depth: int) -> Proposition | LogicalExpression:
         """Generate a random logical expression up to max_depth."""
         # At max depth or with some probability, return an atom
         if depth >= self.config.max_depth or self.rng.random() < 0.4:
@@ -351,9 +346,7 @@ class ProblemGenerator:
         self._collect_from(conclusion, atoms)
         return atoms
 
-    def _collect_from(
-        self, expr: Proposition | LogicalExpression, atoms: set[str]
-    ) -> None:
+    def _collect_from(self, expr: Proposition | LogicalExpression, atoms: set[str]) -> None:
         if isinstance(expr, Proposition):
             atoms.add(expr.label)
         elif isinstance(expr, LogicalExpression):

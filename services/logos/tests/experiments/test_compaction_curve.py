@@ -94,9 +94,7 @@ def _write_curve_level(result: dict[str, object]) -> None:
         raise AssertionError("Compaction curve result levels must be a list")
 
     filtered = [
-        level
-        for level in levels
-        if isinstance(level, dict) and level.get("difficulty") != result["difficulty"]
+        level for level in levels if isinstance(level, dict) and level.get("difficulty") != result["difficulty"]
     ]
     filtered.append(result)
     filtered.sort(key=lambda level: ["EASY", "MEDIUM", "HARD", "EXTREME"].index(str(level["difficulty"])))

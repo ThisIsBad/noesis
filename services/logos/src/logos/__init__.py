@@ -15,8 +15,14 @@ Quick usage:
 from .models import Proposition, LogicalExpression, Connective, Argument, VerificationResult
 from .verifier import PropositionalVerifier
 from .predicate_models import (
-    Variable, Constant, Predicate, PredicateConnective,
-    PredicateExpression, QuantifiedExpression, Quantifier, FOLArgument
+    Variable,
+    Constant,
+    Predicate,
+    PredicateConnective,
+    PredicateExpression,
+    QuantifiedExpression,
+    Quantifier,
+    FOLArgument,
 )
 from .predicate import PredicateVerifier
 from .exceptions import (

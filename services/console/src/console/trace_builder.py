@@ -52,6 +52,7 @@ The builder owns the SSE-event shape so the server doesn't have to
 care about message-type translation; it just forwards what the
 builder produces.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -181,7 +182,8 @@ class TraceBuilder:
             content = getattr(msg, "content", None) or []
             # Could be a list of ToolResultBlock if the SDK splits them out.
             tool_result_blocks = [
-                b for b in (content if isinstance(content, list) else [])
+                b
+                for b in (content if isinstance(content, list) else [])
                 if type(b).__name__ == "ToolResultBlock"
             ]
             if not tool_result_blocks:
@@ -340,9 +342,7 @@ class TraceBuilder:
         result_step = ReasoningStep(
             id=result_step_id,
             kind=StepKind.OBSERVATION,
-            label=(
-                f"{call.tool_name} result" if call is not None else "tool result"
-            ),
+            label=(f"{call.tool_name} result" if call is not None else "tool result"),
             detail=result_text[:2000],
             status=StepStatus.FAILED if is_error else StepStatus.OK,
             source_ref=call.tool_name if call is not None else None,
@@ -363,9 +363,7 @@ class TraceBuilder:
                 "service": call.service if call is not None else "",
                 "is_error": is_error,
                 "content": (
-                    raw_content
-                    if isinstance(raw_content, (str, list))
-                    else None
+                    raw_content if isinstance(raw_content, (str, list)) else None
                 ),
                 "text": result_text[:500],
             },
@@ -379,9 +377,7 @@ class TraceBuilder:
         relation: EdgeRelation,
     ) -> None:
         self._trace.steps.append(step)
-        self._trace.edges.append(
-            Edge(source=parent, target=step.id, relation=relation)
-        )
+        self._trace.edges.append(Edge(source=parent, target=step.id, relation=relation))
         self._last_step_id = step.id
 
     def _next_id(self, prefix: str) -> str:
@@ -403,14 +399,14 @@ def _service_from_tool(tool_name: str) -> str:
     """
     if not tool_name.startswith("mcp__"):
         return ""
-    rest = tool_name[len("mcp__"):]
+    rest = tool_name[len("mcp__") :]
     head, _sep, _tail = rest.partition("__")
     return head
 
 
 def _short_tool_label(tool_name: str) -> str:
     if tool_name.startswith("mcp__"):
-        rest = tool_name[len("mcp__"):]
+        rest = tool_name[len("mcp__") :]
         head, _sep, tail = rest.partition("__")
         return f"{head}.{tail}" if tail else head
     return tool_name

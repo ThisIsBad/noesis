@@ -8,8 +8,14 @@ import z3
 
 from logos.models import VerificationResult
 from logos.predicate_models import (
-    Variable, Constant, Predicate, PredicateConnective,
-    PredicateExpression, QuantifiedExpression, Quantifier, FOLArgument
+    Variable,
+    Constant,
+    Predicate,
+    PredicateConnective,
+    PredicateExpression,
+    QuantifiedExpression,
+    Quantifier,
+    FOLArgument,
 )
 
 
@@ -18,7 +24,7 @@ class PredicateVerifier:
 
     def __init__(self) -> None:
         # We use a single domain of discourse (Universe of Discourse)
-        self.U: z3.SortRef = z3.DeclareSort('U')
+        self.U: z3.SortRef = z3.DeclareSort("U")
         # Cache for Z3 constants, variables, and predicates so they remain consistent across the argument
         self.z3_constants: dict[str, z3.ExprRef] = {}
         self.z3_predicates: dict[str, z3.FuncDeclRef] = {}
@@ -124,7 +130,7 @@ class PredicateVerifier:
                     valid=True,
                     counterexample=None,
                     rule="Valid (Predicate logic valid)",
-                    explanation="The conclusion necessarily follows. No counterexample exists."
+                    explanation="The conclusion necessarily follows. No counterexample exists.",
                 )
             elif result == z3.sat:
                 model = solver.model()
@@ -135,19 +141,16 @@ class PredicateVerifier:
                     valid=False,
                     counterexample={"raw_model": ce_repr},
                     rule="Invalid (Predicate logic counterexample)",
-                    explanation="Found a counterexample where all premises are true but the conclusion is false."
+                    explanation="Found a counterexample where all premises are true but the conclusion is false.",
                 )
             else:
                 return VerificationResult(
                     valid=False,
                     counterexample=None,
                     rule="Unknown",
-                    explanation=f"Z3 solver returned unknown. Reason: {solver.reason_unknown()}"
+                    explanation=f"Z3 solver returned unknown. Reason: {solver.reason_unknown()}",
                 )
         except (z3.Z3Exception, ValueError, TypeError, KeyError) as e:
             return VerificationResult(
-                valid=False,
-                counterexample=None,
-                rule="Error",
-                explanation=f"Translation or solver error: {str(e)}"
+                valid=False, counterexample=None, rule="Error", explanation=f"Translation or solver error: {str(e)}"
             )

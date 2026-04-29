@@ -16,9 +16,7 @@ from noesis_clients.auth import BearerAuthMiddleware
 
 async def _stub_app(scope: dict, receive: Any, send: Any) -> None:
     """Minimal downstream app that records `called=True` via send()."""
-    await send(
-        {"type": "http.response.start", "status": 200, "headers": []}
-    )
+    await send({"type": "http.response.start", "status": 200, "headers": []})
     await send({"type": "http.response.body", "body": b"ok"})
 
 
@@ -91,7 +89,9 @@ def test_health_path_always_exempt() -> None:
 
 def test_custom_exempt_paths() -> None:
     mw = BearerAuthMiddleware(
-        _stub_app, secret="s3cret", exempt_paths={"/", "/health"},
+        _stub_app,
+        secret="s3cret",
+        exempt_paths={"/", "/health"},
     )
     status, _ = asyncio.run(_drive(mw, _http_scope(path="/")))
     assert status == 200
@@ -99,7 +99,9 @@ def test_custom_exempt_paths() -> None:
 
 def test_exempt_prefixes_match() -> None:
     mw = BearerAuthMiddleware(
-        _stub_app, secret="s3cret", exempt_prefixes=("/static/",),
+        _stub_app,
+        secret="s3cret",
+        exempt_prefixes=("/static/",),
     )
     status, _ = asyncio.run(_drive(mw, _http_scope(path="/static/app.js")))
     assert status == 200
@@ -108,12 +110,14 @@ def test_exempt_prefixes_match() -> None:
 def test_non_http_scope_passes_through() -> None:
     """WebSocket / lifespan scopes must not trigger auth checks."""
     lifespan_scope = {"type": "lifespan"}
+
     # Lifespan drives different messages; a simple call through is enough
     # to prove the middleware didn't intercept.
     async def receive() -> dict:
         return {"type": "lifespan.startup"}
 
     sent: list[dict] = []
+
     async def send(msg: dict) -> None:
         sent.append(msg)
 
@@ -173,15 +177,17 @@ def test_bearer_middleware_factory_reads_env_at_construction_not_call(
 
     scope = _http_scope(headers=[(b"authorization", b"Bearer initial")])
     status, _ = asyncio.run(_drive(mw, scope))
-    assert status == 200    # original secret still honoured
+    assert status == 200  # original secret still honoured
 
 
 # ── Rotation: <SVC>_SECRET + <SVC>_SECRET_PREV ────────────────────────────────
 
+
 def test_rotation_both_tokens_accepted() -> None:
     """During the rotation window both active and previous tokens pass."""
     mw = BearerAuthMiddleware(
-        _stub_app, secrets=("new-token", "old-token"),
+        _stub_app,
+        secrets=("new-token", "old-token"),
     )
     for token in ("new-token", "old-token"):
         scope = _http_scope(headers=[(b"authorization", f"Bearer {token}".encode())])
@@ -191,7 +197,8 @@ def test_rotation_both_tokens_accepted() -> None:
 
 def test_rotation_rejects_token_not_in_active_set() -> None:
     mw = BearerAuthMiddleware(
-        _stub_app, secrets=("new-token", "old-token"),
+        _stub_app,
+        secrets=("new-token", "old-token"),
     )
     scope = _http_scope(headers=[(b"authorization", b"Bearer stale-token")])
     status, _ = asyncio.run(_drive(mw, scope))

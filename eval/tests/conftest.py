@@ -14,6 +14,7 @@ matching ``_secret`` fixture (empty string if unset) and baked into the
 A local ``eval/.env.e2e`` file is auto-loaded if present. See
 ``eval/.env.e2e.example`` for the template.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -115,8 +116,14 @@ async def _mcp_session(url: str, secret: str = "") -> AsyncIterator[Any]:
 
 
 SERVICES = (
-    "mneme", "telos", "praxis", "logos",
-    "episteme", "empiria", "techne", "kosmos",
+    "mneme",
+    "telos",
+    "praxis",
+    "logos",
+    "episteme",
+    "empiria",
+    "techne",
+    "kosmos",
 )
 
 
@@ -133,6 +140,7 @@ def _service_secret(name: str) -> str:
 
 
 # ── URL fixtures ──────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mneme_url() -> str:
@@ -176,6 +184,7 @@ def kosmos_url() -> str:
 
 # ── Secret fixtures ───────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def mneme_secret() -> str:
     return _service_secret("mneme")
@@ -218,12 +227,14 @@ def kosmos_secret() -> str:
 
 # ── HTTP client ───────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def http() -> httpx.Client:
     return httpx.Client(timeout=30.0)
 
 
 # ── Cleanup helpers ───────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 async def mneme_cleanup(mneme_url: str, mneme_secret: str) -> AsyncIterator[list[str]]:

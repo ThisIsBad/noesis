@@ -46,11 +46,11 @@ class ErrorType(Enum):
 @dataclass
 class Diagnostic:
     """Structured diagnostic information for an error.
-    
+
     This class provides detailed, machine-readable information about
     errors that occur during proving or constraint solving, making it
     easier for agents to understand and recover from failures.
-    
+
     The ``schema_version`` field allows agents to check compatibility
     before processing diagnostics.
     """
@@ -177,14 +177,14 @@ class LeanDiagnosticParser:
     @classmethod
     def parse(cls, error_output: str, tactic: str | None = None) -> Diagnostic:
         """Parse Lean error output into a structured Diagnostic.
-        
+
         Parameters
         ----------
         error_output : str
             The raw error output from Lean.
         tactic : str, optional
             The tactic that was attempted.
-        
+
         Returns
         -------
         Diagnostic
@@ -225,14 +225,14 @@ class LeanDiagnosticParser:
     def _extract_message(cls, output: str) -> str:
         """Extract the main error message."""
         # Look for "error: <message>"
-        match = re.search(r'error:\s*(.+?)(?:\n|$)', output, re.IGNORECASE)
+        match = re.search(r"error:\s*(.+?)(?:\n|$)", output, re.IGNORECASE)
         if match:
             return match.group(1).strip()
 
         # Fallback: first non-empty line
-        for line in output.split('\n'):
+        for line in output.split("\n"):
             line = line.strip()
-            if line and not line.startswith(('/', 'temp', 'logos')):
+            if line and not line.startswith(("/", "temp", "logos")):
                 return line
 
         return "Unknown error"
@@ -241,18 +241,14 @@ class LeanDiagnosticParser:
     def _extract_types(cls, output: str) -> tuple[str | None, str | None]:
         """Extract expected and actual types from type mismatch errors."""
         # Pattern: "has type X but is expected to have type Y"
-        match = re.search(
-            r'has type\s+(.+?)\s+but is expected to have type\s+(.+)',
-            output,
-            re.DOTALL
-        )
+        match = re.search(r"has type\s+(.+?)\s+but is expected to have type\s+(.+)", output, re.DOTALL)
         if match:
             actual = match.group(1).strip()
             expected = match.group(2).strip()
             return expected, actual
 
         # Pattern: "expected X, got Y"
-        match = re.search(r'expected\s+(.+?),\s*got\s+(.+)', output, re.IGNORECASE)
+        match = re.search(r"expected\s+(.+?),\s*got\s+(.+)", output, re.IGNORECASE)
         if match:
             return match.group(1).strip(), match.group(2).strip()
 
@@ -261,18 +257,13 @@ class LeanDiagnosticParser:
     @classmethod
     def _extract_location(cls, output: str) -> str | None:
         """Extract error location (file:line:column)."""
-        match = re.search(r'(\S+\.lean):(\d+):(\d+)', output)
+        match = re.search(r"(\S+\.lean):(\d+):(\d+)", output)
         if match:
             return f"line {match.group(2)}, column {match.group(3)}"
         return None
 
     @classmethod
-    def _generate_suggestions(
-        cls,
-        output: str,
-        tactic: str | None,
-        error_type: ErrorType
-    ) -> list[str]:
+    def _generate_suggestions(cls, output: str, tactic: str | None, error_type: ErrorType) -> list[str]:
         """Generate suggestions based on the error."""
         suggestions = []
 
@@ -335,7 +326,7 @@ class Z3DiagnosticParser:
         model_before: dict[str, Any] | None = None,
     ) -> Diagnostic:
         """Create diagnostic for unsatisfiable constraints.
-        
+
         Parameters
         ----------
         constraints : list[str]
@@ -348,17 +339,13 @@ class Z3DiagnosticParser:
         suggestions = []
 
         if unsat_core:
-            suggestions.append(
-                f"Conflicting constraints: {', '.join(unsat_core)}"
-            )
+            suggestions.append(f"Conflicting constraints: {', '.join(unsat_core)}")
             suggestions.append("Try removing or weakening one of these constraints")
         else:
             suggestions.append("Use track_unsat_core=True to identify conflicting constraints")
 
         if len(constraints) <= 3:
-            suggestions.append(
-                "With few constraints, check each one manually for contradictions"
-            )
+            suggestions.append("With few constraints, check each one manually for contradictions")
 
         return Diagnostic(
             error_type=ErrorType.UNSATISFIABLE,

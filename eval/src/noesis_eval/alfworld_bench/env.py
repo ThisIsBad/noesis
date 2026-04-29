@@ -13,6 +13,7 @@ That lets a real LLM agent emit a paraphrased action — e.g.
 ``"walk to conference room"`` — without the env rejecting on a
 verbatim-string mismatch and burning through the step budget.
 """
+
 from __future__ import annotations
 
 import re
@@ -47,18 +48,48 @@ class StepResult:
 # that "walk to conference room" matches "walk from the lobby to the
 # conference room". Keep this list short — aggressive stop-word
 # stripping would start collapsing genuinely different actions.
-_STOP_WORDS = frozenset({
-    "a", "an", "the",
-    "to", "from", "into", "onto", "out", "off",
-    "in", "on", "at", "of", "for", "with", "by",
-    "over", "under", "through", "across",
-    "and", "or", "but",
-    "is", "are", "was", "were", "be", "been",
-    "this", "that", "these", "those",
-    "my", "your", "its",
-})
+_STOP_WORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "to",
+        "from",
+        "into",
+        "onto",
+        "out",
+        "off",
+        "in",
+        "on",
+        "at",
+        "of",
+        "for",
+        "with",
+        "by",
+        "over",
+        "under",
+        "through",
+        "across",
+        "and",
+        "or",
+        "but",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "this",
+        "that",
+        "these",
+        "those",
+        "my",
+        "your",
+        "its",
+    }
+)
 
-_PUNCT_TRIM = '.,;:!?"\'()[]{}'
+_PUNCT_TRIM = ".,;:!?\"'()[]{}"
 
 
 def _tokenize(text: str) -> list[str]:
@@ -73,9 +104,7 @@ def _tokenize(text: str) -> list[str]:
     return tokens
 
 
-def _action_matches(
-    action: str, canonical: str, min_overlap: float = 0.6
-) -> bool:
+def _action_matches(action: str, canonical: str, min_overlap: float = 0.6) -> bool:
     """Return True if ``action`` covers at least ``min_overlap`` of the
     canonical action's content tokens.
 
@@ -153,14 +182,10 @@ class MockAlfworldEnv:
 
         # Failure injection: at the marked index, reject the canonical
         # action and force the agent to use a recovery action instead.
-        injecting = (
-            self.task.inject_failure_at == idx
-            and not self._injected_recovered
-        )
+        injecting = self.task.inject_failure_at == idx and not self._injected_recovered
         if injecting:
             if any(
-                _action_matches(action_lower, r)
-                for r in self.task.recovery_actions
+                _action_matches(action_lower, r) for r in self.task.recovery_actions
             ):
                 self._injected_recovered = True
                 self._cursor += 1

@@ -41,20 +41,32 @@ def test_trace_isolation():
 
 def _seed(core: KairosCore) -> None:
     core.record_span(
-        service="mneme", operation="store_memory", trace_id="t1",
-        duration_ms=5.0, success=True,
+        service="mneme",
+        operation="store_memory",
+        trace_id="t1",
+        duration_ms=5.0,
+        success=True,
     )
     core.record_span(
-        service="praxis", operation="decompose_goal", trace_id="t1",
-        duration_ms=150.0, success=True,
+        service="praxis",
+        operation="decompose_goal",
+        trace_id="t1",
+        duration_ms=150.0,
+        success=True,
     )
     core.record_span(
-        service="mneme", operation="retrieve_memory", trace_id="t2",
-        duration_ms=12.0, success=False,
+        service="mneme",
+        operation="retrieve_memory",
+        trace_id="t2",
+        duration_ms=12.0,
+        success=False,
     )
     core.record_span(
-        service="telos", operation="check_alignment", trace_id="t2",
-        duration_ms=2.0, success=True,
+        service="telos",
+        operation="check_alignment",
+        trace_id="t2",
+        duration_ms=2.0,
+        success=True,
     )
 
 

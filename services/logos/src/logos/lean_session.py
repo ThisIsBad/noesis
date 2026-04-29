@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 @dataclass
 class TacticResult:
     """Result of applying a tactic.
-    
+
     Attributes
     ----------
     success : bool
@@ -78,11 +78,11 @@ class TacticResult:
 @dataclass
 class LeanSession:
     """Interactive Lean 4 session for incremental proof construction.
-    
-    This class simulates a REPL by writing the proof iteratively to a 
+
+    This class simulates a REPL by writing the proof iteratively to a
     temporary file and parsing the Lean compiler output. This approach
     is more robust than trying to interact with the LSP server directly.
-    
+
     Parameters
     ----------
     lean_path : str, optional
@@ -90,7 +90,7 @@ class LeanSession:
         find it automatically via `elan` or system PATH.
     timeout : int, optional
         Timeout in seconds for Lean compiler calls. Default is 30.
-    
+
     Example
     -------
     >>> session = LeanSession()
@@ -124,15 +124,15 @@ class LeanSession:
         ]
 
         # Windows: Check elan default location
-        if os.name == 'nt':
-            home = os.environ.get('USERPROFILE', '')
-            elan_lean = os.path.join(home, '.elan', 'bin', 'lean.exe')
+        if os.name == "nt":
+            home = os.environ.get("USERPROFILE", "")
+            elan_lean = os.path.join(home, ".elan", "bin", "lean.exe")
             if os.path.exists(elan_lean):
                 candidates.append(elan_lean)
         else:
             # Unix: Check elan default location
-            home = os.environ.get('HOME', '')
-            elan_lean = os.path.join(home, '.elan', 'bin', 'lean')
+            home = os.environ.get("HOME", "")
+            elan_lean = os.path.join(home, ".elan", "bin", "lean")
             if os.path.exists(elan_lean):
                 candidates.append(elan_lean)
 
@@ -165,13 +165,13 @@ class LeanSession:
 
     def start(self, theorem_header: str) -> TacticResult:
         """Start a new proof session.
-        
+
         Parameters
         ----------
         theorem_header : str
             The theorem statement with `by` keyword.
             Example: "theorem foo (n : Nat) : n = n := by"
-        
+
         Returns
         -------
         TacticResult
@@ -190,12 +190,12 @@ class LeanSession:
 
     def apply(self, tactic: str) -> TacticResult:
         """Apply a tactic to the current proof state.
-        
+
         Parameters
         ----------
         tactic : str
             The tactic to apply, e.g., "rfl", "simp", "intro h".
-        
+
         Returns
         -------
         TacticResult
@@ -207,10 +207,7 @@ class LeanSession:
 
         if self._is_complete:
             return TacticResult(
-                success=False,
-                goals=[],
-                proof_so_far=self.proof,
-                error_message="Proof is already complete."
+                success=False, goals=[], proof_so_far=self.proof, error_message="Proof is already complete."
             )
 
         # Temporarily add the tactic
@@ -232,7 +229,7 @@ class LeanSession:
 
     def undo(self) -> TacticResult:
         """Undo the last tactic.
-        
+
         Returns
         -------
         TacticResult
@@ -240,10 +237,7 @@ class LeanSession:
         """
         if not self._tactics:
             return TacticResult(
-                success=False,
-                goals=self._goals,
-                proof_so_far=self.proof,
-                error_message="No tactics to undo."
+                success=False, goals=self._goals, proof_so_far=self.proof, error_message="No tactics to undo."
             )
 
         self._tactics.pop()
@@ -266,9 +260,9 @@ class LeanSession:
         proof_text = self.proof
 
         # Create a temporary file
-        fd, temp_path = tempfile.mkstemp(suffix='.lean', prefix='logos_')
+        fd, temp_path = tempfile.mkstemp(suffix=".lean", prefix="logos_")
         try:
-            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(proof_text)
 
             # Run Lean compiler
@@ -276,18 +270,13 @@ class LeanSession:
                 if self.lean_path is None:
                     raise RuntimeError("Lean path not set")
                 cmd = [self.lean_path, temp_path]
-                process = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8',
-                    timeout=self.timeout
-                )
+                process = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=self.timeout)
                 output = process.stdout + process.stderr
                 return self._parse_output(output, proof_text, current_tactic)
 
             except subprocess.TimeoutExpired:
                 from logos.diagnostics import Diagnostic, ErrorType
+
                 return TacticResult(
                     success=False,
                     goals=self._goals,
@@ -297,10 +286,11 @@ class LeanSession:
                         error_type=ErrorType.TIMEOUT,
                         message=f"Lean timed out after {self.timeout} seconds",
                         suggestions=["Try a simpler tactic", "Increase timeout if needed"],
-                    )
+                    ),
                 )
             except FileNotFoundError:
                 from logos.diagnostics import Diagnostic, ErrorType
+
                 return TacticResult(
                     success=False,
                     goals=self._goals,
@@ -310,19 +300,14 @@ class LeanSession:
                         error_type=ErrorType.INTERNAL_ERROR,
                         message=f"Lean executable not found at: {self.lean_path}",
                         suggestions=["Install Lean 4 via elan", "Check lean_path parameter"],
-                    )
+                    ),
                 )
         finally:
             # Clean up temp file
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
-    def _parse_output(
-        self,
-        output: str,
-        proof_text: str,
-        current_tactic: str | None = None
-    ) -> TacticResult:
+    def _parse_output(self, output: str, proof_text: str, current_tactic: str | None = None) -> TacticResult:
         """Parse Lean compiler output to extract goals and errors."""
         output_lower = output.lower()
 
@@ -330,16 +315,17 @@ class LeanSession:
         if "error:" in output_lower:
             # Extract the error message
             error_lines: list[str] = []
-            for line in output.split('\n'):
-                if 'error:' in line.lower() or (error_lines and line.strip()):
+            for line in output.split("\n"):
+                if "error:" in line.lower() or (error_lines and line.strip()):
                     error_lines.append(line)
                     if len(error_lines) > 5:  # Limit error length
                         break
 
-            error_message = '\n'.join(error_lines).strip() or output.strip()
+            error_message = "\n".join(error_lines).strip() or output.strip()
 
             # Parse into structured diagnostic
             from logos.diagnostics import LeanDiagnosticParser
+
             diagnostic = LeanDiagnosticParser.parse(output, current_tactic)
 
             return TacticResult(
@@ -355,21 +341,15 @@ class LeanSession:
         if "unsolved goals" in output_lower:
             goals = self._extract_goals(output)
             return TacticResult(
-                success=True,
-                goals=goals if goals else ["(could not parse goal state)"],
-                proof_so_far=proof_text
+                success=True, goals=goals if goals else ["(could not parse goal state)"], proof_so_far=proof_text
             )
 
         # No errors and no unsolved goals = proof complete
-        return TacticResult(
-            success=True,
-            goals=[],
-            proof_so_far=proof_text
-        )
+        return TacticResult(success=True, goals=[], proof_so_far=proof_text)
 
     def _extract_goals(self, output: str) -> list[str]:
         """Extract goal states from Lean output.
-        
+
         Lean 4 formats goals like:
             unsolved goals
             case ...
@@ -377,7 +357,7 @@ class LeanSession:
             ⊢ a + b = b + a
         """
         goals = []
-        lines = output.split('\n')
+        lines = output.split("\n")
         current_goal: list[str] = []
         capturing = False
 
@@ -389,18 +369,18 @@ class LeanSession:
             if capturing:
                 # Empty line might separate multiple goals
                 if line.strip() == "" and current_goal:
-                    goal_text = '\n'.join(current_goal).strip()
+                    goal_text = "\n".join(current_goal).strip()
                     if goal_text:
                         goals.append(goal_text)
                     current_goal = []
                 elif line.strip():
                     # Skip file path lines like "temp.lean:1:2:"
-                    if not (line.strip().endswith(':') and ':' in line):
+                    if not (line.strip().endswith(":") and ":" in line):
                         current_goal.append(line)
 
         # Don't forget the last goal
         if current_goal:
-            goal_text = '\n'.join(current_goal).strip()
+            goal_text = "\n".join(current_goal).strip()
             if goal_text:
                 goals.append(goal_text)
 

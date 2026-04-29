@@ -14,7 +14,7 @@
       "timed_out": false,
       "valid_count": 77,
       "verification_passed": true,
-      "wall_time_seconds": 0.753873
+      "wall_time_seconds": 1.011212
     },
     {
       "compacted_count": 2,
@@ -29,7 +29,7 @@
       "timed_out": false,
       "valid_count": 84,
       "verification_passed": true,
-      "wall_time_seconds": 1.211024
+      "wall_time_seconds": 1.592925
     },
     {
       "compacted_count": 2,
@@ -44,7 +44,7 @@
       "timed_out": false,
       "valid_count": 87,
       "verification_passed": true,
-      "wall_time_seconds": 1.766635
+      "wall_time_seconds": 2.460231
     },
     {
       "compacted_count": 2,
@@ -59,7 +59,7 @@
       "timed_out": false,
       "valid_count": 94,
       "verification_passed": true,
-      "wall_time_seconds": 2.455685
+      "wall_time_seconds": 3.123145
     }
   ]
 }

@@ -34,13 +34,13 @@ class StepKind(str, Enum):
 class StepStatus(str, Enum):
     """Evaluation status of a reasoning step."""
 
-    OK = "ok"                    # satisfied / accepted / true
-    TRIGGERED = "triggered"      # rule fired / constraint active
-    FAILED = "failed"            # constraint violated / proof failed
-    REJECTED = "rejected"        # branch pruned / alternative discarded
-    PENDING = "pending"          # not yet evaluated
-    UNKNOWN = "unknown"          # solver returned UNKNOWN / no verdict
-    INFO = "info"                # informational, no verdict
+    OK = "ok"  # satisfied / accepted / true
+    TRIGGERED = "triggered"  # rule fired / constraint active
+    FAILED = "failed"  # constraint violated / proof failed
+    REJECTED = "rejected"  # branch pruned / alternative discarded
+    PENDING = "pending"  # not yet evaluated
+    UNKNOWN = "unknown"  # solver returned UNKNOWN / no verdict
+    INFO = "info"  # informational, no verdict
 
 
 class EdgeRelation(str, Enum):
@@ -50,10 +50,10 @@ class EdgeRelation(str, Enum):
     CONTRADICTS = "contradicts"
     IMPLIES = "implies"
     REQUIRES = "requires"
-    CONSIDERS = "considers"       # branch being explored
-    PRUNES = "prunes"             # alternative was discarded
-    YIELDS = "yields"             # produced as output
-    WITNESS = "witness"           # concrete example / Z3 model
+    CONSIDERS = "considers"  # branch being explored
+    PRUNES = "prunes"  # alternative was discarded
+    YIELDS = "yields"  # produced as output
+    WITNESS = "witness"  # concrete example / Z3 model
 
 
 @dataclass
@@ -93,7 +93,7 @@ class ReasoningStep:
     detail: str | None = None
     status: StepStatus = StepStatus.INFO
     confidence: float | None = None
-    source_ref: str | None = None        # e.g. "logos/action_policy.py:145"
+    source_ref: str | None = None  # e.g. "logos/action_policy.py:145"
     meta: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -128,7 +128,7 @@ class ReasoningStep:
 class Outcome:
     """Final decision outcome for a trace."""
 
-    verdict: str                         # free-form: "allow", "block", "plan-found", ...
+    verdict: str  # free-form: "allow", "block", "plan-found", ...
     summary: str
     confidence: float | None = None
     meta: dict[str, Any] = field(default_factory=dict)
@@ -153,9 +153,9 @@ class DecisionTrace:
     id: str
     title: str
     question: str
-    source: str                          # service of origin: "logos", "praxis", ...
-    kind: str                            # "policy" | "plan" | "proof" | "goal" | ...
-    root: str                            # id of the root step (usually a QUESTION)
+    source: str  # service of origin: "logos", "praxis", ...
+    kind: str  # "policy" | "plan" | "proof" | "goal" | ...
+    root: str  # id of the root step (usually a QUESTION)
     steps: list[ReasoningStep] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
     outcome: Outcome | None = None

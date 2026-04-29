@@ -47,6 +47,7 @@ Design constraints followed:
 Keep this suite small (6 tasks = 3 pairs) until the first real
 measurement tells us whether the signal we expect shows up.
 """
+
 from __future__ import annotations
 
 from .env import Task
@@ -79,8 +80,7 @@ _PAIRS: list[tuple[str, str, str, str, str, str]] = [
         "deliver the envelope from reception to the mailroom",
         "deliver envelope to mailroom",
         "retrieve the cleaning solvent — the janitor named a specific crate",
-        "The store-room has dozens of crates. Which crate holds the "
-        "cleaning solvent?",
+        "The store-room has dozens of crates. Which crate holds the cleaning solvent?",
     ),
 ]
 
@@ -96,21 +96,23 @@ def build_memory_suite() -> list[Task]:
     """
     suite: list[Task] = []
     for i, (_nonce, obs_suffix, phys_goal, phys_action, _, _) in enumerate(_PAIRS):
-        suite.append(Task(
-            task_id=f"mem_plant_{i}",
-            goal=phys_goal,
-            initial_observation=obs_suffix + (
-                f"To finish this task, {phys_goal}."
-            ),
-            canonical_plan=(phys_action,),
-        ))
+        suite.append(
+            Task(
+                task_id=f"mem_plant_{i}",
+                goal=phys_goal,
+                initial_observation=obs_suffix + (f"To finish this task, {phys_goal}."),
+                canonical_plan=(phys_action,),
+            )
+        )
     for i, (nonce, _, _, _, query_goal, query_obs) in enumerate(_PAIRS):
-        suite.append(Task(
-            task_id=f"mem_query_{i}",
-            goal=query_goal,
-            initial_observation=query_obs,
-            canonical_plan=(nonce.lower(),),
-        ))
+        suite.append(
+            Task(
+                task_id=f"mem_query_{i}",
+                goal=query_goal,
+                initial_observation=query_obs,
+                canonical_plan=(nonce.lower(),),
+            )
+        )
     return suite
 
 

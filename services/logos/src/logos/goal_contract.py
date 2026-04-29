@@ -438,9 +438,7 @@ def _check_contract_clause_set(
     return session.check()
 
 
-def _auto_declare_contract_variables(
-    session: object, statements: list[str]
-) -> None:
+def _auto_declare_contract_variables(session: object, statements: list[str]) -> None:
     """Best-effort auto-declare single-letter variables as Int."""
     import re
 

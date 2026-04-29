@@ -24,6 +24,7 @@ Sessions are timed out + cleaned up by the periodic sweeper in
 ``mcp_server_http.py`` so a forgotten browser tab doesn't pin memory
 forever.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -72,9 +73,7 @@ class SessionRegistry:
         async with self._lock:
             self._evict_old_locked()
             if len(self._sessions) >= self._max_sessions:
-                raise RuntimeError(
-                    f"too many active sessions ({len(self._sessions)})"
-                )
+                raise RuntimeError(f"too many active sessions ({len(self._sessions)})")
             sid = uuid.uuid4().hex
             session = Session(session_id=sid, prompt=prompt)
             self._sessions[sid] = session
@@ -96,8 +95,7 @@ class SessionRegistry:
     def _evict_old_locked(self) -> int:
         # Caller holds self._lock.
         stale = [
-            sid for sid, s in self._sessions.items()
-            if not s.is_alive(self._max_age_s)
+            sid for sid, s in self._sessions.items() if not s.is_alive(self._max_age_s)
         ]
         for sid in stale:
             session = self._sessions.pop(sid, None)

@@ -29,18 +29,24 @@ def test_mermaid_emits_class_definitions(samples) -> None:
 
 def test_mermaid_escapes_pipe_and_quote() -> None:
     from theoria.models import DecisionTrace, ReasoningStep, StepKind
+
     trace = DecisionTrace(
-        id="t", title="t", question="?", source="s", kind="k", root="a",
+        id="t",
+        title="t",
+        question="?",
+        source="s",
+        kind="k",
+        root="a",
         steps=[ReasoningStep(id="a", kind=StepKind.NOTE, label='Hello | "World"')],
     )
     out = to_mermaid(trace)
-    assert "&#124;" in out   # pipe escaped
-    assert "&quot;" in out   # quote escaped
+    assert "&#124;" in out  # pipe escaped
+    assert "&quot;" in out  # quote escaped
     assert "|" not in _label_body(out)  # raw pipe does not appear inside the label
 
 
 def test_graphviz_is_valid_looking_dot(samples) -> None:
-    out = to_graphviz(samples[1])   # praxis plan
+    out = to_graphviz(samples[1])  # praxis plan
     assert out.startswith("//")
     assert "digraph Trace" in out
     assert "rankdir=TB" in out
@@ -49,12 +55,18 @@ def test_graphviz_is_valid_looking_dot(samples) -> None:
 
 def test_graphviz_escapes_quote_in_label() -> None:
     from theoria.models import DecisionTrace, ReasoningStep, StepKind
+
     trace = DecisionTrace(
-        id="t", title="t", question="?", source="s", kind="k", root="a",
+        id="t",
+        title="t",
+        question="?",
+        source="s",
+        kind="k",
+        root="a",
         steps=[ReasoningStep(id="a", kind=StepKind.NOTE, label='Say "hi"')],
     )
     out = to_graphviz(trace)
-    assert '\\"' in out     # escaped double quote
+    assert '\\"' in out  # escaped double quote
 
 
 def test_format_for_dispatch(samples) -> None:
@@ -70,6 +82,7 @@ def test_format_for_dispatch(samples) -> None:
 # ---------------------------------------------------------------------------
 # Markdown
 # ---------------------------------------------------------------------------
+
 
 def test_markdown_has_header_and_metadata_table(samples) -> None:
     trace = samples[0]  # logos policy block
@@ -102,8 +115,14 @@ def test_markdown_can_disable_mermaid_embed(samples) -> None:
 
 def test_markdown_lists_every_step_in_topological_order() -> None:
     from theoria.models import DecisionTrace, Edge, EdgeRelation, ReasoningStep, StepKind
+
     trace = DecisionTrace(
-        id="t", title="t", question="?", source="s", kind="k", root="q",
+        id="t",
+        title="t",
+        question="?",
+        source="s",
+        kind="k",
+        root="q",
         steps=[
             ReasoningStep(id="q", kind=StepKind.QUESTION, label="Q"),
             ReasoningStep(id="c", kind=StepKind.CONCLUSION, label="C"),
@@ -123,8 +142,14 @@ def test_markdown_lists_every_step_in_topological_order() -> None:
 
 def test_markdown_shows_incoming_edges_inline() -> None:
     from theoria.models import DecisionTrace, Edge, EdgeRelation, ReasoningStep, StepKind
+
     trace = DecisionTrace(
-        id="t", title="t", question="?", source="s", kind="k", root="a",
+        id="t",
+        title="t",
+        question="?",
+        source="s",
+        kind="k",
+        root="a",
         steps=[
             ReasoningStep(id="a", kind=StepKind.QUESTION, label="A"),
             ReasoningStep(id="b", kind=StepKind.CONCLUSION, label="B"),
@@ -133,7 +158,7 @@ def test_markdown_shows_incoming_edges_inline() -> None:
     )
     out = to_markdown(trace, embed_mermaid=False)
     # The B step should surface its incoming edge from A.
-    b_section = out[out.index("### `b`"):]
+    b_section = out[out.index("### `b`") :]
     assert "*From:*" in b_section
     assert "implies" in b_section
     assert "because" in b_section
@@ -141,9 +166,14 @@ def test_markdown_shows_incoming_edges_inline() -> None:
 
 def test_markdown_escapes_special_characters() -> None:
     from theoria.models import DecisionTrace, ReasoningStep, StepKind
+
     trace = DecisionTrace(
-        id="t", title="Title with |pipe| and [bracket]", question="?",
-        source="s", kind="k", root="a",
+        id="t",
+        title="Title with |pipe| and [bracket]",
+        question="?",
+        source="s",
+        kind="k",
+        root="a",
         steps=[ReasoningStep(id="a", kind=StepKind.NOTE, label="has_*underscore*_and_`backtick`")],
     )
     out = to_markdown(trace, embed_mermaid=False)
@@ -165,9 +195,15 @@ def test_markdown_includes_outcome_section_when_present(samples) -> None:
 
 def test_markdown_topological_order_handles_cycles_gracefully() -> None:
     from theoria.models import DecisionTrace, Edge, EdgeRelation, ReasoningStep, StepKind
+
     # Build a cycle b → c → b under a root a.
     trace = DecisionTrace(
-        id="t", title="t", question="?", source="s", kind="k", root="a",
+        id="t",
+        title="t",
+        question="?",
+        source="s",
+        kind="k",
+        root="a",
         steps=[
             ReasoningStep(id="a", kind=StepKind.QUESTION, label="A"),
             ReasoningStep(id="b", kind=StepKind.INFERENCE, label="B"),

@@ -21,9 +21,7 @@ def expr_strings(draw: st.DrawFn) -> str:
         ATOM_STRATEGY,
         lambda child: st.one_of(
             child.map(lambda expr: f"~{expr}"),
-            st.tuples(child, OP_STRATEGY, child).map(
-                lambda parts: f"({parts[0]} {parts[1]} {parts[2]})"
-            ),
+            st.tuples(child, OP_STRATEGY, child).map(lambda parts: f"({parts[0]} {parts[1]} {parts[2]})"),
         ),
         max_leaves=8,
     )

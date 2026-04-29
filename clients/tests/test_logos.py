@@ -16,6 +16,7 @@ Pins the contract:
   without a network: a hand-rolled fake mirrors the SDK's
   call-tool surface.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -39,6 +40,7 @@ def _run(coro: Coroutine[Any, Any, T]) -> T:
     thing here because LogosClient is stateless across calls.
     """
     return asyncio.run(coro)
+
 
 # ── fakes ────────────────────────────────────────────────────────────────────
 
@@ -73,9 +75,7 @@ class _FakeSession:
     async def initialize(self) -> None:
         self.initialized = True
 
-    async def call_tool(
-        self, name: str, arguments: Mapping[str, Any]
-    ) -> Any:
+    async def call_tool(self, name: str, arguments: Mapping[str, Any]) -> Any:
         self.last_tool_name = name
         self.last_arguments = arguments
         return self.response
@@ -124,13 +124,15 @@ def _logos_response_text(cert: dict[str, Any] | None = None) -> str:
     a top-level dict with ``certificate_json`` containing the
     serialised cert string."""
     cert = cert if cert is not None else _GOOD_CERT
-    return json.dumps({
-        "status": "certified",
-        "verified": cert["verified"],
-        "method": cert["method"],
-        "certificate_json": json.dumps(cert),
-        "certificate_id": "abc123",
-    })
+    return json.dumps(
+        {
+            "status": "certified",
+            "verified": cert["verified"],
+            "method": cert["method"],
+            "certificate_json": json.dumps(cert),
+            "certificate_id": "abc123",
+        }
+    )
 
 
 # ── from_env ─────────────────────────────────────────────────────────────────
@@ -181,13 +183,15 @@ def test_certify_claim_parses_production_response_shape() -> None:
 def test_certify_claim_accepts_dict_response_for_test_ergonomics() -> None:
     """Tests don't always want to construct CallToolResult/TextContent;
     the client also accepts a bare dict that mimics Logos's payload."""
-    session = _FakeSession({
-        "status": "certified",
-        "verified": True,
-        "method": "z3_propositional",
-        "certificate_json": json.dumps(_GOOD_CERT),
-        "certificate_id": "abc",
-    })
+    session = _FakeSession(
+        {
+            "status": "certified",
+            "verified": True,
+            "method": "z3_propositional",
+            "certificate_json": json.dumps(_GOOD_CERT),
+            "certificate_id": "abc",
+        }
+    )
     client = LogosClient(
         "https://logos.example",
         session_factory=_factory_returning(session),

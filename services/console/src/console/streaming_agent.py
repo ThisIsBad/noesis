@@ -22,6 +22,7 @@ For dependency injection (and tests), ``query_fn`` defaults to
 ``AsyncIterator``. Tests inject a scripted iterator without spawning
 the real ``claude`` CLI.
 """
+
 from __future__ import annotations
 
 from typing import Any, AsyncIterator, Callable, Sequence, cast
@@ -83,9 +84,7 @@ class StreamingMCPAgent:
         self._max_turns = max_turns
         self._system_prompt = system_prompt
         if max_budget_usd is not None and max_budget_usd <= 0:
-            raise ValueError(
-                f"max_budget_usd must be positive, got {max_budget_usd}"
-            )
+            raise ValueError(f"max_budget_usd must be positive, got {max_budget_usd}")
         self._max_budget_usd = max_budget_usd
         self._query_fn: QueryFn = query_fn if query_fn is not None else query
 
@@ -98,9 +97,7 @@ class StreamingMCPAgent:
         the first text chunk hits the browser before Claude has finished
         thinking.
         """
-        allowed_tools = [
-            f"mcp__{name}" for name in self._mcp_servers
-        ] + [
+        allowed_tools = [f"mcp__{name}" for name in self._mcp_servers] + [
             f"mcp__{name}__*" for name in self._mcp_servers
         ]
 

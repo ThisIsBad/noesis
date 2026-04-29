@@ -19,7 +19,6 @@ def _write_jsonl(lines: list[dict], suffix: str = ".jsonl") -> Path:
 
 
 class TestLoadSATBench:
-
     def test_basic_loading(self):
         data = [
             {"scenario": "A puzzle", "conditions": ["x > 0"], "question": "Is x positive?", "label": "SAT"},
@@ -59,7 +58,6 @@ class TestLoadSATBench:
 
 
 class TestLoadFOLIO:
-
     def test_basic_loading(self):
         data = [
             {"premises": ["All men are mortal"], "conclusion": "Socrates is mortal", "label": "True"},

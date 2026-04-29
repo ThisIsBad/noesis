@@ -1,4 +1,5 @@
 """Retrieval metrics used by Mneme acceptance benchmarks."""
+
 from __future__ import annotations
 
 import math

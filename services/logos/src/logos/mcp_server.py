@@ -14,9 +14,7 @@ try:
     from mcp.server import NotificationOptions, Server
     from mcp.server.stdio import stdio_server
 except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "MCP SDK is not installed. Install with: pip install logic-brain[mcp]"
-    ) from exc
+    raise ImportError("MCP SDK is not installed. Install with: pip install logic-brain[mcp]") from exc
 
 from logos.mcp_tools import (
     certificate_store,
@@ -34,6 +32,7 @@ from logos.mcp_tools import (
 )
 
 ToolHandler = Callable[[dict[str, object]], dict[str, object]]
+
 
 @dataclass(frozen=True)
 class ToolSpec:
@@ -370,8 +369,7 @@ _TOOLS: tuple[ToolSpec, ...] = (
     ),
     _tool(
         "proof_carrying_action",
-        "Execute an action envelope only when precondition certificates verify and "
-        "expected postconditions hold.",
+        "Execute an action envelope only when precondition certificates verify and expected postconditions hold.",
         {
             "schema_version": {"type": "string"},
             "intent": {"type": "string", "description": "Why the action is being executed."},

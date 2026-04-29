@@ -9,6 +9,7 @@ instead of only Clients' CI.
 If you're here chasing a bearer-gate bug, start there; come back to
 this file once you've verified the shared helper behaves.
 """
+
 from __future__ import annotations
 
 from noesis_clients.auth import BearerAuthMiddleware, bearer_middleware
@@ -76,9 +77,7 @@ def test_wrong_bearer_token_rejected(monkeypatch):
 def test_correct_bearer_token_accepted(monkeypatch):
     app = _build_app({"TELOS_SECRET": "test-secret"}, monkeypatch)
     client = TestClient(app)
-    resp = client.get(
-        "/spans", headers={"Authorization": "Bearer test-secret"}
-    )
+    resp = client.get("/spans", headers={"Authorization": "Bearer test-secret"})
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
 
@@ -91,9 +90,7 @@ def test_rotation_accepts_previous_token(monkeypatch):
     )
     client = TestClient(app)
     for token in ("new-token", "old-token"):
-        resp = client.get(
-            "/spans", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = client.get("/spans", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 200, token
 
 

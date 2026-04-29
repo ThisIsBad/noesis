@@ -10,12 +10,15 @@ import tempfile
 import subprocess
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class LeanVerificationResult:
     """Result of verifying a Lean 4 theorem."""
+
     valid: bool
     output: str
     error: str | None = None
+
 
 class LeanVerifier:
     """Verifies mathematical proofs using the Lean 4 interactive theorem prover."""
@@ -27,14 +30,14 @@ class LeanVerifier:
 
     def verify(self, theorem_header: str, tactic_proof: str) -> LeanVerificationResult:
         """
-        Synthesizes a full .lean document, runs it through the Lean 4 compiler, 
+        Synthesizes a full .lean document, runs it through the Lean 4 compiler,
         and parses the result.
-        
+
         Args:
             theorem_header: The theorem statement, e.g.
                 ``theorem sum_even (a b : Nat) ... : Even (a + b) := by``
             tactic_proof: The generated tactics to prove the theorem.
-            
+
         Returns:
             LeanVerificationResult containing whether the proof was successful.
         """
@@ -50,7 +53,7 @@ class LeanVerifier:
         # Create a temporary file
         fd, temp_path = tempfile.mkstemp(suffix=".lean")
         try:
-            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 # Basic Mathlib imports might be needed depending on the theorems.
                 # For now, we assume simple theorems that don't need heavy imports,
                 # or the LLM includes `import Mathlib` at the top.
@@ -69,23 +72,15 @@ class LeanVerifier:
 
             # In Lean 4, if there are unsolved goals or errors, the exit code is non-zero
             if process.returncode == 0 and "error:" not in output.lower():
-                return LeanVerificationResult(
-                    valid=True,
-                    output=output,
-                    error=None
-                )
+                return LeanVerificationResult(valid=True, output=output, error=None)
             else:
-                return LeanVerificationResult(
-                    valid=False,
-                    output=output,
-                    error="Proof failed. See compiler output."
-                )
+                return LeanVerificationResult(valid=False, output=output, error="Proof failed. See compiler output.")
 
         except FileNotFoundError:
             return LeanVerificationResult(
                 valid=False,
                 output="",
-                error=f"Lean executable not found at '{self.lean_path}'. Please ensure Lean 4 (elan) is installed."
+                error=f"Lean executable not found at '{self.lean_path}'. Please ensure Lean 4 (elan) is installed.",
             )
         except subprocess.TimeoutExpired as e:
             return LeanVerificationResult(
@@ -94,11 +89,7 @@ class LeanVerifier:
                 error=f"Lean timed out after {self.timeout} seconds: {str(e)}",
             )
         except (OSError, subprocess.SubprocessError) as e:
-            return LeanVerificationResult(
-                valid=False,
-                output="",
-                error=f"Error running Lean: {str(e)}"
-            )
+            return LeanVerificationResult(valid=False, output="", error=f"Error running Lean: {str(e)}")
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)

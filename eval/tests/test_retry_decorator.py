@@ -5,6 +5,7 @@ known Railway mid-session failure patterns, and only on async tests. A
 test that fails for any other reason must surface immediately so real
 regressions aren't masked by silent retries.
 """
+
 from __future__ import annotations
 
 import httpx
@@ -41,6 +42,7 @@ def _sse_handshake_502() -> httpx.HTTPStatusError:
 
 # ── Leaf / group classification ───────────────────────────────────────────────
 
+
 def test_connection_closed_mcp_error_is_a_drop() -> None:
     assert _is_mid_session_drop(_mcp_error("Connection closed"))
 
@@ -67,9 +69,7 @@ def test_other_404_on_non_messages_path_is_not_a_drop() -> None:
 
 
 def test_drop_wrapped_in_exception_group_is_a_drop() -> None:
-    group = BaseExceptionGroup(
-        "anyio taskgroup", [_mcp_error("Connection closed")]
-    )
+    group = BaseExceptionGroup("anyio taskgroup", [_mcp_error("Connection closed")])
     assert _is_mid_session_drop(group)
 
 
@@ -87,6 +87,7 @@ def test_group_with_only_non_drops_is_not_a_drop() -> None:
 
 
 # ── Decorator behaviour ───────────────────────────────────────────────────────
+
 
 async def test_decorator_returns_value_on_clean_run() -> None:
     @retry_on_transient_mcp_error()
@@ -174,9 +175,7 @@ async def test_decorator_retries_when_drop_is_wrapped_in_group() -> None:
     async def inner() -> str:
         calls["n"] += 1
         if calls["n"] < 2:
-            raise BaseExceptionGroup(
-                "taskgroup", [_mcp_error("Connection closed")]
-            )
+            raise BaseExceptionGroup("taskgroup", [_mcp_error("Connection closed")])
         return "recovered"
 
     assert await inner() == "recovered"

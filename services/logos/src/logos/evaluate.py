@@ -58,13 +58,15 @@ def evaluate(answers_path: Path) -> str:
             correct += 1
 
         # Collect for analyzer
-        results_for_analyzer.append({
-            "problem_id": pid,
-            "level": meta["level"],
-            "category": meta["category"],
-            "expected_valid": ground_truth,
-            "llm_said_valid": llm_said_valid,
-        })
+        results_for_analyzer.append(
+            {
+                "problem_id": pid,
+                "level": meta["level"],
+                "category": meta["category"],
+                "expected_valid": ground_truth,
+                "llm_said_valid": llm_said_valid,
+            }
+        )
 
         # Format result
         status = "✅" if llm_correct else "❌ WRONG"
