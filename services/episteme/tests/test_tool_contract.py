@@ -11,6 +11,7 @@ The critical invariant (from PR #49): any parameter whose name ends in
 declared annotation is not *exactly* ``str``, which silently turns a
 serialised payload into a ``dict`` before Pydantic validation.
 """
+
 from __future__ import annotations
 
 import episteme.mcp_server_http as server

@@ -178,9 +178,7 @@ def z3_session(payload: Mapping[str, object]) -> ToolResult:
             depth = _SESSION_STORE.pop(session_id, count=count)
             return {"session_id": session_id, "scope_depth": depth}
 
-        raise ValueError(
-            "Field 'action' must be one of: create, declare, assert, check, push, pop, destroy"
-        )
+        raise ValueError("Field 'action' must be one of: create, declare, assert, check, push, pop, destroy")
     except Exception as exc:  # pragma: no cover - exercised via tests
         return _error_response(exc)
 
@@ -285,10 +283,7 @@ def certificate_store(payload: Mapping[str, object]) -> ToolResult:
             return {
                 "count": len(ranked_result.results),
                 "total_candidates": ranked_result.total_candidates,
-                "entries": [
-                    {"score": r.score, "entry": r.entry.to_dict()}
-                    for r in ranked_result.results
-                ],
+                "entries": [{"score": r.score, "entry": r.entry.to_dict()} for r in ranked_result.results],
             }
 
         raise ValueError(
@@ -330,8 +325,10 @@ def check_beliefs(payload: Mapping[str, object]) -> ToolResult:
                 }
             )
 
-        status = "unknown" if contradictions.status.value == "unknown" else (
-            "consistent" if not contradictions else "contradictions_found"
+        status = (
+            "unknown"
+            if contradictions.status.value == "unknown"
+            else ("consistent" if not contradictions else "contradictions_found")
         )
 
         return {
@@ -362,8 +359,7 @@ def check_contract(payload: Mapping[str, object]) -> ToolResult:
         return {
             "status": result.status.value,
             "diagnostics": [
-                {"code": diagnostic.code, "message": diagnostic.message}
-                for diagnostic in result.diagnostics
+                {"code": diagnostic.code, "message": diagnostic.message} for diagnostic in result.diagnostics
             ],
             "unsat_core": list(result.unsat_core),
             "solver_status": result.solver_status,

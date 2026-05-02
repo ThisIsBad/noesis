@@ -12,24 +12,33 @@ from theoria.stats import compute_stats
 
 
 def _trace(
-    trace_id: str, *, source="test", kind="custom", verdict=None, confidence=None,
+    trace_id: str,
+    *,
+    source="test",
+    kind="custom",
+    verdict=None,
+    confidence=None,
     created_at="2026-04-23T12:00:00+00:00",
-    rule_label=None, rule_status=StepStatus.TRIGGERED,
-    concl_label=None, concl_status=StepStatus.OK,
+    rule_label=None,
+    rule_status=StepStatus.TRIGGERED,
+    concl_label=None,
+    concl_status=StepStatus.OK,
 ) -> DecisionTrace:
     steps = [ReasoningStep(id="q", kind=StepKind.QUESTION, label="Q")]
     if rule_label:
-        steps.append(ReasoningStep(id="r", kind=StepKind.RULE_CHECK,
-                                   label=rule_label, status=rule_status))
-    steps.append(ReasoningStep(id="c", kind=StepKind.CONCLUSION,
-                               label=concl_label or "Done", status=concl_status))
-    outcome = (
-        Outcome(verdict=verdict, summary="", confidence=confidence)
-        if verdict is not None else None
-    )
+        steps.append(ReasoningStep(id="r", kind=StepKind.RULE_CHECK, label=rule_label, status=rule_status))
+    steps.append(ReasoningStep(id="c", kind=StepKind.CONCLUSION, label=concl_label or "Done", status=concl_status))
+    outcome = Outcome(verdict=verdict, summary="", confidence=confidence) if verdict is not None else None
     return DecisionTrace(
-        id=trace_id, title=trace_id, question="?", source=source, kind=kind,
-        root="q", steps=steps, outcome=outcome, created_at=created_at,
+        id=trace_id,
+        title=trace_id,
+        question="?",
+        source=source,
+        kind=kind,
+        root="q",
+        steps=steps,
+        outcome=outcome,
+        created_at=created_at,
     )
 
 

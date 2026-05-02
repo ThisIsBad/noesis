@@ -66,9 +66,7 @@ class KairosClient:
         url = f"{self.base_url}/traces/{urllib.parse.quote(trace_id)}"
         payload = self._get_json(url)
         if not isinstance(payload, list):
-            raise KairosError(
-                f"expected list from {url}, got {type(payload).__name__}"
-            )
+            raise KairosError(f"expected list from {url}, got {type(payload).__name__}")
         return [_parse_span(item) for item in payload]
 
     def recent_spans(self, limit: int = 100) -> list[KairosSpan]:

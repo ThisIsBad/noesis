@@ -10,6 +10,7 @@ Pins two contracts the CLI and MCPAgent layers build on:
 
 MCPAgent-specific tests live in ``test_mcp_agent.py``.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -84,11 +85,7 @@ def test_null_agent_fails_every_task() -> None:
 def test_oracle_clears_stage3_acceptance_bars() -> None:
     suite = build_stage3_suite()
     plans = {t.goal: list(t.canonical_plan) for t in suite}
-    recovery = {
-        t.goal: [t.recovery_actions[0]]
-        for t in suite
-        if t.recovery_actions
-    }
+    recovery = {t.goal: [t.recovery_actions[0]] for t in suite if t.recovery_actions}
     agent = OracleAgent(plans=plans, recovery=recovery)
     results = run_suite(suite, agent)
     summary = results.summary()
@@ -110,11 +107,7 @@ def test_run_ab_scores_oracle_above_null() -> None:
     when the treatment is actually better."""
     suite = build_default_suite()
     plans = {t.goal: list(t.canonical_plan) for t in suite}
-    recovery = {
-        t.goal: [t.recovery_actions[0]]
-        for t in suite
-        if t.recovery_actions
-    }
+    recovery = {t.goal: [t.recovery_actions[0]] for t in suite if t.recovery_actions}
     treatment = OracleAgent(plans=plans, recovery=recovery)
     baseline = NullAgent(action="wait")
     treatment_results, baseline_results = run_ab(suite, treatment, baseline)
@@ -163,8 +156,8 @@ def test_diff_counts_wins_and_losses_by_task_flip() -> None:
     treatment = SuiteResults(agent="t")
     baseline = SuiteResults(agent="b")
     for tid, t_ok, b_ok in [
-        ("both_ok", True, True),       # tie, no signal
-        ("both_fail", False, False),   # tie, no signal
+        ("both_ok", True, True),  # tie, no signal
+        ("both_fail", False, False),  # tie, no signal
         ("treatment_wins", True, False),
         ("baseline_wins", False, True),
     ]:
@@ -201,6 +194,7 @@ def test_episode_result_is_json_serialisable() -> None:
     """JSONL is the target format for recorded runs; EpisodeResult must
     round-trip through plain dicts without bespoke serialisers."""
     import json
+
     ep = _episode("oracle", "t1", True)
     blob = json.dumps(ep.to_dict())
     recovered = json.loads(blob)

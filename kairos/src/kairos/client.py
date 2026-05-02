@@ -10,6 +10,7 @@ If ``base_url`` is unset (or ``disabled=True``), ``span`` still measures
 duration and updates contextvars — it just doesn't POST to Kairos.
 That way tracing can be switched off in dev without touching call sites.
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -33,9 +34,7 @@ PARENT_SPAN_HEADER = "X-Kairos-Parent-Span-Id"
 _current_trace_id: ContextVar[Optional[str]] = ContextVar(
     "kairos_trace_id", default=None
 )
-_current_span_id: ContextVar[Optional[str]] = ContextVar(
-    "kairos_span_id", default=None
-)
+_current_span_id: ContextVar[Optional[str]] = ContextVar("kairos_span_id", default=None)
 
 
 def current_trace_id() -> Optional[str]:

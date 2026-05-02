@@ -82,9 +82,7 @@ class ProofCertificate:
         if not isinstance(schema_version, str):
             raise ValueError("Certificate field 'schema_version' must be a string")
         if schema_version != SCHEMA_VERSION:
-            raise ValueError(
-                f"Unsupported certificate schema version '{schema_version}'"
-            )
+            raise ValueError(f"Unsupported certificate schema version '{schema_version}'")
 
         claim_type = data["claim_type"]
         if not isinstance(claim_type, str):
@@ -188,9 +186,7 @@ def certify_z3_session(
 def verify_certificate(certificate: ProofCertificate) -> bool:
     """Independently re-check and validate certificate integrity."""
     if certificate.schema_version != SCHEMA_VERSION:
-        raise ValueError(
-            f"Unsupported certificate schema version '{certificate.schema_version}'"
-        )
+        raise ValueError(f"Unsupported certificate schema version '{certificate.schema_version}'")
 
     if certificate.claim_type == PROPOSITIONAL_CLAIM:
         if not isinstance(certificate.claim, str):

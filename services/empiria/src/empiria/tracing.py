@@ -6,6 +6,7 @@ first use. It is best-effort: if ``KAIROS_URL`` is unset or
 nothing is emitted. That lets us wrap every MCP tool unconditionally
 without changing call sites when tracing is off.
 """
+
 from __future__ import annotations
 
 import os

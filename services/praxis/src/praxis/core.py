@@ -86,8 +86,14 @@ class PraxisCore:
             ).fetchall()
             for row in rows:
                 (
-                    step_id, parent_step_id, desc, tool_call,
-                    status, outcome, risk_score, score,
+                    step_id,
+                    parent_step_id,
+                    desc,
+                    tool_call,
+                    status,
+                    outcome,
+                    risk_score,
+                    score,
                 ) = row
                 g.add_node(
                     step_id,
@@ -159,8 +165,18 @@ class PraxisCore:
 
         self._conn.execute(
             "INSERT INTO steps VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (step.step_id, plan_id, parent_step_id, description, tool_call,
-             StepStatus.PENDING.value, None, risk_score, node_score, None),
+            (
+                step.step_id,
+                plan_id,
+                parent_step_id,
+                description,
+                tool_call,
+                StepStatus.PENDING.value,
+                None,
+                risk_score,
+                node_score,
+                None,
+            ),
         )
         self._conn.commit()
 
@@ -212,8 +228,7 @@ class PraxisCore:
         """
         g = self._trees[plan_id]
         failed = [
-            n for n, d in g.nodes(data=True)
-            if d.get("status") == StepStatus.FAILED
+            n for n, d in g.nodes(data=True) if d.get("status") == StepStatus.FAILED
         ]
         alternatives: list[str] = []
 
@@ -221,7 +236,8 @@ class PraxisCore:
             # Collect pending siblings
             for parent in g.predecessors(node):
                 siblings = [
-                    s for s in g.successors(parent)
+                    s
+                    for s in g.successors(parent)
                     if s != node and g.nodes[s].get("status") == StepStatus.PENDING
                 ]
                 alternatives.extend(siblings)
@@ -276,10 +292,7 @@ class PraxisCore:
             beam = next_beam[:k]
 
         complete.sort(key=lambda x: x[1], reverse=True)
-        return [
-            [self._node_to_step(g, sid) for sid in ids]
-            for ids, _ in complete[:k]
-        ]
+        return [[self._node_to_step(g, sid) for sid in ids] for ids, _ in complete[:k]]
 
     def get_next_step(self, plan_id: str) -> PlanStep | None:
         """Returns the first PENDING step on the current best path."""
@@ -330,9 +343,7 @@ class PraxisCore:
         cert = _run_async(self._logos_client.certify_claim(plan_summary))
         if cert is None:
             err = self._logos_client.last_error or "no certificate"
-            return True, (
-                f"Plan passes local safety check (Logos sidecar: {err})"
-            )
+            return True, (f"Plan passes local safety check (Logos sidecar: {err})")
         if not cert.verified:
             return False, f"Logos refuted plan ({cert.method})"
         return True, f"Plan verified by Logos ({cert.method})"
@@ -351,9 +362,7 @@ class PraxisCore:
         """
         g = self._trees[plan_id]
         goal = g.nodes[plan_id].get("goal", "(unknown goal)")
-        body = "; ".join(
-            f"{desc} (risk={risk:.2f})" for risk, desc in step_nodes
-        )
+        body = "; ".join(f"{desc} (risk={risk:.2f})" for risk, desc in step_nodes)
         return f"Plan to achieve goal '{goal}': {body}"
 
     def get_plan(self, plan_id: str) -> Plan:

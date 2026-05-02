@@ -30,7 +30,8 @@ class EpistemeCore:
 
     def get_calibration(self, domain: str | None = None) -> CalibrationReport:
         resolved = [
-            p for p in self._predictions.values()
+            p
+            for p in self._predictions.values()
             if p.correct is not None and (domain is None or p.domain == domain)
         ]
         if not resolved:
@@ -44,12 +45,10 @@ class EpistemeCore:
             )
 
         n = len(resolved)
-        brier = sum(
-            (p.confidence - (1.0 if p.correct else 0.0)) ** 2 for p in resolved
-        ) / n
-        bias = sum(
-            p.confidence - (1.0 if p.correct else 0.0) for p in resolved
-        ) / n
+        brier = (
+            sum((p.confidence - (1.0 if p.correct else 0.0)) ** 2 for p in resolved) / n
+        )
+        bias = sum(p.confidence - (1.0 if p.correct else 0.0) for p in resolved) / n
         sharpness = sum(abs(p.confidence - 0.5) for p in resolved) / n
 
         # Simplified ECE: single bucket (avg confidence vs avg accuracy). The
@@ -68,9 +67,7 @@ class EpistemeCore:
             sharpness=sharpness,
         )
 
-    def should_escalate(
-        self, confidence: float, domain: str | None = None
-    ) -> bool:
+    def should_escalate(self, confidence: float, domain: str | None = None) -> bool:
         report = self.get_calibration(domain)
         # Escalate on low confidence OR when the history shows systematic
         # overconfidence in this domain (bias > 0.2) at high confidence.
@@ -82,7 +79,8 @@ class EpistemeCore:
         weakness_threshold: float = 0.15,
     ) -> CompetenceMap:
         resolved = [
-            p for p in self._predictions.values()
+            p
+            for p in self._predictions.values()
             if p.correct is not None and p.domain is not None
         ]
         by_domain: dict[str, list[Prediction]] = {}
@@ -95,9 +93,10 @@ class EpistemeCore:
             n = len(preds)
             accuracy = sum(1 for p in preds if p.correct) / n
             avg_conf = sum(p.confidence for p in preds) / n
-            brier = sum(
-                (p.confidence - (1.0 if p.correct else 0.0)) ** 2 for p in preds
-            ) / n
+            brier = (
+                sum((p.confidence - (1.0 if p.correct else 0.0)) ** 2 for p in preds)
+                / n
+            )
             domain_stats.append(
                 DomainCompetence(
                     domain=domain,
@@ -112,15 +111,13 @@ class EpistemeCore:
         # Only domains with enough signal are eligible for labels.
         eligible = [d for d in domain_stats if d.sample_size >= min_samples]
         weaknesses = [
-            d.domain for d in sorted(
-                eligible, key=lambda d: abs(d.confidence_gap), reverse=True
-            )
+            d.domain
+            for d in sorted(eligible, key=lambda d: abs(d.confidence_gap), reverse=True)
             if abs(d.confidence_gap) >= weakness_threshold
         ]
         strengths = [
-            d.domain for d in sorted(
-                eligible, key=lambda d: d.accuracy, reverse=True
-            )
+            d.domain
+            for d in sorted(eligible, key=lambda d: d.accuracy, reverse=True)
             if abs(d.confidence_gap) < weakness_threshold and d.accuracy >= 0.7
         ]
         return CompetenceMap(

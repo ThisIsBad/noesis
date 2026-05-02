@@ -18,7 +18,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "argument",
-        help="Logical argument to verify, e.g. \"P -> Q, P |- Q\"",
+        help='Logical argument to verify, e.g. "P -> Q, P |- Q"',
     )
     parser.add_argument(
         "--json",

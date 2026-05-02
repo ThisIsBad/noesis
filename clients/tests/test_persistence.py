@@ -3,6 +3,7 @@
 Pins the fallback chain and URL parsing so downstream services can
 trust the resolution before the T3.5 Postgres migration arrives.
 """
+
 from __future__ import annotations
 
 import pytest

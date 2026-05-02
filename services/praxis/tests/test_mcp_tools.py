@@ -6,6 +6,7 @@ success path and every error branch, which is where the Stage-3
 user-facing behaviour lives (plan-not-found, parent-not-found, JSON
 shape of responses, `alternatives` / `paths` envelopes).
 """
+
 from __future__ import annotations
 
 import json
@@ -24,6 +25,7 @@ def _new_plan(goal: str = "ship the feature") -> str:
 
 
 # ── decompose_goal ────────────────────────────────────────────────────────────
+
 
 def test_decompose_goal_returns_plan_json_with_id_and_goal() -> None:
     payload = json.loads(_tool("decompose_goal")("write the RFC"))
@@ -50,6 +52,7 @@ def test_decompose_goal_with_unknown_parent_returns_error_envelope() -> None:
 
 
 # ── evaluate_step ─────────────────────────────────────────────────────────────
+
 
 def test_evaluate_step_happy_path_returns_step_json() -> None:
     plan_id = _new_plan()
@@ -88,6 +91,7 @@ def test_evaluate_step_with_unknown_parent_step_returns_error() -> None:
 
 # ── commit_step ───────────────────────────────────────────────────────────────
 
+
 def test_commit_step_success_marks_completed() -> None:
     plan_id = _new_plan()
     step = json.loads(_tool("evaluate_step")(plan_id, "do X"))
@@ -117,6 +121,7 @@ def test_commit_step_with_unknown_step_returns_error() -> None:
 
 # ── backtrack ────────────────────────────────────────────────────────────────
 
+
 def test_backtrack_after_failure_surfaces_pending_sibling() -> None:
     plan_id = _new_plan()
     failed = json.loads(_tool("evaluate_step")(plan_id, "path A"))
@@ -134,6 +139,7 @@ def test_backtrack_on_unknown_plan_returns_error() -> None:
 
 
 # ── verify_plan ──────────────────────────────────────────────────────────────
+
 
 def test_verify_plan_passes_low_risk_plan() -> None:
     plan_id = _new_plan()
@@ -164,6 +170,7 @@ def test_verify_plan_on_unknown_plan_returns_error() -> None:
 
 # ── get_next_step ────────────────────────────────────────────────────────────
 
+
 def test_get_next_step_returns_first_pending_on_best_path() -> None:
     plan_id = _new_plan()
     step = json.loads(_tool("evaluate_step")(plan_id, "do this"))
@@ -186,6 +193,7 @@ def test_get_next_step_unknown_plan_returns_error() -> None:
 
 # ── best_path ────────────────────────────────────────────────────────────────
 
+
 def test_best_path_returns_top_k_paths() -> None:
     plan_id = _new_plan()
     _tool("evaluate_step")(plan_id, "option A", risk_score=0.1)
@@ -201,6 +209,7 @@ def test_best_path_unknown_plan_returns_error() -> None:
 
 
 # ── get_plan ─────────────────────────────────────────────────────────────────
+
 
 def test_get_plan_returns_full_plan_payload() -> None:
     plan_id = _new_plan("build the thing")

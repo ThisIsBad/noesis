@@ -12,14 +12,19 @@ declared annotation is not *exactly* ``str``, which silently turns a
 serialised ``ProofCertificate`` into a ``dict`` before Pydantic
 validation and rejects it as "Input should be a valid string".
 """
+
 from __future__ import annotations
 
 import mneme.mcp_server_http as server
 
 EXPECTED_TOOLS: dict[str, set[str]] = {
     "store_memory": {
-        "content", "memory_type", "confidence",
-        "tags", "source", "certificate_json",
+        "content",
+        "memory_type",
+        "confidence",
+        "tags",
+        "source",
+        "certificate_json",
     },
     "retrieve_memory": {"query", "k", "min_confidence"},
     "forget_memory": {"memory_id", "reason"},

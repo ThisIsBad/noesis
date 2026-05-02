@@ -1,4 +1,5 @@
 """Techne tracing wiring tests (no network — disabled mode only)."""
+
 import techne.tracing as tracing_mod
 from techne.tracing import get_tracer, reset_tracer_for_tests
 

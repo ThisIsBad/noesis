@@ -30,6 +30,7 @@ Railway deployments the internal hostname ``logos.railway.internal``
 works the same way and avoids the edge round-trip; the client is
 agnostic to which one's configured.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -57,22 +58,16 @@ class _Session(Protocol):
 
     async def initialize(self) -> Any: ...
 
-    async def call_tool(
-        self, name: str, arguments: Mapping[str, Any]
-    ) -> Any: ...
+    async def call_tool(self, name: str, arguments: Mapping[str, Any]) -> Any: ...
 
 
-SessionFactory = Callable[
-    [str, str], AbstractAsyncContextManager["_Session"]
-]
+SessionFactory = Callable[[str, str], AbstractAsyncContextManager["_Session"]]
 """``(url, secret) -> async context manager yielding a Session``.
 Defaults to a real MCP+SSE session; tests inject a no-network fake."""
 
 
 @asynccontextmanager
-async def _real_mcp_session(
-    url: str, secret: str
-) -> AsyncIterator[_Session]:
+async def _real_mcp_session(url: str, secret: str) -> AsyncIterator[_Session]:
     """Real MCP-over-SSE session against ``<url>/sse``.
 
     One retry on the handshake to ride out Railway cold-starts;
@@ -156,9 +151,7 @@ class LogosClient:
     ) -> None:
         self._url = url.rstrip("/")
         self._secret = secret
-        self._session_factory: SessionFactory = (
-            session_factory or _real_mcp_session
-        )
+        self._session_factory: SessionFactory = session_factory or _real_mcp_session
         self.last_error: str | None = None
 
     @classmethod
@@ -201,9 +194,7 @@ class LogosClient:
 
         try:
             async with self._session_factory(self._url, self._secret) as session:
-                raw = await session.call_tool(
-                    "certify_claim", {"argument": argument}
-                )
+                raw = await session.call_tool("certify_claim", {"argument": argument})
         except BaseException as exc:
             # Catch BaseException to include CancelledError / TaskGroup
             # exceptions from the SSE plumbing — caller still gets None.
@@ -213,9 +204,7 @@ class LogosClient:
 
         cert_json = _extract_certificate_json(raw)
         if cert_json is None:
-            self.last_error = (
-                f"no certificate_json in Logos response: {raw!r}"
-            )
+            self.last_error = f"no certificate_json in Logos response: {raw!r}"
             log.warning(self.last_error)
             return None
 
@@ -230,8 +219,7 @@ class LogosClient:
             cert = ProofCertificate.model_validate(data)
         except Exception as exc:
             self.last_error = (
-                f"certificate failed schema validation: {type(exc).__name__}: "
-                f"{exc}"
+                f"certificate failed schema validation: {type(exc).__name__}: {exc}"
             )
             log.warning(self.last_error)
             return None

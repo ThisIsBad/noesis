@@ -32,14 +32,28 @@ def test_put_get_roundtrip() -> None:
 
 def test_list_is_most_recent_first() -> None:
     store = TraceStore()
-    store.put(DecisionTrace(
-        id="a", title="a", question="?", source="t", kind="c", root="q",
-        steps=[ReasoningStep(id="q", kind=StepKind.QUESTION, label="a")],
-    ))
-    store.put(DecisionTrace(
-        id="b", title="b", question="?", source="t", kind="c", root="q",
-        steps=[ReasoningStep(id="q", kind=StepKind.QUESTION, label="b")],
-    ))
+    store.put(
+        DecisionTrace(
+            id="a",
+            title="a",
+            question="?",
+            source="t",
+            kind="c",
+            root="q",
+            steps=[ReasoningStep(id="q", kind=StepKind.QUESTION, label="a")],
+        )
+    )
+    store.put(
+        DecisionTrace(
+            id="b",
+            title="b",
+            question="?",
+            source="t",
+            kind="c",
+            root="q",
+            steps=[ReasoningStep(id="q", kind=StepKind.QUESTION, label="b")],
+        )
+    )
     ordered = [t.id for t in store.list()]
     assert ordered == ["b", "a"]
 
@@ -92,6 +106,7 @@ def test_subscribe_receives_delete_and_clear_events() -> None:
 
 def test_unsubscribe_stops_events() -> None:
     import queue as _q
+
     store = TraceStore()
     qsub = store.subscribe()
     store.unsubscribe(qsub)
@@ -106,12 +121,20 @@ def test_slow_consumer_does_not_block_producer() -> None:
     qsub = store.subscribe(max_queue=1)
     store.put(_sample())
     # Second put with a different id — must not raise or block.
-    store.put(DecisionTrace(
-        id="t2", title="t2", question="?", source="t", kind="c", root="q",
-        steps=[ReasoningStep(id="q", kind=StepKind.QUESTION, label="b")],
-    ))
+    store.put(
+        DecisionTrace(
+            id="t2",
+            title="t2",
+            question="?",
+            source="t",
+            kind="c",
+            root="q",
+            steps=[ReasoningStep(id="q", kind=StepKind.QUESTION, label="b")],
+        )
+    )
     # Exactly one event survived.
     import queue as _q
+
     qsub.get(timeout=0.1)
     with pytest.raises(_q.Empty):
         qsub.get(timeout=0.1)

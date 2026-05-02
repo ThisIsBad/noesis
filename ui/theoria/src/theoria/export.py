@@ -19,17 +19,17 @@ from theoria.models import DecisionTrace, Edge, EdgeRelation, Outcome, Reasoning
 # Kind → node shape (Mermaid flowchart syntax).
 # Mermaid doesn't support every StepKind distinctly so we collapse some.
 _MERMAID_SHAPE: dict[StepKind, tuple[str, str]] = {
-    StepKind.QUESTION:       ("([", "])"),     # stadium
-    StepKind.PREMISE:        ("[", "]"),
-    StepKind.OBSERVATION:    ("[/", "/]"),     # parallelogram
-    StepKind.RULE_CHECK:     ("{{", "}}"),     # hexagon
-    StepKind.CONSTRAINT:     ("{{", "}}"),
-    StepKind.INFERENCE:      ("[", "]"),
-    StepKind.EVIDENCE:       ("[\\", "\\]"),   # parallelogram (alt)
-    StepKind.ALTERNATIVE:    ("[[", "]]"),     # subroutine
+    StepKind.QUESTION: ("([", "])"),  # stadium
+    StepKind.PREMISE: ("[", "]"),
+    StepKind.OBSERVATION: ("[/", "/]"),  # parallelogram
+    StepKind.RULE_CHECK: ("{{", "}}"),  # hexagon
+    StepKind.CONSTRAINT: ("{{", "}}"),
+    StepKind.INFERENCE: ("[", "]"),
+    StepKind.EVIDENCE: ("[\\", "\\]"),  # parallelogram (alt)
+    StepKind.ALTERNATIVE: ("[[", "]]"),  # subroutine
     StepKind.COUNTERFACTUAL: ("[[", "]]"),
-    StepKind.CONCLUSION:     ("([", "])"),     # stadium
-    StepKind.NOTE:           ("[", "]"),
+    StepKind.CONCLUSION: ("([", "])"),  # stadium
+    StepKind.NOTE: ("[", "]"),
 }
 
 _STATUS_CLASS: dict[StepStatus, str] = {
@@ -101,12 +101,7 @@ def _mermaid_arrow(edge: Edge) -> tuple[str, str | None]:
 
 
 def _mermaid_escape(text: str) -> str:
-    return (
-        text.replace("\\", "\\\\")
-        .replace('"', "&quot;")
-        .replace("|", "&#124;")
-        .replace("\n", " ")
-    )
+    return text.replace("\\", "\\\\").replace('"', "&quot;").replace("|", "&#124;").replace("\n", " ")
 
 
 # ---------------------------------------------------------------------------
@@ -140,20 +135,21 @@ _DOT_SHAPE: dict[StepKind, str] = {
 
 def to_graphviz(trace: DecisionTrace) -> str:
     """Render ``trace`` as a Graphviz ``digraph`` DOT string."""
-    lines: list[str] = [f"// {trace.title}", "digraph Trace {",
-                        "    rankdir=TB;",
-                        '    bgcolor="#0c1116";',
-                        '    node [fontname="Inter" fontcolor="#e6edf3" style=filled];',
-                        '    edge [color="#8b98a5" fontcolor="#8b98a5" fontname="Inter"];']
+    lines: list[str] = [
+        f"// {trace.title}",
+        "digraph Trace {",
+        "    rankdir=TB;",
+        '    bgcolor="#0c1116";',
+        '    node [fontname="Inter" fontcolor="#e6edf3" style=filled];',
+        '    edge [color="#8b98a5" fontcolor="#8b98a5" fontname="Inter"];',
+    ]
 
     for step in trace.steps:
         nid = _dot_id(step.id)
         fill, stroke = _DOT_FILL[step.status]
         shape = _DOT_SHAPE.get(step.kind, "box")
         label = _dot_label(step)
-        lines.append(
-            f'    {nid} [shape={shape} label="{label}" fillcolor="{fill}" color="{stroke}"];'
-        )
+        lines.append(f'    {nid} [shape={shape} label="{label}" fillcolor="{fill}" color="{stroke}"];')
 
     for edge in trace.edges:
         src = _dot_id(edge.source)
@@ -296,9 +292,11 @@ def _md_step_block(
     trace: DecisionTrace,
 ) -> list[str]:
     kind_label = step.kind.value.replace("_", " ")
-    status_tag = f"**{_STATUS_MARKER[step.status]}**" if step.status in (
-        StepStatus.TRIGGERED, StepStatus.FAILED, StepStatus.REJECTED
-    ) else _STATUS_MARKER[step.status]
+    status_tag = (
+        f"**{_STATUS_MARKER[step.status]}**"
+        if step.status in (StepStatus.TRIGGERED, StepStatus.FAILED, StepStatus.REJECTED)
+        else _STATUS_MARKER[step.status]
+    )
     header = f"### {_md_code(step.id)} — {kind_label} ({status_tag})"
     if step.confidence is not None:
         header += f" — confidence {step.confidence * 100:.0f}%"
@@ -439,6 +437,7 @@ def _md_cell(text: str) -> str:
 # ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
+
 
 def format_for(trace: DecisionTrace, fmt: str) -> str:
     """Dispatch helper — ``fmt`` in ``{"mermaid", "dot"/"graphviz", "markdown"/"md"}``."""

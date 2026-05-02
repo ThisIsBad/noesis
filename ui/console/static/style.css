@@ -1,0 +1,244 @@
+/*
+  Console UI — vanilla CSS, no build step.
+  Layout mirrors Theoria's three-pane shape (chat | trace | health strip)
+  but with a wider trace pane because the live DAG is the main feature.
+  Colour palette is intentionally close to Theoria's so a session that
+  bounces from Console → Theoria for browse/diff feels like one product.
+*/
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #1c2128;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --ok: #3fb950;
+  --fail: #f85149;
+  --pending: #d29922;
+  --info: #6e7681;
+  --user-bubble: #1f3759;
+  --assistant-bubble: #1a1d20;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+#health-strip {
+  display: flex;
+  gap: 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+}
+
+.health-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+.health-pill.ok { color: var(--ok); border-color: var(--ok); }
+.health-pill.bad { color: var(--fail); border-color: var(--fail); }
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) 2fr;
+  min-height: 0;
+}
+
+#chat-pane, #trace-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#chat-pane {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+}
+
+#chat-history {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-msg {
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  max-width: 90%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.chat-msg.user      { background: var(--user-bubble);      align-self: flex-end; }
+.chat-msg.assistant { background: var(--assistant-bubble); align-self: flex-start; }
+.chat-msg.system    { background: transparent; color: var(--text-dim); font-style: italic; align-self: center; font-size: 0.8rem; }
+.chat-msg.error     { background: var(--fail); color: white; align-self: flex-start; }
+.chat-msg.thinking  { background: transparent; color: var(--info); font-style: italic; font-size: 0.8rem; align-self: flex-start; border-left: 2px solid var(--info); padding-left: 0.5rem; }
+
+#chat-form {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  padding: 0.75rem;
+  gap: 0.5rem;
+}
+
+#chat-input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.chat-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+.chat-controls label { display: flex; align-items: center; gap: 0.3rem; color: var(--text-dim); }
+.chat-controls input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.4rem;
+  font-family: inherit;
+  width: 18ch;
+}
+
+#chat-send {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+#chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#chat-status { color: var(--text-dim); font-size: 0.8rem; margin-left: auto; }
+
+#trace-pane {
+  background: var(--bg);
+}
+
+#trace-meta {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 0.85rem;
+}
+
+#trace-title { font-weight: 600; }
+#trace-outcome { color: var(--text-dim); }
+#trace-outcome.complete { color: var(--ok); }
+#trace-outcome.error    { color: var(--fail); }
+
+#trace-canvas-wrap {
+  flex: 1;
+  overflow: auto;
+  background: var(--bg);
+}
+
+#trace-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+}
+
+.node-rect {
+  stroke: var(--border);
+  stroke-width: 1;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.node-rect:hover { opacity: 0.85; }
+.node-text {
+  fill: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  pointer-events: none;
+}
+.node-text.label { font-weight: 600; }
+.node-text.detail { fill: var(--text-dim); }
+
+.edge-path {
+  stroke: var(--border);
+  stroke-width: 1.5;
+  fill: none;
+  marker-end: url(#arrowhead);
+}
+
+.node-rect.kind-question     { fill: #1f6feb; }
+.node-rect.kind-inference    { fill: #6e7681; }
+.node-rect.kind-observation  { fill: #1c2128; }
+.node-rect.kind-note         { fill: transparent; stroke-dasharray: 4 2; }
+.node-rect.kind-conclusion   { fill: #238636; }
+
+.node-rect.status-failed    { stroke: var(--fail); stroke-width: 2; }
+.node-rect.status-ok        { stroke: var(--ok); stroke-width: 2; }
+.node-rect.status-pending   { stroke: var(--pending); stroke-width: 2; }
+.node-rect.status-rejected  { stroke: var(--fail); stroke-dasharray: 4 2; }
+
+#trace-step-detail {
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  max-height: 30vh;
+  overflow: auto;
+  font-size: 0.8rem;
+}
+
+#trace-step-detail summary { cursor: pointer; padding: 0.4rem 1rem; color: var(--text-dim); }
+
+#trace-step-detail-body {
+  margin: 0;
+  padding: 0.5rem 1rem 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  color: var(--text);
+}

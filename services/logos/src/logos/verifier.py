@@ -51,9 +51,7 @@ class PropositionalVerifier:
         """
         # Gather atoms and create Z3 variables
         atoms = self._collect_atoms(argument)
-        z3_vars: dict[str, z3.BoolRef] = {
-            label: z3.Bool(label) for label in sorted(atoms)
-        }
+        z3_vars: dict[str, z3.BoolRef] = {label: z3.Bool(label) for label in sorted(atoms)}
 
         solver = z3.Solver()
 
@@ -82,10 +80,7 @@ class PropositionalVerifier:
         elif result == z3.sat:
             # Counterexample found
             model = solver.model()
-            counterexample = {
-                label: bool(model.evaluate(var, model_completion=True))
-                for label, var in z3_vars.items()
-            }
+            counterexample = {label: bool(model.evaluate(var, model_completion=True)) for label, var in z3_vars.items()}
             fallacy = self._identify_fallacy(argument)
             return VerificationResult(
                 valid=False,
@@ -224,21 +219,13 @@ class PropositionalVerifier:
             for j, p2 in enumerate(prems):
                 if i == j:
                     continue
-                if (
-                    isinstance(p2, LogicalExpression)
-                    and p2.connective is Connective.IMPLIES
-                    and p2.right is not None
-                ):
+                if isinstance(p2, LogicalExpression) and p2.connective is Connective.IMPLIES and p2.right is not None:
                     if self._expr_eq(p2.left, p1) and self._expr_eq(p2.right, conc):
                         return "Modus Ponens"
 
         # Modus Tollens: P->Q, ~Q |- ~P
         for i, p1 in enumerate(prems):
-            if (
-                isinstance(p1, LogicalExpression)
-                and p1.connective is Connective.IMPLIES
-                and p1.right is not None
-            ):
+            if isinstance(p1, LogicalExpression) and p1.connective is Connective.IMPLIES and p1.right is not None:
                 neg_right = LogicalExpression(Connective.NOT, p1.right)
                 neg_left = LogicalExpression(Connective.NOT, p1.left)
                 for j, p2 in enumerate(prems):
@@ -248,11 +235,7 @@ class PropositionalVerifier:
                         return "Modus Tollens"
 
         # Hypothetical Syllogism: P->Q, Q->R |- P->R
-        if (
-            isinstance(conc, LogicalExpression)
-            and conc.connective is Connective.IMPLIES
-            and conc.right is not None
-        ):
+        if isinstance(conc, LogicalExpression) and conc.connective is Connective.IMPLIES and conc.right is not None:
             for i, p1 in enumerate(prems):
                 for j, p2 in enumerate(prems):
                     if i == j:
@@ -274,11 +257,7 @@ class PropositionalVerifier:
 
         # Disjunctive Syllogism: P|Q, ~P |- Q
         for i, p1 in enumerate(prems):
-            if (
-                isinstance(p1, LogicalExpression)
-                and p1.connective is Connective.OR
-                and p1.right is not None
-            ):
+            if isinstance(p1, LogicalExpression) and p1.connective is Connective.OR and p1.right is not None:
                 for j, p2 in enumerate(prems):
                     if i == j:
                         continue
@@ -314,11 +293,7 @@ class PropositionalVerifier:
 
         # Affirming the Consequent: P->Q, Q |- P  (INVALID)
         for i, p1 in enumerate(prems):
-            if (
-                isinstance(p1, LogicalExpression)
-                and p1.connective is Connective.IMPLIES
-                and p1.right is not None
-            ):
+            if isinstance(p1, LogicalExpression) and p1.connective is Connective.IMPLIES and p1.right is not None:
                 for j, p2 in enumerate(prems):
                     if i == j:
                         continue
@@ -327,11 +302,7 @@ class PropositionalVerifier:
 
         # Denying the Antecedent: P->Q, ~P |- ~Q  (INVALID)
         for i, p1 in enumerate(prems):
-            if (
-                isinstance(p1, LogicalExpression)
-                and p1.connective is Connective.IMPLIES
-                and p1.right is not None
-            ):
+            if isinstance(p1, LogicalExpression) and p1.connective is Connective.IMPLIES and p1.right is not None:
                 neg_left = LogicalExpression(Connective.NOT, p1.left)
                 neg_right = LogicalExpression(Connective.NOT, p1.right)
                 for j, p2 in enumerate(prems):

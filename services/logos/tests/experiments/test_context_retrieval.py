@@ -62,8 +62,7 @@ def is_consistent(stored_conclusion: str, query_premises: list[str]) -> bool:
     """Check if stored_conclusion is satisfiable together with query_premises."""
     verifier = PropositionalVerifier()
     premise_exprs = [
-        _expression_to_ascii(parse_argument(f"{premise} |- {premise}").conclusion)
-        for premise in query_premises
+        _expression_to_ascii(parse_argument(f"{premise} |- {premise}").conclusion) for premise in query_premises
     ]
     stored_expr = parse_argument(f"{stored_conclusion} |- {stored_conclusion}").conclusion
 
@@ -153,18 +152,12 @@ def test_context_aware_retrieval_with_z3_filters() -> None:
         query_conclusion = _expression_to_ascii(query_argument.conclusion)
 
         consistency_start = perf_counter()
-        consistent = [
-            conclusion
-            for conclusion in stored_conclusions
-            if is_consistent(conclusion, query_premises)
-        ]
+        consistent = [conclusion for conclusion in stored_conclusions if is_consistent(conclusion, query_premises)]
         consistency_time = perf_counter() - consistency_start
 
         applicability_start = perf_counter()
         applicable = [
-            conclusion
-            for conclusion in consistent
-            if is_applicable(conclusion, query_premises, query_conclusion)
+            conclusion for conclusion in consistent if is_applicable(conclusion, query_premises, query_conclusion)
         ]
         applicability_time = perf_counter() - applicability_start
 

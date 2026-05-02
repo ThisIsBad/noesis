@@ -8,6 +8,7 @@ under a ReAct-style loop — no upfront plan, no oracle over the env.
 The Protocol is intentionally tiny. Every reference agent below
 implements it; a future Claude-via-Anthropic-API agent will too.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,6 +28,7 @@ class AgentTelemetry:
     only the agent (e.g. MCPAgent draining SDK result messages) can
     see them.
     """
+
     tokens_in: int = 0
     tokens_out: int = 0
     tool_calls: int = 0
@@ -40,6 +42,7 @@ class ActionOutcome:
     agents can condition on their own trajectory — the same history a
     real ReAct loop would feed into a model prompt.
     """
+
     action: str
     observation: str
     reward: float
@@ -54,6 +57,7 @@ class Agent(Protocol):
     of resets. A stateful agent that leaks across tasks would make
     suite-level comparisons meaningless.
     """
+
     name: str
 
     def act(
@@ -69,14 +73,13 @@ class NullAgent:
     above zero the env contract would be broken) and to provide a
     floor reference point for ``SuiteResults.diff``.
     """
+
     name = "null"
 
     def __init__(self, action: str = "wait") -> None:
         self._action = action
 
-    def act(
-        self, goal: str, observation: str, history: Sequence[ActionOutcome]
-    ) -> str:
+    def act(self, goal: str, observation: str, history: Sequence[ActionOutcome]) -> str:
         return self._action
 
 
@@ -94,6 +97,7 @@ class OracleAgent:
     suite is losing capability somewhere — the env, the prompt, the
     tool surface, or the policy itself.
     """
+
     name = "oracle"
 
     def __init__(
@@ -104,9 +108,7 @@ class OracleAgent:
         self._plans = plans
         self._recovery = recovery or {}
 
-    def act(
-        self, goal: str, observation: str, history: Sequence[ActionOutcome]
-    ) -> str:
+    def act(self, goal: str, observation: str, history: Sequence[ActionOutcome]) -> str:
         plan = self._plans.get(goal, [])
         recovery = self._recovery.get(goal, [])
 
@@ -143,5 +145,3 @@ class OracleAgent:
         # (In practice the env terminates before we reach this branch.)
         _ = recovered  # silence unused-var lints in edge cases
         return ""
-
-

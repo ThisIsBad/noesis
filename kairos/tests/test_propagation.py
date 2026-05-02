@@ -15,6 +15,7 @@ Demonstrates the header-based propagation contract:
 The test doubles stand in for an httpx.Client so we can assert on
 exactly what gets emitted without spinning up a real server.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -68,10 +69,12 @@ def test_trace_context_round_trips_through_headers() -> None:
 
 
 def test_extract_is_case_insensitive() -> None:
-    trace, parent = extract_trace_context({
-        "x-kairos-trace-id": "t1",
-        "X-Kairos-Parent-Span-Id": "s1",
-    })
+    trace, parent = extract_trace_context(
+        {
+            "x-kairos-trace-id": "t1",
+            "X-Kairos-Parent-Span-Id": "s1",
+        }
+    )
     assert trace == "t1"
     assert parent == "s1"
 
@@ -97,10 +100,14 @@ def test_cross_service_propagation_assembles_full_trace() -> None:
     """
     core = KairosCore()
     client_a = KairosClient(
-        base_url="http://k", service="svc_a", _http=_KairosTransport(core),
+        base_url="http://k",
+        service="svc_a",
+        _http=_KairosTransport(core),
     )
     client_b = KairosClient(
-        base_url="http://k", service="svc_b", _http=_KairosTransport(core),
+        base_url="http://k",
+        service="svc_b",
+        _http=_KairosTransport(core),
     )
 
     def service_b_handler(inbound_headers: dict[str, str]) -> None:
@@ -139,7 +146,9 @@ def test_cross_service_propagation_assembles_full_trace() -> None:
 def test_continue_trace_is_noop_when_both_values_are_none() -> None:
     core = KairosCore()
     client = KairosClient(
-        base_url="http://k", service="svc", _http=_KairosTransport(core),
+        base_url="http://k",
+        service="svc",
+        _http=_KairosTransport(core),
     )
     assert current_trace_id() is None
     with client.continue_trace(None, None):
@@ -157,7 +166,9 @@ def test_continue_trace_adopts_trace_id_even_without_parent() -> None:
     """
     core = KairosCore()
     client = KairosClient(
-        base_url="http://k", service="svc", _http=_KairosTransport(core),
+        base_url="http://k",
+        service="svc",
+        _http=_KairosTransport(core),
     )
     with client.continue_trace("inbound-trace", None):
         with client.span("op") as trace_id:

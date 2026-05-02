@@ -12,6 +12,7 @@ deterministic — if the underlying metrics drift (e.g. ECE definition
 changes from single-bucket to bucketed and breaks the invariant) the
 suite will surface the regression.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -24,10 +25,10 @@ from episteme.core import EpistemeCore
 # avoid the mid-confidence regime (p ≈ 0.5) where Brier peaks.
 _CALIBRATED_DOMAINS = [
     # (domain,     confidence, samples, correct)
-    ("weather",    0.9,        50,      45),   # 45/50 = 0.90; Brier 0.09
-    ("markets",    0.8,        50,      40),   # 40/50 = 0.80; Brier 0.16
-    ("sports",     0.2,        50,      10),   # 10/50 = 0.20; Brier 0.16
-    ("physics",    0.1,        50,      5),    #  5/50 = 0.10; Brier 0.09
+    ("weather", 0.9, 50, 45),  # 45/50 = 0.90; Brier 0.09
+    ("markets", 0.8, 50, 40),  # 40/50 = 0.80; Brier 0.16
+    ("sports", 0.2, 50, 10),  # 10/50 = 0.20; Brier 0.16
+    ("physics", 0.1, 50, 5),  #  5/50 = 0.10; Brier 0.09
 ]
 
 
@@ -37,7 +38,9 @@ def _seed_calibrated_history(core: EpistemeCore) -> int:
     for domain, confidence, samples, correct in _CALIBRATED_DOMAINS:
         for i in range(samples):
             pred = core.log_prediction(
-                f"{domain} claim #{i}", confidence=confidence, domain=domain,
+                f"{domain} claim #{i}",
+                confidence=confidence,
+                domain=domain,
             )
             core.log_outcome(pred.prediction_id, correct=(i < correct))
         total += samples
@@ -96,7 +99,9 @@ def test_ece_threshold_detects_systematic_overconfidence() -> None:
     # accuracy 0.5, ECE = 0.4, which is clearly above 0.10.
     for i in range(200):
         pred = core.log_prediction(
-            f"overconfident #{i}", confidence=0.9, domain="mis_cal",
+            f"overconfident #{i}",
+            confidence=0.9,
+            domain="mis_cal",
         )
         core.log_outcome(pred.prediction_id, correct=(i < 100))
 

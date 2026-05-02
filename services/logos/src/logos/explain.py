@@ -59,9 +59,7 @@ def truth_table(claim: str) -> TruthTable:
     argument = parse_argument(claim)
     propositions = _collect_atoms(argument)
     if len(propositions) > 8:
-        raise ValueError(
-            "Truth tables are limited to 8 propositions (256 rows maximum)."
-        )
+        raise ValueError("Truth tables are limited to 8 propositions (256 rows maximum).")
 
     rows: list[TruthTableRow] = []
     counterexample_rows: list[int] = []
@@ -133,8 +131,7 @@ def render_truth_table(table: TruthTable) -> str:
         lines.append("Summary: ✓ Valid - no counterexample rows.")
     else:
         lines.append(
-            "Summary: ✗ Invalid - counterexample rows: "
-            + ", ".join(str(index) for index in table.counterexample_rows)
+            "Summary: ✗ Invalid - counterexample rows: " + ", ".join(str(index) for index in table.counterexample_rows)
         )
 
     return "\n".join(lines)

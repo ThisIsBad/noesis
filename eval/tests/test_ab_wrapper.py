@@ -15,6 +15,7 @@ Covers the contract:
   error: the user might be measuring noise on purpose) but proceeds.
 * ``--samples 0`` is rejected with a useful message.
 """
+
 from __future__ import annotations
 
 import json
@@ -34,14 +35,21 @@ def test_ab_writes_treatment_baseline_and_delta_artifacts(
     the agents and ``delta.json``. Episode counts match samples × suite.
     """
     out_dir = tmp_path / "ab"
-    rc = main([
-        "ab",
-        "--treatment", "oracle",
-        "--baseline", "null",
-        "--suite", "default",
-        "--samples", "2",
-        "--out-dir", str(out_dir),
-    ])
+    rc = main(
+        [
+            "ab",
+            "--treatment",
+            "oracle",
+            "--baseline",
+            "null",
+            "--suite",
+            "default",
+            "--samples",
+            "2",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
     assert rc == 0
 
     treatment_jsonl = out_dir / "oracle.jsonl"
@@ -60,23 +68,39 @@ def test_ab_delta_json_is_valid_and_has_expected_keys(
     tmp_path: Path,
 ) -> None:
     out_dir = tmp_path / "ab"
-    assert main([
-        "ab",
-        "--treatment", "oracle",
-        "--baseline", "null",
-        "--suite", "default",
-        "--samples", "1",
-        "--out-dir", str(out_dir),
-    ]) == 0
+    assert (
+        main(
+            [
+                "ab",
+                "--treatment",
+                "oracle",
+                "--baseline",
+                "null",
+                "--suite",
+                "default",
+                "--samples",
+                "1",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
     summary = json.loads((out_dir / "delta.json").read_text())
     # Headline fields the dashboard / regression-gate logic depends on.
     for key in (
-        "treatment", "baseline",
+        "treatment",
+        "baseline",
         "shared_tasks",
-        "treatment_success_rate", "baseline_success_rate",
-        "delta", "delta_ci95", "p_value",
-        "wins", "losses",
-        "treatment_tokens_per_episode", "baseline_tokens_per_episode",
+        "treatment_success_rate",
+        "baseline_success_rate",
+        "delta",
+        "delta_ci95",
+        "p_value",
+        "wins",
+        "losses",
+        "treatment_tokens_per_episode",
+        "baseline_tokens_per_episode",
         "tokens_ratio",
         "treatment_wall_time_per_episode",
         "baseline_wall_time_per_episode",
@@ -88,10 +112,19 @@ def test_ab_delta_json_is_valid_and_has_expected_keys(
 
 def test_ab_creates_out_dir_if_missing(tmp_path: Path) -> None:
     out_dir = tmp_path / "nested" / "deep" / "ab-runs"
-    rc = main([
-        "ab", "--treatment", "oracle", "--baseline", "null",
-        "--suite", "default", "--out-dir", str(out_dir),
-    ])
+    rc = main(
+        [
+            "ab",
+            "--treatment",
+            "oracle",
+            "--baseline",
+            "null",
+            "--suite",
+            "default",
+            "--out-dir",
+            str(out_dir),
+        ]
+    )
     assert rc == 0
     assert out_dir.exists()
 
@@ -100,10 +133,22 @@ def test_ab_prints_human_summary_on_stdout(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     out_dir = tmp_path / "ab"
-    assert main([
-        "ab", "--treatment", "oracle", "--baseline", "null",
-        "--suite", "default", "--out-dir", str(out_dir),
-    ]) == 0
+    assert (
+        main(
+            [
+                "ab",
+                "--treatment",
+                "oracle",
+                "--baseline",
+                "null",
+                "--suite",
+                "default",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
     out = capsys.readouterr().out
     # Human-readable header + the cost / wall-time lines from diff.
     assert "treatment (oracle) vs baseline (null)" in out
@@ -120,11 +165,19 @@ def test_ab_rejects_unknown_treatment_before_running(
     no budget would have been burned."""
     out_dir = tmp_path / "ab"
     with pytest.raises(SystemExit, match="unknown agent"):
-        main([
-            "ab", "--treatment", "definitely-not-an-agent",
-            "--baseline", "null", "--suite", "default",
-            "--out-dir", str(out_dir),
-        ])
+        main(
+            [
+                "ab",
+                "--treatment",
+                "definitely-not-an-agent",
+                "--baseline",
+                "null",
+                "--suite",
+                "default",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
     # Side effect check: out_dir gets created by argparse handling but
     # neither agent JSONL should exist.
     assert not (out_dir / "definitely-not-an-agent.jsonl").exists()
@@ -138,11 +191,19 @@ def test_ab_rejects_unknown_baseline_before_treatment_runs(
     not waste a treatment run first."""
     out_dir = tmp_path / "ab"
     with pytest.raises(SystemExit, match="unknown agent"):
-        main([
-            "ab", "--treatment", "oracle",
-            "--baseline", "definitely-not-an-agent",
-            "--suite", "default", "--out-dir", str(out_dir),
-        ])
+        main(
+            [
+                "ab",
+                "--treatment",
+                "oracle",
+                "--baseline",
+                "definitely-not-an-agent",
+                "--suite",
+                "default",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
     # Treatment must NOT have been written either.
     assert not (out_dir / "oracle.jsonl").exists()
 
@@ -150,11 +211,21 @@ def test_ab_rejects_unknown_baseline_before_treatment_runs(
 def test_ab_rejects_zero_samples(tmp_path: Path) -> None:
     out_dir = tmp_path / "ab"
     with pytest.raises(SystemExit, match="--samples"):
-        main([
-            "ab", "--treatment", "oracle", "--baseline", "null",
-            "--suite", "default", "--samples", "0",
-            "--out-dir", str(out_dir),
-        ])
+        main(
+            [
+                "ab",
+                "--treatment",
+                "oracle",
+                "--baseline",
+                "null",
+                "--suite",
+                "default",
+                "--samples",
+                "0",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
 
 
 def test_ab_warns_when_treatment_equals_baseline(
@@ -164,13 +235,24 @@ def test_ab_warns_when_treatment_equals_baseline(
     a typo; we warn loudly to stderr so the user sees it without
     failing the run."""
     out_dir = tmp_path / "ab"
-    assert main([
-        "ab", "--treatment", "null", "--baseline", "null",
-        "--suite", "default", "--out-dir", str(out_dir),
-    ]) == 0
+    assert (
+        main(
+            [
+                "ab",
+                "--treatment",
+                "null",
+                "--baseline",
+                "null",
+                "--suite",
+                "default",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
     err = capsys.readouterr().err
-    assert "noise" in err.lower() or "same" in err.lower() \
-        or "both" in err.lower()
+    assert "noise" in err.lower() or "same" in err.lower() or "both" in err.lower()
 
 
 def test_ab_default_out_dir_is_ab_runs(
@@ -180,10 +262,20 @@ def test_ab_default_out_dir_is_ab_runs(
     that so the runbook + dashboard / artifact-upload step can rely on
     it without a flag."""
     monkeypatch.chdir(tmp_path)
-    assert main([
-        "ab", "--treatment", "oracle", "--baseline", "null",
-        "--suite", "default",
-    ]) == 0
+    assert (
+        main(
+            [
+                "ab",
+                "--treatment",
+                "oracle",
+                "--baseline",
+                "null",
+                "--suite",
+                "default",
+            ]
+        )
+        == 0
+    )
     assert (tmp_path / "ab-runs" / "oracle.jsonl").exists()
     assert (tmp_path / "ab-runs" / "null.jsonl").exists()
     assert (tmp_path / "ab-runs" / "delta.json").exists()
@@ -196,10 +288,20 @@ def test_ab_default_suite_is_stage3(
     invocation is just ``ab --treatment ... --baseline ...`` without
     needing to remember which suite is "the" one."""
     out_dir = tmp_path / "ab"
-    assert main([
-        "ab", "--treatment", "oracle", "--baseline", "null",
-        "--out-dir", str(out_dir),
-    ]) == 0
+    assert (
+        main(
+            [
+                "ab",
+                "--treatment",
+                "oracle",
+                "--baseline",
+                "null",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
     # Stage3 has 50 tasks; with default samples=1 → 50 lines per side.
     assert len((out_dir / "oracle.jsonl").read_text().splitlines()) == 50
 
@@ -213,10 +315,22 @@ def test_ab_overwrites_existing_artifacts(tmp_path: Path) -> None:
     (out_dir / "oracle.jsonl").write_text("STALE GARBAGE\n")
     (out_dir / "delta.json").write_text("STALE GARBAGE")
 
-    assert main([
-        "ab", "--treatment", "oracle", "--baseline", "null",
-        "--suite", "default", "--out-dir", str(out_dir),
-    ]) == 0
+    assert (
+        main(
+            [
+                "ab",
+                "--treatment",
+                "oracle",
+                "--baseline",
+                "null",
+                "--suite",
+                "default",
+                "--out-dir",
+                str(out_dir),
+            ]
+        )
+        == 0
+    )
     assert "STALE" not in (out_dir / "oracle.jsonl").read_text()
     # delta.json must round-trip through json.loads now — no garbage.
     json.loads((out_dir / "delta.json").read_text())

@@ -77,8 +77,7 @@ def format_report(results: list[ProblemResult]) -> str:
     # Summary
     total = len(results)
     correct = sum(1 for r in results if r.verifier_correct)
-    lines.append(f"**Overall: {correct}/{total} correct** "
-                 f"({'✅ ALL PASS' if correct == total else '❌ FAILURES'})\n")
+    lines.append(f"**Overall: {correct}/{total} correct** ({'✅ ALL PASS' if correct == total else '❌ FAILURES'})\n")
 
     # Group by level
     levels: dict[str, list[ProblemResult]] = {}
@@ -99,8 +98,7 @@ def format_report(results: list[ProblemResult]) -> str:
             expected = "valid" if r.expected_valid else "invalid"
             actual = "valid" if r.actual_valid else "invalid"
             lines.append(
-                f"| {r.problem_id} | {r.category} | {expected} | {actual} "
-                f"| {status} | {r.verification.rule} |"
+                f"| {r.problem_id} | {r.category} | {expected} | {actual} | {status} | {r.verification.rule} |"
             )
 
     # Failures detail

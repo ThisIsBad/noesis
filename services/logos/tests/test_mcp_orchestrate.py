@@ -188,9 +188,7 @@ def test_orchestrate_proof_propagates_failed_child_to_parent() -> None:
         }
     )
     orchestrate_proof({"action": "verify_leaf", "session_id": "demo", "claim_id": "a", "expression": "P |- P"})
-    orchestrate_proof(
-        {"action": "verify_leaf", "session_id": "demo", "claim_id": "b", "expression": "P -> Q, Q |- P"}
-    )
+    orchestrate_proof({"action": "verify_leaf", "session_id": "demo", "claim_id": "b", "expression": "P -> Q, Q |- P"})
 
     result = orchestrate_proof({"action": "propagate", "session_id": "demo"})
 
@@ -208,9 +206,7 @@ def test_orchestrate_proof_mark_failed() -> None:
         }
     )
 
-    result = orchestrate_proof(
-        {"action": "mark_failed", "session_id": "demo", "claim_id": "root", "reason": "manual"}
-    )
+    result = orchestrate_proof({"action": "mark_failed", "session_id": "demo", "claim_id": "root", "reason": "manual"})
 
     assert result["status"] == "marked_failed"
 

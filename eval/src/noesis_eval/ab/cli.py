@@ -27,6 +27,7 @@ re-diffed across machines.
 Kept deliberately argparse-only (no Click / Typer) so the eval package
 doesn't grow dependencies for one CLI.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -58,11 +59,7 @@ SUITES = {
 
 def _build_oracle(suite: list[Task]) -> OracleAgent:
     plans = {t.goal: list(t.canonical_plan) for t in suite}
-    recovery = {
-        t.goal: [t.recovery_actions[0]]
-        for t in suite
-        if t.recovery_actions
-    }
+    recovery = {t.goal: [t.recovery_actions[0]] for t in suite if t.recovery_actions}
     return OracleAgent(plans=plans, recovery=recovery)
 
 
@@ -112,9 +109,7 @@ def _iter_jsonl(path: Path) -> Iterator[EpisodeResult]:
             try:
                 raw = json.loads(line)
             except json.JSONDecodeError as exc:
-                raise SystemExit(
-                    f"{path}:{line_no}: invalid JSON — {exc.msg}"
-                ) from exc
+                raise SystemExit(f"{path}:{line_no}: invalid JSON — {exc.msg}") from exc
             yield EpisodeResult(**raw)
 
 
@@ -177,8 +172,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     suite = SUITES[args.suite]()
     if args.agent not in AGENT_FACTORIES:
         raise SystemExit(
-            f"unknown agent {args.agent!r}; choose from "
-            f"{sorted(AGENT_FACTORIES)}"
+            f"unknown agent {args.agent!r}; choose from {sorted(AGENT_FACTORIES)}"
         )
     agent = AGENT_FACTORIES[args.agent](suite)
 
@@ -211,8 +205,7 @@ def _cmd_diff(args: argparse.Namespace) -> int:
 def _build_agent_or_die(name: str, suite: list[Task]) -> Agent:
     if name not in AGENT_FACTORIES:
         raise SystemExit(
-            f"unknown agent {name!r}; choose from "
-            f"{sorted(AGENT_FACTORIES)}"
+            f"unknown agent {name!r}; choose from {sorted(AGENT_FACTORIES)}"
         )
     return AGENT_FACTORIES[name](suite)
 
@@ -261,9 +254,7 @@ def _cmd_ab(args: argparse.Namespace) -> int:
         file=sys.stderr,
     )
     with treatment_path.open("w", encoding="utf-8") as f:
-        treatment_results = _run(
-            treatment_agent, suite, f, samples=args.samples
-        )
+        treatment_results = _run(treatment_agent, suite, f, samples=args.samples)
 
     print(
         f"running baseline  {args.baseline!r} on suite "
@@ -272,9 +263,7 @@ def _cmd_ab(args: argparse.Namespace) -> int:
         file=sys.stderr,
     )
     with baseline_path.open("w", encoding="utf-8") as f:
-        baseline_results = _run(
-            baseline_agent, suite, f, samples=args.samples
-        )
+        baseline_results = _run(baseline_agent, suite, f, samples=args.samples)
 
     delta = treatment_results.diff(baseline_results)
     delta_path.write_text(
@@ -349,10 +338,7 @@ def _cmd_history(args: argparse.Namespace) -> int:
 
     # Per-run table header — fixed-width so copy-paste into docs /
     # GitHub comments renders as a clean code block.
-    print(
-        f"{'run':<30}  {'t':<12}  {'b':<12}  "
-        f"{'delta':>8}  {'ci95':>12}  {'p':>7}"
-    )
+    print(f"{'run':<30}  {'t':<12}  {'b':<12}  {'delta':>8}  {'ci95':>12}  {'p':>7}")
     print("-" * 90)
 
     for run_dir, a_path, b_path in runs:
@@ -372,7 +358,8 @@ def _cmd_history(args: argparse.Namespace) -> int:
             except (json.JSONDecodeError, OSError):
                 treatment_agent = None
         if treatment_agent is None or treatment_agent not in (
-            side_a.agent, side_b.agent,
+            side_a.agent,
+            side_b.agent,
         ):
             treatment, baseline = side_a, side_b
         elif treatment_agent == side_a.agent:
@@ -397,9 +384,7 @@ def _cmd_history(args: argparse.Namespace) -> int:
             pooled.setdefault(treatment.agent, []).append(ep)
         for ep in baseline.episodes:
             pooled.setdefault(baseline.agent, []).append(ep)
-        treatment_role[treatment.agent] = (
-            treatment_role.get(treatment.agent, 0) + 1
-        )
+        treatment_role[treatment.agent] = treatment_role.get(treatment.agent, 0) + 1
 
     # Pool requires exactly two agent names across every run. If
     # weekly runs swap agents around (e.g. a week of mcp-treatment

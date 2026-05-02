@@ -1,15 +1,16 @@
+import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+
 from pydantic import BaseModel, Field
-import uuid
 
 from .certificates import ProofCertificate
 
 
 class MemoryType(str, Enum):
-    EPISODIC = "episodic"   # what happened when
-    SEMANTIC = "semantic"   # what is known/believed
+    EPISODIC = "episodic"  # what happened when
+    SEMANTIC = "semantic"  # what is known/believed
 
 
 class ClaimKind(str, Enum):

@@ -9,6 +9,7 @@ Setting ``PRAXIS_DATA_DIR`` in ``pytest_configure`` runs before collection,
 so the very first import of ``praxis.mcp_server_http`` sees the writable
 path.
 """
+
 from __future__ import annotations
 
 import os

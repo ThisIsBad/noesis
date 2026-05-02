@@ -45,7 +45,7 @@ class StepPredicate:
     id: str | None = None
     kind: str | None = None
     status: str | None = None
-    label_contains: str | None = None        # case-insensitive
+    label_contains: str | None = None  # case-insensitive
     detail_contains: str | None = None
     confidence_gte: float | None = None
     confidence_lte: float | None = None
@@ -79,7 +79,7 @@ class EdgePredicate:
     source: str | None = None
     target: str | None = None
     relation: str | None = None
-    label_contains: str | None = None        # case-insensitive
+    label_contains: str | None = None  # case-insensitive
 
     def matches(self, edge: Edge) -> bool:
         if self.source is not None and edge.source != self.source:
@@ -146,8 +146,13 @@ def run_query(
 # ---------------------------------------------------------------------------
 
 _STEP_FIELDS = {
-    "id", "kind", "status", "label_contains", "detail_contains",
-    "confidence_gte", "confidence_lte",
+    "id",
+    "kind",
+    "status",
+    "label_contains",
+    "detail_contains",
+    "confidence_gte",
+    "confidence_lte",
 }
 _EDGE_FIELDS = {"source", "target", "relation", "label_contains"}
 _BASE_FIELDS = {"source", "kind", "verdict", "tags", "text", "q"}
@@ -214,6 +219,9 @@ def _parse_edge_predicate(raw: Any) -> EdgePredicate:
 
 
 __all__: Sequence[str] = (
-    "StepPredicate", "EdgePredicate", "TraceQuery",
-    "run_query", "parse_query",
+    "StepPredicate",
+    "EdgePredicate",
+    "TraceQuery",
+    "run_query",
+    "parse_query",
 )

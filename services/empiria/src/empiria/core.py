@@ -45,9 +45,7 @@ class EmpiriaCore:
         results.sort(key=lambda lesson: lesson.confidence, reverse=True)
         return results[:k]
 
-    def successful_patterns(
-        self, domain: str | None = None
-    ) -> list[Lesson]:
+    def successful_patterns(self, domain: str | None = None) -> list[Lesson]:
         return [
             lesson
             for lesson in self._lessons.values()

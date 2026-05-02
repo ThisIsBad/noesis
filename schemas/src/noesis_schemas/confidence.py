@@ -7,6 +7,7 @@ importing Logos internals.
 
 from enum import Enum
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 SCHEMA_VERSION = "1.0"

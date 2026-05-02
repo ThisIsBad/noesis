@@ -14,6 +14,7 @@ Planner Protocol. We verify two things:
 cleanly if either is missing, so the rest of the eval suite still runs
 in a minimal environment.
 """
+
 import pytest
 
 pytest.importorskip("networkx")
@@ -101,14 +102,8 @@ def test_stage3_suite_clears_acceptance_targets(tmp_path):
     backtrack-recovery >=50%, plan depth <=8."""
     suite = build_stage3_suite()
     plans = {t.goal: list(t.canonical_plan) for t in suite}
-    recovery = {
-        t.goal: list(t.recovery_actions)
-        for t in suite
-        if t.recovery_actions
-    }
-    planner = PraxisCorePlanner(
-        core=_core(tmp_path), plans=plans, recovery=recovery
-    )
+    recovery = {t.goal: list(t.recovery_actions) for t in suite if t.recovery_actions}
+    planner = PraxisCorePlanner(core=_core(tmp_path), plans=plans, recovery=recovery)
     metrics = run_suite(suite, planner)
     summary = metrics.summary()
 

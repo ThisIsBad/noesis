@@ -12,14 +12,18 @@ declared annotation is not *exactly* ``str``, which silently turns a
 serialised ``ProofCertificate`` into a ``dict`` before Pydantic
 validation and rejects it as "Input should be a valid string".
 """
+
 from __future__ import annotations
 
 import techne.mcp_server_http as server
 
 EXPECTED_TOOLS: dict[str, set[str]] = {
     "store_skill": {
-        "name", "description", "strategy",
-        "certificate_json", "domain",
+        "name",
+        "description",
+        "strategy",
+        "certificate_json",
+        "domain",
     },
     "retrieve_skill": {"query", "k", "verified_only"},
     "record_use": {"skill_id", "success"},

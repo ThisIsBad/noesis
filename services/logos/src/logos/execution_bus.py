@@ -63,9 +63,7 @@ class ActionEnvelope:
             "payload": self.payload,
             "preconditions": list(self.preconditions),
             "expected_postconditions": [item.to_dict() for item in self.expected_postconditions],
-            "cert_refs": {
-                ref: certificate.to_dict() for ref, certificate in sorted(self.cert_refs.items())
-            },
+            "cert_refs": {ref: certificate.to_dict() for ref, certificate in sorted(self.cert_refs.items())},
             "metadata": dict(self.metadata),
         }
 
@@ -106,9 +104,7 @@ class ActionEnvelope:
             payload.get("cert_refs", {}),
             "Envelope field 'cert_refs' must be an object",
         )
-        cert_refs = {
-            ref: _certificate_from_value(value) for ref, value in sorted(cert_ref_payload.items())
-        }
+        cert_refs = {ref: _certificate_from_value(value) for ref, value in sorted(cert_ref_payload.items())}
         metadata = require_dict(
             payload.get("metadata", {}),
             "Envelope field 'metadata' must be an object",
@@ -381,9 +377,7 @@ def _build_proof_bundle(
 def _postcondition_recommendations(
     postcondition_trace: list[dict[str, JSONValue]],
 ) -> tuple[str, ...]:
-    mismatched_paths = sorted(
-        str(item["path"]) for item in postcondition_trace if item.get("matched") is False
-    )
+    mismatched_paths = sorted(str(item["path"]) for item in postcondition_trace if item.get("matched") is False)
     joined_paths = ", ".join(mismatched_paths)
     return (
         f"Rollback or defer side effects until the postconditions hold for: {joined_paths}.",

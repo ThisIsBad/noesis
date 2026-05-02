@@ -16,7 +16,6 @@ def _make_result(expected: bool, said: bool, category: str = "misc", level: str 
 
 
 class TestErrorAnalyzer:
-
     def test_perfect_score(self):
         results = [
             _make_result(True, True),
@@ -70,7 +69,6 @@ class TestErrorAnalyzer:
 
 
 class TestAnalysisReport:
-
     def test_to_markdown_contains_accuracy(self):
         report = AnalysisReport(
             total_problems=10,

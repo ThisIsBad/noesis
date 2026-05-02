@@ -3,6 +3,7 @@ name = "episteme"
 version = "0.1.0"
 description = "Metacognition and uncertainty calibration for the Noesis AGI stack"
 requires-python = ">=3.11"
+license = "Apache-2.0"
 dependencies = [
     "noesis-schemas>=0.1.0,<0.2",
     "kairos>=0.1.0,<0.2",

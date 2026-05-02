@@ -53,15 +53,17 @@ def load_satbench(jsonl_path: Path) -> list[dict[str, Any]]:
     with open(jsonl_path, encoding="utf-8") as f:
         for i, line in enumerate(f):
             raw = json.loads(line)
-            problems.append({
-                "id": f"SAT-{i+1:04d}",
-                "source": "SATBench",
-                "level": "external",
-                "category": "sat_puzzle",
-                "natural_language": _format_satbench_problem(raw),
-                "expected_satisfiable": raw.get("label", "").upper() == "SAT",
-                "raw": raw,
-            })
+            problems.append(
+                {
+                    "id": f"SAT-{i + 1:04d}",
+                    "source": "SATBench",
+                    "level": "external",
+                    "category": "sat_puzzle",
+                    "natural_language": _format_satbench_problem(raw),
+                    "expected_satisfiable": raw.get("label", "").upper() == "SAT",
+                    "raw": raw,
+                }
+            )
     return problems
 
 
@@ -91,15 +93,17 @@ def load_folio(jsonl_path: Path) -> list[dict[str, Any]]:
     with open(jsonl_path, encoding="utf-8") as f:
         for i, line in enumerate(f):
             raw = json.loads(line)
-            problems.append({
-                "id": f"FOLIO-{i+1:04d}",
-                "source": "FOLIO",
-                "level": "external",
-                "category": "first_order_nli",
-                "natural_language": _format_folio_problem(raw),
-                "expected_label": raw.get("label", "Unknown"),
-                "raw": raw,
-            })
+            problems.append(
+                {
+                    "id": f"FOLIO-{i + 1:04d}",
+                    "source": "FOLIO",
+                    "level": "external",
+                    "category": "first_order_nli",
+                    "natural_language": _format_folio_problem(raw),
+                    "expected_label": raw.get("label", "Unknown"),
+                    "raw": raw,
+                }
+            )
     return problems
 
 

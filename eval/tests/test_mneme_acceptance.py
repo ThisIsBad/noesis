@@ -9,6 +9,7 @@ The 100k-entry latency run is opt-in via MNEME_BENCH_LATENCY_N because
 populating ChromaDB at that scale takes minutes; CI runs a smaller N to
 catch regressions in the instrumentation itself.
 """
+
 from __future__ import annotations
 
 import os

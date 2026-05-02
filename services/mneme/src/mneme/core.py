@@ -42,9 +42,18 @@ class MnemeCore:
         tags: list[str] | None = None,
         source: str | None = None,
     ) -> Memory:
-        return self.store_batch([(
-            content, memory_type, confidence, certificate, tags, source,
-        )])[0]
+        return self.store_batch(
+            [
+                (
+                    content,
+                    memory_type,
+                    confidence,
+                    certificate,
+                    tags,
+                    source,
+                )
+            ]
+        )[0]
 
     def store_batch(
         self,
@@ -88,11 +97,13 @@ class MnemeCore:
             rows.append((mem.memory_id, mem.model_dump_json(), int(mem.proven)))
             ids.append(mem.memory_id)
             documents.append(content)
-            metadatas.append({
-                "confidence": confidence,
-                "proven": int(mem.proven),
-                "memory_type": memory_type.value,
-            })
+            metadatas.append(
+                {
+                    "confidence": confidence,
+                    "proven": int(mem.proven),
+                    "memory_type": memory_type.value,
+                }
+            )
         self._conn.executemany(
             "INSERT INTO memories (memory_id, data_json, proven) VALUES (?, ?, ?)",
             rows,
@@ -130,7 +141,8 @@ class MnemeCore:
         out: list[list[Memory]] = []
         for ids, metadatas in zip(results["ids"], results["metadatas"]):
             filtered_ids = [
-                mid for mid, meta in zip(ids, metadatas)
+                mid
+                for mid, meta in zip(ids, metadatas)
                 if float(meta["confidence"]) >= min_confidence
             ][:k]
             memories: list[Memory] = []
@@ -193,10 +205,12 @@ class MnemeCore:
         existing = self.get(memory_id)
         if existing is None:
             return None
-        updated = existing.model_copy(update={
-            "certificate": certificate,
-            "proven": certificate.verified,
-        })
+        updated = existing.model_copy(
+            update={
+                "certificate": certificate,
+                "proven": certificate.verified,
+            }
+        )
         self._conn.execute(
             "UPDATE memories SET data_json=?, proven=? WHERE memory_id=?",
             (updated.model_dump_json(), int(updated.proven), memory_id),
@@ -206,11 +220,13 @@ class MnemeCore:
         # refreshes the metadata — cheap, no re-embedding cost.
         self._col.update(
             ids=[memory_id],
-            metadatas=[{
-                "confidence": existing.confidence,
-                "proven": int(updated.proven),
-                "memory_type": existing.memory_type.value,
-            }],
+            metadatas=[
+                {
+                    "confidence": existing.confidence,
+                    "proven": int(updated.proven),
+                    "memory_type": existing.memory_type.value,
+                }
+            ],
         )
         return updated
 

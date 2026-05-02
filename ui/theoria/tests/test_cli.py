@@ -30,12 +30,21 @@ def running_server():
     thread.start()
     time.sleep(0.05)
     # Preload samples for list/export/diff tests.
-    store.put_many([
-        _make_trace("t-one", source="logos", kind="policy", verdict="block",
-                    title="Block delete", tags=["policy", "block"]),
-        _make_trace("t-two", source="praxis", kind="plan", verdict="plan-selected",
-                    title="Dual-write migration", tags=["plan"]),
-    ])
+    store.put_many(
+        [
+            _make_trace(
+                "t-one", source="logos", kind="policy", verdict="block", title="Block delete", tags=["policy", "block"]
+            ),
+            _make_trace(
+                "t-two",
+                source="praxis",
+                kind="plan",
+                verdict="plan-selected",
+                title="Dual-write migration",
+                tags=["plan"],
+            ),
+        ]
+    )
     base = f"http://127.0.0.1:{port}"
     try:
         yield base, store
@@ -47,6 +56,7 @@ def running_server():
 
 def _make_trace(trace_id: str, **kw) -> DecisionTrace:
     from theoria.models import Outcome
+
     return DecisionTrace(
         id=trace_id,
         title=kw.get("title", trace_id),
@@ -70,6 +80,7 @@ def test_no_args_and_flag_only_default_to_serve() -> None:
     def _route(argv: list[str]) -> str:
         raw = list(argv)
         from theoria.cli import _COMMANDS
+
         if not raw or raw[0] not in _COMMANDS:
             if not raw or raw[0].startswith("-"):
                 raw = ["serve", *raw]

@@ -76,9 +76,8 @@ class KairosCore:
                 and span.ended_at < since
             ):
                 continue
-            if (
-                min_duration_ms is not None
-                and (span.duration_ms is None or span.duration_ms < min_duration_ms)
+            if min_duration_ms is not None and (
+                span.duration_ms is None or span.duration_ms < min_duration_ms
             ):
                 continue
             matched.append(span)

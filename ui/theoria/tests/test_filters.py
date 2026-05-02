@@ -8,7 +8,12 @@ from theoria.models import DecisionTrace, Outcome, ReasoningStep, StepKind
 
 def _trace(**kwargs) -> DecisionTrace:
     defaults = dict(
-        id="t", title="Title", question="Question?", source="logos", kind="policy", root="q",
+        id="t",
+        title="Title",
+        question="Question?",
+        source="logos",
+        kind="policy",
+        root="q",
         steps=[ReasoningStep(id="q", kind=StepKind.QUESTION, label="Q")],
         outcome=Outcome(verdict="allow", summary="ok"),
         tags=["a", "b"],

@@ -87,9 +87,7 @@ def test_compact_never_loses_conclusions() -> None:
 
     store.compact()
     remaining = [
-        str(entry.certificate.claim)
-        for entry in store.query(limit=20)
-        if isinstance(entry.certificate.claim, str)
+        str(entry.certificate.claim) for entry in store.query(limit=20) if isinstance(entry.certificate.claim, str)
     ]
 
     for claim in original:

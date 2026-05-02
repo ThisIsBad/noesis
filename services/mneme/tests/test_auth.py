@@ -13,6 +13,7 @@ four-branch contract:
 4. With a secret configured, a matching ``Bearer <secret>`` passes
    through to the wrapped app.
 """
+
 from __future__ import annotations
 
 from starlette.applications import Starlette
@@ -76,8 +77,6 @@ def test_correct_bearer_token_accepted(monkeypatch):
     monkeypatch.setattr(server, "_SECRET", "test-secret")
     app = server._BearerAuth(_downstream())
     client = TestClient(app)
-    resp = client.get(
-        "/spans", headers={"Authorization": "Bearer test-secret"}
-    )
+    resp = client.get("/spans", headers={"Authorization": "Bearer test-secret"})
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}

@@ -78,16 +78,12 @@ def compute_stats(
     # Keep day rollup in chronological order so consumers can chart it.
     stats.by_day = dict(sorted(by_day.items()))
     stats.top_triggered_rules = [
-        {"label": label, "count": count}
-        for label, count in triggered_rules.most_common(top_n)
+        {"label": label, "count": count} for label, count in triggered_rules.most_common(top_n)
     ]
     stats.top_failed_conclusions = [
-        {"label": label, "count": count}
-        for label, count in failed_conclusions.most_common(top_n)
+        {"label": label, "count": count} for label, count in failed_conclusions.most_common(top_n)
     ]
-    stats.mean_confidence = (
-        confidence_total / confidence_count if confidence_count > 0 else None
-    )
+    stats.mean_confidence = confidence_total / confidence_count if confidence_count > 0 else None
     return stats
 
 

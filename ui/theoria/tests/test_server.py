@@ -48,9 +48,7 @@ def _get(url: str) -> tuple[int, dict]:
 
 def _post(url: str, body: dict | None = None) -> tuple[int, dict | str]:
     data = json.dumps(body).encode("utf-8") if body is not None else b"{}"
-    req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"}, method="POST"
-    )
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
     try:
         with urllib.request.urlopen(req) as resp:
             return resp.status, json.loads(resp.read().decode())
@@ -121,9 +119,12 @@ def test_stats_endpoint_top_n(live_server) -> None:
 def test_search_endpoint_with_step_predicate(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
-    status, body = _post(f"{base}/api/traces/search", {
-        "any_step": [{"kind": "rule_check", "status": "triggered"}],
-    })
+    status, body = _post(
+        f"{base}/api/traces/search",
+        {
+            "any_step": [{"kind": "rule_check", "status": "triggered"}],
+        },
+    )
     assert status == 200
     ids = [t["id"] for t in body["traces"]]
     assert ids == ["sample-logos-policy-block"]
@@ -132,9 +133,12 @@ def test_search_endpoint_with_step_predicate(live_server) -> None:
 def test_search_endpoint_rejects_unknown_predicate_field(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
-    status, body = _post(f"{base}/api/traces/search", {
-        "any_step": [{"kind": "note", "bogus": 1}],
-    })
+    status, body = _post(
+        f"{base}/api/traces/search",
+        {
+            "any_step": [{"kind": "note", "bogus": 1}],
+        },
+    )
     assert status == 400
     assert "unknown" in body["error"]
 
@@ -204,12 +208,11 @@ def test_clear_removes_all_traces(live_server) -> None:
 # Export endpoint
 # ---------------------------------------------------------------------------
 
+
 def test_export_mermaid(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
-    with urllib.request.urlopen(
-        f"{base}/api/traces/sample-logos-policy-block/export?format=mermaid"
-    ) as resp:
+    with urllib.request.urlopen(f"{base}/api/traces/sample-logos-policy-block/export?format=mermaid") as resp:
         body = resp.read().decode()
         assert resp.status == 200
         assert resp.headers.get("Content-Type", "").startswith("text/plain")
@@ -220,9 +223,7 @@ def test_export_mermaid(live_server) -> None:
 def test_export_markdown(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
-    with urllib.request.urlopen(
-        f"{base}/api/traces/sample-telos-drift/export?format=markdown"
-    ) as resp:
+    with urllib.request.urlopen(f"{base}/api/traces/sample-telos-drift/export?format=markdown") as resp:
         body = resp.read().decode()
         assert resp.status == 200
         assert resp.headers.get("Content-Type", "").startswith("text/markdown")
@@ -236,9 +237,7 @@ def test_export_markdown(live_server) -> None:
 def test_export_dot(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
-    with urllib.request.urlopen(
-        f"{base}/api/traces/sample-z3-proof/export?format=dot"
-    ) as resp:
+    with urllib.request.urlopen(f"{base}/api/traces/sample-z3-proof/export?format=dot") as resp:
         body = resp.read().decode()
     assert "digraph Trace" in body
     assert "rankdir=TB" in body
@@ -247,9 +246,7 @@ def test_export_dot(live_server) -> None:
 def test_export_unknown_format_returns_400(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
-    req = urllib.request.Request(
-        f"{base}/api/traces/sample-z3-proof/export?format=pdf"
-    )
+    req = urllib.request.Request(f"{base}/api/traces/sample-z3-proof/export?format=pdf")
     try:
         urllib.request.urlopen(req)
         assert False, "should have raised HTTPError"
@@ -270,6 +267,7 @@ def test_export_unknown_trace_returns_404(live_server) -> None:
 # ---------------------------------------------------------------------------
 # Diff endpoint
 # ---------------------------------------------------------------------------
+
 
 def test_diff_endpoint_json(live_server) -> None:
     base, _ = live_server
@@ -304,9 +302,7 @@ def test_diff_endpoint_missing_trace_returns_404(live_server) -> None:
 def test_diff_endpoint_unknown_format_returns_400(live_server) -> None:
     base, _ = live_server
     _post(f"{base}/api/samples/load")
-    req = urllib.request.Request(
-        f"{base}/api/traces/sample-z3-proof/diff/sample-telos-drift?format=pdf"
-    )
+    req = urllib.request.Request(f"{base}/api/traces/sample-z3-proof/diff/sample-telos-drift?format=pdf")
     try:
         urllib.request.urlopen(req)
         assert False, "should have raised HTTPError"
@@ -317,6 +313,7 @@ def test_diff_endpoint_unknown_format_returns_400(live_server) -> None:
 # ---------------------------------------------------------------------------
 # Server-Sent Events
 # ---------------------------------------------------------------------------
+
 
 def test_sse_broadcasts_new_trace(live_server) -> None:
     base, _ = live_server

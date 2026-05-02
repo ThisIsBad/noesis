@@ -76,7 +76,7 @@ def resolve_sqlite_path(
         if url.startswith(SQLITE_SCHEME):
             # ``sqlite:////abs/path`` → ``/abs/path``
             # ``sqlite:///rel/path`` → ``rel/path``
-            return url[len(SQLITE_SCHEME):]
+            return url[len(SQLITE_SCHEME) :]
         raise UnsupportedDatabaseURL(
             f"{url_env} uses scheme other than 'sqlite:///'; got {url!r}. "
             "Only SQLite URLs are supported today — Postgres handling "

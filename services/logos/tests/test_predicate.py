@@ -1,13 +1,21 @@
 import pytest
 from logos.predicate_models import (
-    Variable, Constant, Predicate, PredicateConnective,
-    PredicateExpression, QuantifiedExpression, Quantifier, FOLArgument
+    Variable,
+    Constant,
+    Predicate,
+    PredicateConnective,
+    PredicateExpression,
+    QuantifiedExpression,
+    Quantifier,
+    FOLArgument,
 )
 from logos.predicate import PredicateVerifier
+
 
 @pytest.fixture
 def verifier():
     return PredicateVerifier()
+
 
 def test_socrates_syllogism(verifier):
     # Forall x (Man(x) -> Mortal(x))
@@ -37,6 +45,7 @@ def test_socrates_syllogism(verifier):
     res = verifier.verify(arg)
     assert res.valid is True
 
+
 def test_invalid_socrates(verifier):
     # Forall x (Man(x) -> Mortal(x))
     # Mortal(Socrates)
@@ -60,6 +69,7 @@ def test_invalid_socrates(verifier):
     res = verifier.verify(arg)
     assert res.valid is False
 
+
 def test_exists_introduction(verifier):
     # Happy(John)
     # ---------------------------
@@ -76,6 +86,7 @@ def test_exists_introduction(verifier):
     arg = FOLArgument(premises=(p1,), conclusion=conc)
     res = verifier.verify(arg)
     assert res.valid is True
+
 
 def test_quantifier_swap_valid(verifier):
     # Exists y Forall x Loves(x, y)
@@ -99,6 +110,7 @@ def test_quantifier_swap_valid(verifier):
     res = verifier.verify(arg)
     assert res.valid is True
 
+
 def test_quantifier_swap_invalid(verifier):
     # Forall x Exists y Loves(x, y)
     # ---------------------------
@@ -118,6 +130,7 @@ def test_quantifier_swap_invalid(verifier):
     arg = FOLArgument(premises=(p1,), conclusion=conc)
     res = verifier.verify(arg)
     assert res.valid is False
+
 
 def test_De_Morgan_for_quantifiers(verifier):
     # ~Forall x P(x)

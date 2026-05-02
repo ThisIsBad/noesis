@@ -24,6 +24,7 @@ from logos import CertificateStore, certify, verify
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _extract_propositions(claim: str) -> set[str]:
     """Extract single-uppercase-letter proposition labels from *claim*."""
     return set(re.findall(r"\b[A-Z]\b", claim))
@@ -127,9 +128,7 @@ class TestProofTemplateTransfer:
                     successful += 1
 
         transfer_rate = successful / total
-        assert transfer_rate == 1.0, (
-            f"Transfer rate: {transfer_rate:.2%} ({successful}/{total})"
-        )
+        assert transfer_rate == 1.0, f"Transfer rate: {transfer_rate:.2%} ({successful}/{total})"
 
     def test_invalid_transfer_matrix(self) -> None:
         """All invalid templates stay invalid across all substitution sets."""
@@ -151,9 +150,7 @@ class TestProofTemplateTransfer:
                     preserved += 1
 
         preservation_rate = preserved / total
-        assert preservation_rate == 1.0, (
-            f"Invalidity preservation rate: {preservation_rate:.2%} ({preserved}/{total})"
-        )
+        assert preservation_rate == 1.0, f"Invalidity preservation rate: {preservation_rate:.2%} ({preserved}/{total})"
 
     def test_template_store_retrieve_and_apply(self) -> None:
         """Templates stored with tags can be retrieved and applied."""

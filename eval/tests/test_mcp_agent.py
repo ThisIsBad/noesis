@@ -17,6 +17,7 @@ harness-side ``emit_action`` tool directly. These tests pin:
 * ``build_treatment_agent`` refuses to build when no services are
   configured (a treatment with zero tools is just another baseline).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -343,9 +344,7 @@ def test_factory_explicit_arg_overrides_env(
     a future refactor that swaps the order doesn't silently flip
     precedence and surprise callers."""
     monkeypatch.setenv("NOESIS_AB_MAX_BUDGET_USD", "9.99")
-    agent = build_baseline_agent(
-        query_fn=fake_sdk.query_fn, max_budget_usd=0.50
-    )
+    agent = build_baseline_agent(query_fn=fake_sdk.query_fn, max_budget_usd=0.50)
     agent.act("g", "o", [])
     assert fake_sdk.captured_options.max_budget_usd == 0.50
 

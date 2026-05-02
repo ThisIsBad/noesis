@@ -18,6 +18,7 @@ from logos.models import (
     Proposition,
 )
 
+
 def _find_benchmarks_dir() -> Path:
     """Locate the benchmarks/ directory, supporting both flat and src/ layouts."""
     here = Path(__file__).resolve().parent
@@ -33,6 +34,7 @@ BENCHMARKS_DIR = _find_benchmarks_dir()
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def load_problems(path: Path | None = None) -> list[dict[str, Any]]:
     """Load raw problem dicts from the JSON file."""
@@ -69,6 +71,7 @@ def parse_problem(raw: dict[str, Any]) -> tuple[Argument, dict[str, Any]]:
 # Expression parser
 # ---------------------------------------------------------------------------
 
+
 def _parse_expr(data: Any) -> Proposition | LogicalExpression:
     """Recursively parse a JSON expression into model objects."""
     # Bare string → atomic proposition
@@ -88,23 +91,15 @@ def _parse_expr(data: Any) -> Proposition | LogicalExpression:
         return LogicalExpression(Connective.NOT, operand)
 
     if expr_type == "and":
-        return LogicalExpression(
-            Connective.AND, _parse_expr(data["left"]), _parse_expr(data["right"])
-        )
+        return LogicalExpression(Connective.AND, _parse_expr(data["left"]), _parse_expr(data["right"]))
 
     if expr_type == "or":
-        return LogicalExpression(
-            Connective.OR, _parse_expr(data["left"]), _parse_expr(data["right"])
-        )
+        return LogicalExpression(Connective.OR, _parse_expr(data["left"]), _parse_expr(data["right"]))
 
     if expr_type == "implies":
-        return LogicalExpression(
-            Connective.IMPLIES, _parse_expr(data["left"]), _parse_expr(data["right"])
-        )
+        return LogicalExpression(Connective.IMPLIES, _parse_expr(data["left"]), _parse_expr(data["right"]))
 
     if expr_type == "iff":
-        return LogicalExpression(
-            Connective.IFF, _parse_expr(data["left"]), _parse_expr(data["right"])
-        )
+        return LogicalExpression(Connective.IFF, _parse_expr(data["left"]), _parse_expr(data["right"]))
 
     raise ValueError(f"Unknown expression type: {expr_type!r}")

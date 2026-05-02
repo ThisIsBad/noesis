@@ -5,6 +5,7 @@ Pydantic models, so schema drift between a service and its shared contract
 fails CI immediately. Tests skip cleanly when their required env vars are
 unset — see ``eval/.env.e2e.example`` for the layout.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -153,6 +154,7 @@ pytestmark = pytest.mark.integration
 
 # ── Mneme ─────────────────────────────────────────────────────────────────────
 
+
 async def test_mneme_store_and_retrieve(
     mneme_url: str, mneme_secret: str, mneme_cleanup: list[str]
 ) -> None:
@@ -187,9 +189,8 @@ async def test_mneme_store_and_retrieve(
 
 # ── Telos ─────────────────────────────────────────────────────────────────────
 
-async def test_telos_register_and_list_goal(
-    telos_url: str, telos_secret: str
-) -> None:
+
+async def test_telos_register_and_list_goal(telos_url: str, telos_secret: str) -> None:
     description = f"E2E smoke goal {uuid.uuid4().hex[:8]}"
     contract = GoalContract(
         description=description,
@@ -214,9 +215,7 @@ async def test_telos_register_and_list_goal(
         assert any(g.goal_id == stored.goal_id for g in listed), listed
 
 
-async def test_telos_alignment_check(
-    telos_url: str, telos_secret: str
-) -> None:
+async def test_telos_alignment_check(telos_url: str, telos_secret: str) -> None:
     async with mcp_session(telos_url, telos_secret) as session:
         body = parse_json(
             await session.call_tool(
@@ -231,9 +230,8 @@ async def test_telos_alignment_check(
 
 # ── Praxis ────────────────────────────────────────────────────────────────────
 
-async def test_praxis_decompose_and_commit(
-    praxis_url: str, praxis_secret: str
-) -> None:
+
+async def test_praxis_decompose_and_commit(praxis_url: str, praxis_secret: str) -> None:
     async with mcp_session(praxis_url, praxis_secret) as session:
         plan = parse_model(
             await session.call_tool("decompose_goal", {"goal": "e2e: boil water"}),
@@ -279,9 +277,7 @@ async def test_praxis_backtrack_surfaces_pending_sibling_after_failure(
     """
     async with mcp_session(praxis_url, praxis_secret) as session:
         plan = parse_model(
-            await session.call_tool(
-                "decompose_goal", {"goal": "e2e: backtrack probe"}
-            ),
+            await session.call_tool("decompose_goal", {"goal": "e2e: backtrack probe"}),
             Plan,
         )
 
@@ -339,6 +335,7 @@ async def test_praxis_backtrack_surfaces_pending_sibling_after_failure(
 
 # ── Logos ─────────────────────────────────────────────────────────────────────
 
+
 async def test_logos_z3_check(logos_url: str, logos_secret: str) -> None:
     """Smoke test Logos' Z3 surface — trivially satisfiable constraints."""
     async with mcp_session(logos_url, logos_secret) as session:
@@ -371,6 +368,7 @@ async def test_logos_certify_claim(logos_url: str, logos_secret: str) -> None:
 
 
 # ── Episteme ──────────────────────────────────────────────────────────────────
+
 
 async def test_episteme_log_predict_outcome_calibration(
     episteme_url: str, episteme_secret: str
@@ -422,6 +420,7 @@ async def test_episteme_should_escalate(
 
 # ── Empiria ───────────────────────────────────────────────────────────────────
 
+
 async def test_empiria_record_and_retrieve(
     empiria_url: str, empiria_secret: str
 ) -> None:
@@ -457,6 +456,7 @@ async def test_empiria_record_and_retrieve(
 
 
 # ── Techne ────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.xfail(
     strict=False,
@@ -510,10 +510,9 @@ async def test_techne_store_and_retrieve_skill(
 
 # ── Kosmos ────────────────────────────────────────────────────────────────────
 
+
 @retry_on_transient_mcp_error()
-async def test_kosmos_causal_chain(
-    kosmos_url: str, kosmos_secret: str
-) -> None:
+async def test_kosmos_causal_chain(kosmos_url: str, kosmos_secret: str) -> None:
     """Build a tiny causal graph A → B → C, then interrogate it."""
     marker = uuid.uuid4().hex[:8]
     a, b, c = f"e2e_a_{marker}", f"e2e_b_{marker}", f"e2e_c_{marker}"
@@ -527,9 +526,7 @@ async def test_kosmos_causal_chain(
             )
             assert "added" in body, body
 
-        causes = parse_json(
-            await session.call_tool("query_causes", {"effect": c})
-        )
+        causes = parse_json(await session.call_tool("query_causes", {"effect": c}))
         assert b in causes.get("causes", []), causes
 
         cf = parse_json(
@@ -598,23 +595,17 @@ async def test_durchstich_kosmos_counterfactual_consistency(
 
         # (2) Multi-hop counterfactual == product of edge weights.
         ad_strength = parse_json(
-            await session.call_tool(
-                "counterfactual", {"cause": a, "effect": d}
-            )
+            await session.call_tool("counterfactual", {"cause": a, "effect": d})
         ).get("strength")
         assert ad_strength == pytest.approx(ab * bc * cd, rel=1e-6), (
             f"counterfactual(A, D) expected {ab * bc * cd}, got {ad_strength}"
         )
         ac_strength = parse_json(
-            await session.call_tool(
-                "counterfactual", {"cause": a, "effect": c}
-            )
+            await session.call_tool("counterfactual", {"cause": a, "effect": c})
         ).get("strength")
         assert ac_strength == pytest.approx(ab * bc, rel=1e-6)
         bd_strength = parse_json(
-            await session.call_tool(
-                "counterfactual", {"cause": b, "effect": d}
-            )
+            await session.call_tool("counterfactual", {"cause": b, "effect": d})
         ).get("strength")
         assert bd_strength == pytest.approx(bc * cd, rel=1e-6)
 
@@ -631,14 +622,13 @@ async def test_durchstich_kosmos_counterfactual_consistency(
 
         # (4) No path ⇒ strength=None and unreachable from intervention.
         raw_unrelated = parse_json(
-            await session.call_tool(
-                "counterfactual", {"cause": unrelated, "effect": d}
-            )
+            await session.call_tool("counterfactual", {"cause": unrelated, "effect": d})
         )
         assert raw_unrelated.get("strength") is None, raw_unrelated
 
 
 # ── Full Durchstich chain ─────────────────────────────────────────────────────
+
 
 @retry_on_transient_mcp_error()
 async def test_durchstich_telos_praxis_mneme(
@@ -802,9 +792,7 @@ async def test_durchstich_five_hop_telos_praxis_logos_mneme_empiria(
     # to thread through the chain rather than a fabricated one.
     async with mcp_session(logos_url, logos_secret) as logos:
         raw_cert = parse_json(
-            await logos.call_tool(
-                "certify_claim", {"argument": "P -> Q, P |- Q"}
-            )
+            await logos.call_tool("certify_claim", {"argument": "P -> Q, P |- Q"})
         )
         assert raw_cert.get("verified") is True, raw_cert
         certificate_json = raw_cert["certificate_json"]

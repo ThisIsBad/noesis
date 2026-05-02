@@ -16,6 +16,7 @@ samples; the suite-level paired statistic is on those per-task rates.
 Everything is JSONL-friendly: ``EpisodeResult.seed`` defaults to 0 so
 pre-multi-sample JSONL files load verbatim.
 """
+
 from __future__ import annotations
 
 import math
@@ -154,12 +155,10 @@ class SuiteResults:
 
         shared = sorted(set(self_by_task) & set(base_by_task))
         per_task: dict[str, tuple[float, float]] = {
-            tid: (_rate(self_by_task[tid]), _rate(base_by_task[tid]))
-            for tid in shared
+            tid: (_rate(self_by_task[tid]), _rate(base_by_task[tid])) for tid in shared
         }
         samples_per_task: dict[str, tuple[int, int]] = {
-            tid: (len(self_by_task[tid]), len(base_by_task[tid]))
-            for tid in shared
+            tid: (len(self_by_task[tid]), len(base_by_task[tid])) for tid in shared
         }
 
         # Wins/losses at the task level: strict inequality on the
@@ -182,14 +181,10 @@ class SuiteResults:
         )
 
         treatment_mean = (
-            statistics.fmean(t for t, _ in per_task.values())
-            if per_task
-            else 0.0
+            statistics.fmean(t for t, _ in per_task.values()) if per_task else 0.0
         )
         baseline_mean = (
-            statistics.fmean(b for _, b in per_task.values())
-            if per_task
-            else 0.0
+            statistics.fmean(b for _, b in per_task.values()) if per_task else 0.0
         )
 
         # Cost: aggregate over all episodes on each side of the shared
@@ -197,12 +192,8 @@ class SuiteResults:
         # correctly dominates a task with 1 — the question "how much
         # does this agent cost per run" is weighted by how many runs
         # happened, not by the task catalogue.
-        t_episodes = [
-            e for tid in shared for e in self_by_task[tid]
-        ]
-        b_episodes = [
-            e for tid in shared for e in base_by_task[tid]
-        ]
+        t_episodes = [e for tid in shared for e in self_by_task[tid]]
+        b_episodes = [e for tid in shared for e in base_by_task[tid]]
         t_tokens = _mean(e.tokens_in + e.tokens_out for e in t_episodes)
         b_tokens = _mean(e.tokens_in + e.tokens_out for e in b_episodes)
         t_tool_calls = _mean(e.tool_calls for e in t_episodes)
@@ -214,12 +205,8 @@ class SuiteResults:
             treatment=self.agent,
             baseline=baseline.agent,
             shared_tasks=len(shared),
-            n_treatment_episodes=sum(
-                len(self_by_task[tid]) for tid in shared
-            ),
-            n_baseline_episodes=sum(
-                len(base_by_task[tid]) for tid in shared
-            ),
+            n_treatment_episodes=sum(len(self_by_task[tid]) for tid in shared),
+            n_baseline_episodes=sum(len(base_by_task[tid]) for tid in shared),
             treatment_success_rate=treatment_mean,
             baseline_success_rate=baseline_mean,
             delta=mean_diff,
@@ -264,6 +251,7 @@ class SuiteDelta:
       under ``H0``. Small task counts → near-unity p-values; don't
       mistake that for "no effect", it's "not enough data to tell".
     """
+
     treatment: str
     baseline: str
     shared_tasks: int
@@ -300,10 +288,7 @@ class SuiteDelta:
             if self.treatment_tokens_per_episode == 0:
                 return 1.0
             return float("inf")
-        return (
-            self.treatment_tokens_per_episode
-            / self.baseline_tokens_per_episode
-        )
+        return self.treatment_tokens_per_episode / self.baseline_tokens_per_episode
 
     @property
     def success_per_1k_tokens_treatment(self) -> float:
@@ -312,19 +297,13 @@ class SuiteDelta:
         no tokens reported (default for deterministic agents)."""
         if self.treatment_tokens_per_episode == 0:
             return 0.0
-        return (
-            1000.0 * self.treatment_success_rate
-            / self.treatment_tokens_per_episode
-        )
+        return 1000.0 * self.treatment_success_rate / self.treatment_tokens_per_episode
 
     @property
     def success_per_1k_tokens_baseline(self) -> float:
         if self.baseline_tokens_per_episode == 0:
             return 0.0
-        return (
-            1000.0 * self.baseline_success_rate
-            / self.baseline_tokens_per_episode
-        )
+        return 1000.0 * self.baseline_success_rate / self.baseline_tokens_per_episode
 
     @property
     def ci95_low(self) -> float:
@@ -363,12 +342,8 @@ class SuiteDelta:
             "losses": self.losses,
             "only_treatment": len(self.only_treatment),
             "only_baseline": len(self.only_baseline),
-            "treatment_tokens_per_episode": round(
-                self.treatment_tokens_per_episode, 1
-            ),
-            "baseline_tokens_per_episode": round(
-                self.baseline_tokens_per_episode, 1
-            ),
+            "treatment_tokens_per_episode": round(self.treatment_tokens_per_episode, 1),
+            "baseline_tokens_per_episode": round(self.baseline_tokens_per_episode, 1),
             "tokens_ratio": (
                 "inf"
                 if self.tokens_ratio == float("inf")
@@ -437,5 +412,5 @@ def _two_sided_sign_test_pvalue(k: int, n: int) -> float:
     if k < 0 or k > n:
         raise ValueError(f"k={k} out of range for n={n}")
     # Two-sided symmetric p: 2 * P(X <= k) under Bin(n, 0.5), capped at 1.
-    tail = sum(comb(n, i) for i in range(k + 1)) / (2 ** n)
+    tail = sum(comb(n, i) for i in range(k + 1)) / (2**n)
     return float(min(1.0, 2 * tail))

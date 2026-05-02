@@ -11,6 +11,7 @@ Covers:
     * Unknown agent / suite names fail with usable error messages
       (argparse handles suite, the run dispatcher handles agent).
 """
+
 from __future__ import annotations
 
 import io
@@ -40,10 +41,18 @@ def test_run_oracle_writes_one_jsonl_line_per_episode(
     assert records, "expected at least one episode recorded"
     fields = set(records[0].keys())
     expected = {
-        "agent", "task_id", "success", "steps_taken",
-        "failures_seen", "failures_recovered", "final_reward",
+        "agent",
+        "task_id",
+        "success",
+        "steps_taken",
+        "failures_seen",
+        "failures_recovered",
+        "final_reward",
         "seed",
-        "tokens_in", "tokens_out", "tool_calls", "wall_time_s",
+        "tokens_in",
+        "tokens_out",
+        "tool_calls",
+        "wall_time_s",
     }
     assert fields == expected
 
@@ -101,9 +110,7 @@ def _write_jsonl(path: Path, records: list[dict[str, object]]) -> None:
             f.write(json.dumps(r) + "\n")
 
 
-def _episode_dict(
-    agent: str, task_id: str, success: bool
-) -> dict[str, object]:
+def _episode_dict(agent: str, task_id: str, success: bool) -> dict[str, object]:
     return EpisodeResult(
         agent=agent,
         task_id=task_id,
@@ -120,16 +127,22 @@ def test_diff_reports_wins_losses_and_delta(
 ) -> None:
     treatment = tmp_path / "t.jsonl"
     baseline = tmp_path / "b.jsonl"
-    _write_jsonl(treatment, [
-        _episode_dict("oracle", "t1", True),
-        _episode_dict("oracle", "t2", True),
-        _episode_dict("oracle", "t3", False),
-    ])
-    _write_jsonl(baseline, [
-        _episode_dict("null", "t1", False),  # treatment wins
-        _episode_dict("null", "t2", True),   # tie
-        _episode_dict("null", "t3", False),  # tie on fail
-    ])
+    _write_jsonl(
+        treatment,
+        [
+            _episode_dict("oracle", "t1", True),
+            _episode_dict("oracle", "t2", True),
+            _episode_dict("oracle", "t3", False),
+        ],
+    )
+    _write_jsonl(
+        baseline,
+        [
+            _episode_dict("null", "t1", False),  # treatment wins
+            _episode_dict("null", "t2", True),  # tie
+            _episode_dict("null", "t3", False),  # tie on fail
+        ],
+    )
 
     rc = main(["diff", str(treatment), str(baseline)])
     assert rc == 0
@@ -151,14 +164,20 @@ def test_diff_surfaces_only_one_side_task_ids(
 ) -> None:
     treatment = tmp_path / "t.jsonl"
     baseline = tmp_path / "b.jsonl"
-    _write_jsonl(treatment, [
-        _episode_dict("oracle", "shared", True),
-        _episode_dict("oracle", "only_t", True),
-    ])
-    _write_jsonl(baseline, [
-        _episode_dict("null", "shared", False),
-        _episode_dict("null", "only_b", False),
-    ])
+    _write_jsonl(
+        treatment,
+        [
+            _episode_dict("oracle", "shared", True),
+            _episode_dict("oracle", "only_t", True),
+        ],
+    )
+    _write_jsonl(
+        baseline,
+        [
+            _episode_dict("null", "shared", False),
+            _episode_dict("null", "only_b", False),
+        ],
+    )
 
     rc = main(["diff", str(treatment), str(baseline)])
     assert rc == 0
@@ -172,10 +191,13 @@ def test_diff_surfaces_only_one_side_task_ids(
 def test_diff_rejects_jsonl_with_mixed_agent_names(tmp_path: Path) -> None:
     treatment = tmp_path / "mixed.jsonl"
     baseline = tmp_path / "b.jsonl"
-    _write_jsonl(treatment, [
-        _episode_dict("oracle", "t1", True),
-        _episode_dict("null", "t2", False),
-    ])
+    _write_jsonl(
+        treatment,
+        [
+            _episode_dict("oracle", "t1", True),
+            _episode_dict("null", "t2", False),
+        ],
+    )
     _write_jsonl(baseline, [_episode_dict("null", "t1", False)])
 
     with pytest.raises(SystemExit, match="multiple agents"):
@@ -185,8 +207,7 @@ def test_diff_rejects_jsonl_with_mixed_agent_names(tmp_path: Path) -> None:
 def test_diff_points_at_line_number_on_bad_json(tmp_path: Path) -> None:
     bad = tmp_path / "bad.jsonl"
     bad.write_text(
-        json.dumps(_episode_dict("oracle", "t1", True))
-        + "\n{not valid json\n"
+        json.dumps(_episode_dict("oracle", "t1", True)) + "\n{not valid json\n"
     )
     ok = tmp_path / "ok.jsonl"
     _write_jsonl(ok, [_episode_dict("null", "t1", False)])

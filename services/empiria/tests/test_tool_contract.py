@@ -11,14 +11,20 @@ The critical invariant (from PR #49): any parameter whose name ends in
 declared annotation is not *exactly* ``str``, which silently turns a
 serialised payload into a ``dict`` before Pydantic validation.
 """
+
 from __future__ import annotations
 
 import empiria.mcp_server_http as server
 
 EXPECTED_TOOLS: dict[str, set[str]] = {
     "record_experience": {
-        "context", "action_taken", "outcome", "success",
-        "lesson_text", "confidence", "domain",
+        "context",
+        "action_taken",
+        "outcome",
+        "success",
+        "lesson_text",
+        "confidence",
+        "domain",
     },
     "retrieve_lessons": {"context", "k", "domain"},
     "successful_patterns": {"domain"},

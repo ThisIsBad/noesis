@@ -15,6 +15,7 @@ These tests pin (1)–(3) and cover the "no active goals", "no forbidding
 postconditions", and "empty token overlap" edge cases that would
 otherwise silently regress the drift signal to 0.0.
 """
+
 from __future__ import annotations
 
 from noesis_schemas import GoalConstraint, GoalContract

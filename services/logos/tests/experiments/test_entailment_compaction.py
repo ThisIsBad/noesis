@@ -155,9 +155,7 @@ def _run_random_compaction() -> dict[str, object]:
 
     unique_entries = store.query(limit=1000)
     unique_claims = [
-        str(entry.certificate.claim)
-        for entry in unique_entries
-        if isinstance(entry.certificate.claim, str)
+        str(entry.certificate.claim) for entry in unique_entries if isinstance(entry.certificate.claim, str)
     ]
 
     removed_claims: list[str] = []
@@ -175,8 +173,7 @@ def _run_random_compaction() -> dict[str, object]:
             entailments_found += 1
 
     verification_passed = all(
-        check_entailment(compacted_claims, _extract_conclusion_text(claim))
-        for claim in unique_claims
+        check_entailment(compacted_claims, _extract_conclusion_text(claim)) for claim in unique_claims
     )
     wall_time = perf_counter() - start
     result = {

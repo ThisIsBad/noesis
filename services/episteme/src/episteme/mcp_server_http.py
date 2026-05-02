@@ -23,7 +23,8 @@ log = logging.getLogger("episteme")
 _secret_set = bool(os.getenv("EPISTEME_SECRET"))
 log.info(
     "episteme boot: port=%s secret_set=%s",
-    os.getenv("PORT", "8000"), _secret_set,
+    os.getenv("PORT", "8000"),
+    _secret_set,
 )
 _core = EpistemeCore()
 
@@ -33,14 +34,11 @@ _core = EpistemeCore()
 # EPISTEME_ALLOWED_HOSTS is a comma-separated list of extra allowed Hosts;
 # defaults keep localhost working for local dev.
 _allowed_hosts = [
-    h.strip()
-    for h in os.getenv("EPISTEME_ALLOWED_HOSTS", "").split(",")
-    if h.strip()
+    h.strip() for h in os.getenv("EPISTEME_ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
 _transport_security = TransportSecuritySettings(
     enable_dns_rebinding_protection=bool(_allowed_hosts),
-    allowed_hosts=_allowed_hosts
-    + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
+    allowed_hosts=_allowed_hosts + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
     allowed_origins=[f"https://{h}" for h in _allowed_hosts]
     + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
 )
@@ -117,9 +115,7 @@ def should_escalate(confidence: float, domain: str | None = None) -> str:
         domain: Optional domain tag — calibration bias is applied per domain.
     """
     with get_tracer().span("should_escalate"):
-        return json.dumps(
-            {"escalate": _core.should_escalate(confidence, domain)}
-        )
+        return json.dumps({"escalate": _core.should_escalate(confidence, domain)})
 
 
 @mcp.tool()
@@ -155,6 +151,7 @@ def get_competence_map(
 
 # ── HTTP app ──────────────────────────────────────────────────────────────────
 
+
 async def _health(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "service": "episteme"})
 
@@ -167,5 +164,6 @@ app.add_middleware(bearer_middleware("EPISTEME_SECRET"))
 
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

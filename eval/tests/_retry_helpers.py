@@ -22,6 +22,7 @@ Default is two retries (three total attempts) with 2 s / 4 s backoff —
 matches the cold-start helper so a single flake burns roughly the same
 budget either way.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -48,10 +49,7 @@ def _is_mid_session_drop_leaf(exc: BaseException) -> bool:
     if isinstance(exc, McpError) and "Connection closed" in str(exc):
         return True
     if isinstance(exc, httpx.HTTPStatusError):
-        return (
-            exc.response.status_code == 404
-            and "/messages/" in str(exc.request.url)
-        )
+        return exc.response.status_code == 404 and "/messages/" in str(exc.request.url)
     return False
 
 
@@ -74,6 +72,7 @@ def retry_on_transient_mcp_error(
     doubles it. Non-transient errors re-raise immediately, so coverage
     of real regressions is unaffected.
     """
+
     def decorator(fn: F) -> F:
         @functools.wraps(fn)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -82,10 +81,7 @@ def retry_on_transient_mcp_error(
                 try:
                     return await fn(*args, **kwargs)
                 except BaseException as exc:
-                    if (
-                        attempt < max_attempts - 1
-                        and _is_mid_session_drop(exc)
-                    ):
+                    if attempt < max_attempts - 1 and _is_mid_session_drop(exc):
                         await asyncio.sleep(delay)
                         delay *= 2
                         continue

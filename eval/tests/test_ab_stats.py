@@ -18,6 +18,7 @@ No suite or runner is driven here — the stats layer is unit-testable
 with hand-constructed ``EpisodeResult`` lists, which is exactly what
 we want: statistical correctness shouldn't depend on env plumbing.
 """
+
 from __future__ import annotations
 
 import json
@@ -40,9 +41,7 @@ pytestmark = pytest.mark.unit
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 
-def _ep(
-    agent: str, task_id: str, success: bool, *, seed: int = 0
-) -> EpisodeResult:
+def _ep(agent: str, task_id: str, success: bool, *, seed: int = 0) -> EpisodeResult:
     return EpisodeResult(
         agent=agent,
         task_id=task_id,
@@ -61,15 +60,17 @@ def _ep(
 def test_episode_result_seed_defaults_to_zero() -> None:
     """Records written before multi-sample had no ``seed`` field; they
     still deserialise via ``EpisodeResult(**raw)``."""
-    legacy_json = json.dumps({
-        "agent": "oracle",
-        "task_id": "t1",
-        "success": True,
-        "steps_taken": 3,
-        "failures_seen": 0,
-        "failures_recovered": 0,
-        "final_reward": 1.0,
-    })
+    legacy_json = json.dumps(
+        {
+            "agent": "oracle",
+            "task_id": "t1",
+            "success": True,
+            "steps_taken": 3,
+            "failures_seen": 0,
+            "failures_recovered": 0,
+            "final_reward": 1.0,
+        }
+    )
     ep = EpisodeResult(**json.loads(legacy_json))
     assert ep.seed == 0
     # And the round-trip preserves seed in the new field.
@@ -152,9 +153,9 @@ def test_diff_single_sample_still_counts_as_task_flip() -> None:
     treatment = SuiteResults(agent="t")
     baseline = SuiteResults(agent="b")
     for tid, t_ok, b_ok in [
-        ("a", True, False),   # treatment wins
-        ("b", False, True),   # baseline wins
-        ("c", True, True),    # tie on 1.0
+        ("a", True, False),  # treatment wins
+        ("b", False, True),  # baseline wins
+        ("c", True, True),  # tie on 1.0
         ("d", False, False),  # tie on 0.0
     ]:
         treatment.record(_ep("t", tid, t_ok))
@@ -237,9 +238,14 @@ def test_suitedelta_not_significant_when_effect_is_mixed() -> None:
     flag must stay off even though delta happens to be nonzero."""
     treatment = SuiteResults(agent="t")
     baseline = SuiteResults(agent="b")
-    for i, (t_ok, b_ok) in enumerate([
-        (True, False), (False, True), (True, False), (False, True),
-    ]):
+    for i, (t_ok, b_ok) in enumerate(
+        [
+            (True, False),
+            (False, True),
+            (True, False),
+            (False, True),
+        ]
+    ):
         treatment.record(_ep("t", f"t{i}", t_ok))
         baseline.record(_ep("b", f"t{i}", b_ok))
 
@@ -257,8 +263,9 @@ def test_cli_samples_emits_one_line_per_replay(tmp_path: Path) -> None:
     """``--samples 3`` on the 5-task default suite → 15 JSONL lines,
     each with a ``seed`` field in {0, 1, 2}."""
     out = tmp_path / "oracle.jsonl"
-    rc = main(["run", "oracle", "--suite", "default",
-               "--samples", "3", "--output", str(out)])
+    rc = main(
+        ["run", "oracle", "--suite", "default", "--samples", "3", "--output", str(out)]
+    )
     assert rc == 0
     lines = [ln for ln in out.read_text().splitlines() if ln.strip()]
     assert len(lines) == 15  # 5 tasks × 3 replays
@@ -297,12 +304,8 @@ def test_cli_diff_prints_ci_and_pvalue_and_sig_marker(
     b = tmp_path / "b.jsonl"
     with t.open("w") as tf, b.open("w") as bf:
         for i in range(6):
-            tf.write(
-                json.dumps(_ep("oracle", f"t{i}", True).to_dict()) + "\n"
-            )
-            bf.write(
-                json.dumps(_ep("null", f"t{i}", False).to_dict()) + "\n"
-            )
+            tf.write(json.dumps(_ep("oracle", f"t{i}", True).to_dict()) + "\n")
+            bf.write(json.dumps(_ep("null", f"t{i}", False).to_dict()) + "\n")
 
     assert main(["diff", str(t), str(b)]) == 0
     out = capsys.readouterr().out
@@ -318,10 +321,14 @@ def test_cli_diff_no_sig_marker_on_noisy_run(
     t = tmp_path / "t.jsonl"
     b = tmp_path / "b.jsonl"
     with t.open("w") as tf, b.open("w") as bf:
-        for i, (t_ok, b_ok) in enumerate([
-            (True, False), (False, True),
-            (True, False), (False, True),
-        ]):
+        for i, (t_ok, b_ok) in enumerate(
+            [
+                (True, False),
+                (False, True),
+                (True, False),
+                (False, True),
+            ]
+        ):
             tf.write(json.dumps(_ep("t", f"t{i}", t_ok).to_dict()) + "\n")
             bf.write(json.dumps(_ep("b", f"t{i}", b_ok).to_dict()) + "\n")
 
@@ -343,10 +350,8 @@ def test_cli_round_trip_with_samples(
     The episode counts in the summary reflect the replay count."""
     oracle_out = tmp_path / "oracle.jsonl"
     null_out = tmp_path / "null.jsonl"
-    assert main(["run", "oracle", "--samples", "2",
-                 "--output", str(oracle_out)]) == 0
-    assert main(["run", "null", "--samples", "2",
-                 "--output", str(null_out)]) == 0
+    assert main(["run", "oracle", "--samples", "2", "--output", str(oracle_out)]) == 0
+    assert main(["run", "null", "--samples", "2", "--output", str(null_out)]) == 0
     capsys.readouterr()  # drop per-run summaries
 
     assert main(["diff", str(oracle_out), str(null_out)]) == 0

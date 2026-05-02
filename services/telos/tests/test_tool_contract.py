@@ -12,6 +12,7 @@ declared annotation is not *exactly* ``str``, which silently turns a
 serialised ``GoalContract`` into a ``dict`` before Pydantic validation
 and rejects it as "Input should be a valid string".
 """
+
 from __future__ import annotations
 
 import telos.mcp_server_http as server

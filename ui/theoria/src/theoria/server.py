@@ -49,9 +49,13 @@ logger = logging.getLogger("theoria.server")
 
 # Paths that never require auth — browser fetches them before the user
 # can provide credentials, and monitoring hits /health.
-_AUTH_EXEMPT_PATHS = frozenset({
-    "/", "/index.html", "/health",
-})
+_AUTH_EXEMPT_PATHS = frozenset(
+    {
+        "/",
+        "/index.html",
+        "/health",
+    }
+)
 _AUTH_EXEMPT_PREFIXES = ("/static/",)
 
 
@@ -62,8 +66,8 @@ class TheoriaHandler(BaseHTTPRequestHandler):
     """HTTP request handler bound to a ``TraceStore`` and a ``KairosClient``."""
 
     store: TraceStore
-    kairos: KairosClient             # bound per-server; see make_handler()
-    secret: str | None = None        # bound per-server; None = auth disabled
+    kairos: KairosClient  # bound per-server; see make_handler()
+    secret: str | None = None  # bound per-server; None = auth disabled
     server_version = "Theoria/0.1"
 
     # Silence default stderr access logging; re-route through logging module.
@@ -116,9 +120,7 @@ class TheoriaHandler(BaseHTTPRequestHandler):
         """
         if not self.secret:
             return True
-        if path in _AUTH_EXEMPT_PATHS or any(
-            path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES
-        ):
+        if path in _AUTH_EXEMPT_PATHS or any(path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES):
             return True
         header = self.headers.get("Authorization", "") or ""
         expected = f"Bearer {self.secret}"
@@ -143,8 +145,10 @@ class TheoriaHandler(BaseHTTPRequestHandler):
             status, headers, body = exc.status, {"Content-Type": "application/json"}, _json_error(exc.message)
         except Exception:  # pragma: no cover - defensive
             logger.exception("Unhandled error in request %s %s", method, path)
-            status, headers, body = HTTPStatus.INTERNAL_SERVER_ERROR, {"Content-Type": "application/json"}, _json_error(
-                "internal server error"
+            status, headers, body = (
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {"Content-Type": "application/json"},
+                _json_error("internal server error"),
             )
 
         self.send_response(status)
@@ -156,12 +160,15 @@ class TheoriaHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def _route(
-        self, method: str, path: str, query: str = "",
+        self,
+        method: str,
+        path: str,
+        query: str = "",
     ) -> tuple[int, dict[str, str], bytes]:
         if method == "GET" and (path == "/" or path == "/index.html"):
             return _serve_file(STATIC_DIR / "index.html")
         if method == "GET" and path.startswith("/static/"):
-            return _serve_static(path[len("/static/"):])
+            return _serve_static(path[len("/static/") :])
         if method == "GET" and path == "/health":
             return _json_response({"ok": True, "traces": len(self.store)})
 
@@ -275,16 +282,20 @@ class TheoriaHandler(BaseHTTPRequestHandler):
         fmt = (query.get("format", ["mermaid"])[0]).lower()
         trace = self.store.get(trace_id)
         if trace is None:
-            status, headers, body = int(HTTPStatus.NOT_FOUND), {
-                "Content-Type": "application/json"
-            }, _json_error(f"trace '{trace_id}' not found")
+            status, headers, body = (
+                int(HTTPStatus.NOT_FOUND),
+                {"Content-Type": "application/json"},
+                _json_error(f"trace '{trace_id}' not found"),
+            )
         else:
             try:
                 rendered = format_for(trace, fmt)
             except ValueError as exc:
-                status, headers, body = int(HTTPStatus.BAD_REQUEST), {
-                    "Content-Type": "application/json"
-                }, _json_error(str(exc))
+                status, headers, body = (
+                    int(HTTPStatus.BAD_REQUEST),
+                    {"Content-Type": "application/json"},
+                    _json_error(str(exc)),
+                )
             else:
                 status = int(HTTPStatus.OK)
                 headers = {
@@ -471,11 +482,14 @@ def make_server(
     client pointed at ``$KAIROS_URL`` (or localhost).
     """
     import os as _os
+
     # NB: use `is None` — an empty TraceStore is falsy because __len__ returns 0.
     resolved_store = TraceStore() if store is None else store
     resolved_secret = secret if secret is not None else _os.environ.get("THEORIA_SECRET") or None
     handler_cls = make_handler(
-        resolved_store, secret=resolved_secret, kairos=kairos,
+        resolved_store,
+        secret=resolved_secret,
+        kairos=kairos,
     )
     server = ThreadingHTTPServer((host, port), handler_cls)
     return server, resolved_store
@@ -491,14 +505,21 @@ def serve(
 ) -> None:
     """Run the Theoria server until SIGINT."""
     server, resolved_store = make_server(
-        host=host, port=port, store=store, secret=secret, kairos=kairos,
+        host=host,
+        port=port,
+        store=store,
+        secret=secret,
+        kairos=kairos,
     )
     if load_samples and len(resolved_store) == 0:
         resolved_store.put_many(build_samples())
     auth_note = "auth=on" if server.RequestHandlerClass.secret else "auth=off"  # type: ignore[attr-defined]
     logger.info(
         "Theoria listening on http://%s:%d (traces=%d, %s)",
-        host, port, len(resolved_store), auth_note,
+        host,
+        port,
+        len(resolved_store),
+        auth_note,
     )
     try:
         server.serve_forever()

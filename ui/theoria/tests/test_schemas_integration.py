@@ -69,8 +69,7 @@ def test_real_goal_contract_with_pre_and_postconditions() -> None:
     contract = GoalContract(
         description="Refactor auth module, preserve public API",
         preconditions=[
-            GoalConstraint(description="public API signatures known",
-                           formal="Callable[[], User]"),
+            GoalConstraint(description="public API signatures known", formal="Callable[[], User]"),
         ],
         postconditions=[
             GoalConstraint(description="public API signature preserved"),
@@ -90,11 +89,8 @@ def test_real_plan_with_mixed_statuses_fails() -> None:
     plan = Plan(
         goal="Migrate users table",
         steps=[
-            PlanStep(description="dump data", tool_call="pg_dump",
-                     status=StepStatus.COMPLETED, risk_score=0.1),
-            PlanStep(description="alter schema",
-                     status=StepStatus.FAILED, outcome="lock timeout",
-                     risk_score=0.8),
+            PlanStep(description="dump data", tool_call="pg_dump", status=StepStatus.COMPLETED, risk_score=0.1),
+            PlanStep(description="alter schema", status=StepStatus.FAILED, outcome="lock timeout", risk_score=0.8),
         ],
     )
     trace = trace_from_plan(plan)
@@ -114,19 +110,34 @@ def test_real_plan_empty_is_pending() -> None:
 def test_real_trace_spans_build_a_dag() -> None:
     spans = [
         TraceSpan(
-            trace_id="t-real-1", span_id="a", parent_span_id=None,
-            service="logos", operation="certify_claim",
-            duration_ms=12.3, success=True, metadata={"claim_type": "propositional"},
+            trace_id="t-real-1",
+            span_id="a",
+            parent_span_id=None,
+            service="logos",
+            operation="certify_claim",
+            duration_ms=12.3,
+            success=True,
+            metadata={"claim_type": "propositional"},
         ),
         TraceSpan(
-            trace_id="t-real-1", span_id="b", parent_span_id="a",
-            service="mneme", operation="recall",
-            duration_ms=4.1, success=True, metadata={"hits": "3"},
+            trace_id="t-real-1",
+            span_id="b",
+            parent_span_id="a",
+            service="mneme",
+            operation="recall",
+            duration_ms=4.1,
+            success=True,
+            metadata={"hits": "3"},
         ),
         TraceSpan(
-            trace_id="t-real-1", span_id="c", parent_span_id="b",
-            service="praxis", operation="commit_step",
-            duration_ms=30.0, success=False, metadata={"err": "timeout"},
+            trace_id="t-real-1",
+            span_id="c",
+            parent_span_id="b",
+            service="praxis",
+            operation="commit_step",
+            duration_ms=30.0,
+            success=False,
+            metadata={"err": "timeout"},
         ),
     ]
     trace = trace_from_trace_spans(spans)

@@ -1,4 +1,5 @@
 """Empiria tracing wiring tests (no network — disabled mode only)."""
+
 import empiria.tracing as tracing_mod
 from empiria.tracing import get_tracer, reset_tracer_for_tests
 

@@ -97,18 +97,12 @@ class PolicyConsistencyResult:
     def __len__(self) -> int:
         return len(self.pairs)
 
-    def __getitem__(
-        self, index: int | slice
-    ) -> tuple[str, str] | tuple[tuple[str, str], ...]:
+    def __getitem__(self, index: int | slice) -> tuple[str, str] | tuple[tuple[str, str], ...]:
         return self.pairs[index]
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, PolicyConsistencyResult):
-            return (
-                self.pairs == other.pairs
-                and self.status is other.status
-                and self.reason == other.reason
-            )
+            return self.pairs == other.pairs and self.status is other.status and self.reason == other.reason
         if isinstance(other, tuple):
             return self.pairs == other
         return False
@@ -407,10 +401,7 @@ def _decision_from_violations(violations: list[PolicyViolationEvidence]) -> Poli
 
 
 def _build_remediation_hints(violations: list[PolicyViolationEvidence]) -> list[str]:
-    return [
-        f"Resolve policy '{violation.policy_name}': {violation.message}"
-        for violation in violations
-    ]
+    return [f"Resolve policy '{violation.policy_name}': {violation.message}" for violation in violations]
 
 
 def _bool_witness_from_model(model: dict[str, object] | None) -> dict[str, bool] | None:

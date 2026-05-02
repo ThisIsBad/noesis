@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Noesis Console</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Noesis Console</h1>
+    <div id="health-strip" title="per-service /health probes; auth-skipped"></div>
+  </header>
+
+  <main>
+    <section id="chat-pane" aria-label="Chat with the Noesis stack">
+      <div id="chat-history" role="log" aria-live="polite"></div>
+      <form id="chat-form">
+        <textarea
+          id="chat-input"
+          rows="3"
+          placeholder="Ask Noesis to do something. e.g. &quot;Register a goal to refactor auth, decompose it, verify the plan, and commit the first step.&quot;"
+          autofocus
+        ></textarea>
+        <div class="chat-controls">
+          <label>
+            Bearer:
+            <input id="auth-input" type="password" placeholder="CONSOLE_SECRET" />
+          </label>
+          <button type="submit" id="chat-send">Send</button>
+          <span id="chat-status"></span>
+        </div>
+      </form>
+    </section>
+
+    <section id="trace-pane" aria-label="Live decision DAG">
+      <div id="trace-meta">
+        <span id="trace-title">no session yet</span>
+        <span id="trace-outcome"></span>
+      </div>
+      <div id="trace-canvas-wrap">
+        <svg id="trace-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <details id="trace-step-detail" open>
+        <summary>step detail</summary>
+        <pre id="trace-step-detail-body">click a node…</pre>
+      </details>
+    </section>
+  </main>
+
+  <script type="module" src="/static/health.js"></script>
+  <script type="module" src="/static/trace.js"></script>
+  <script type="module" src="/static/chat.js"></script>
+</body>
+</html>

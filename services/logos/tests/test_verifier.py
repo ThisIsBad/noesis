@@ -19,6 +19,7 @@ from logos.verifier import PropositionalVerifier
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def v():
     return PropositionalVerifier()
@@ -28,13 +29,16 @@ def v():
 def P():
     return Proposition("P")
 
+
 @pytest.fixture
 def Q():
     return Proposition("Q")
 
+
 @pytest.fixture
 def R():
     return Proposition("R")
+
 
 @pytest.fixture
 def S():
@@ -44,6 +48,7 @@ def S():
 # ---------------------------------------------------------------------------
 # VALID inference rules
 # ---------------------------------------------------------------------------
+
 
 class TestValidInferences:
     """The verifier must recognise all valid inference rules."""
@@ -199,6 +204,7 @@ class TestValidInferences:
 # INVALID arguments (fallacies)
 # ---------------------------------------------------------------------------
 
+
 class TestInvalidArguments:
     """The verifier must correctly reject fallacies and provide counterexamples."""
 
@@ -257,22 +263,19 @@ class TestInvalidArguments:
 # Edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
     """Edge cases and special forms."""
 
     def test_tautology(self, v, P):
         """P ∨ ¬P is a tautology."""
-        expr = LogicalExpression(
-            Connective.OR, P, LogicalExpression(Connective.NOT, P)
-        )
+        expr = LogicalExpression(Connective.OR, P, LogicalExpression(Connective.NOT, P))
         result = v.is_tautology(expr)
         assert result.valid is True
 
     def test_contradiction(self, v, P):
         """P ∧ ¬P is a contradiction."""
-        expr = LogicalExpression(
-            Connective.AND, P, LogicalExpression(Connective.NOT, P)
-        )
+        expr = LogicalExpression(Connective.AND, P, LogicalExpression(Connective.NOT, P))
         result = v.is_contradiction(expr)
         assert result.valid is True
 
@@ -310,6 +313,7 @@ class TestEdgeCases:
 # ---------------------------------------------------------------------------
 # Benchmark suite correctness
 # ---------------------------------------------------------------------------
+
 
 class TestBenchmarkSuite:
     """Verify that the verifier agrees with every expected_valid flag."""

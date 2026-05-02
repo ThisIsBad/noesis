@@ -35,10 +35,7 @@ def test_lean_parser_identifies_unknown_tactic_and_suggestion():
 
 
 def test_lean_parser_extracts_type_mismatch_types():
-    output = (
-        "tmp.lean:4:10: error: type mismatch\n"
-        "term has type Bool but is expected to have type Nat"
-    )
+    output = "tmp.lean:4:10: error: type mismatch\nterm has type Bool but is expected to have type Nat"
 
     diagnostic = LeanDiagnosticParser.parse(output, tactic="exact")
 

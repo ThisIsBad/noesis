@@ -1,18 +1,17 @@
 from noesis_schemas import (
-    ProofCertificate,
     ClaimKind,
     ConfidenceLevel,
     ConfidenceRecord,
     EscalationDecision,
     GoalContract,
+    Lesson,
     Memory,
     MemoryType,
     Plan,
     PlanStep,
+    ProofCertificate,
     RiskLevel,
-    Lesson,
     Skill,
-    Prediction,
     TraceSpan,
     confidence_from_float,
 )
@@ -123,9 +122,18 @@ def test_confidence_record_serialization():
 
 def test_escalation_vocabulary():
     # Ensure the vocabulary matches Logos at the enum-value level.
-    assert {e.value for e in EscalationDecision} == {"proceed", "review_required", "blocked"}
+    assert {e.value for e in EscalationDecision} == {
+        "proceed",
+        "review_required",
+        "blocked",
+    }
     assert {r.value for r in RiskLevel} == {"low", "medium", "high"}
-    assert {c.value for c in ConfidenceLevel} == {"certain", "supported", "weak", "unknown"}
+    assert {c.value for c in ConfidenceLevel} == {
+        "certain",
+        "supported",
+        "weak",
+        "unknown",
+    }
 
 
 def test_logos_certificate_round_trip():
@@ -136,11 +144,13 @@ def test_logos_certificate_round_trip():
     """
     import sys
     from pathlib import Path
+
     import pytest
+
     pytest.importorskip(
         "z3",
         reason="z3-solver required for the Logos round-trip test "
-               "(install Logos service deps to enable)",
+        "(install Logos service deps to enable)",
     )
     logos_src = Path(__file__).resolve().parents[2] / "services" / "logos" / "src"
     sys.path.insert(0, str(logos_src))

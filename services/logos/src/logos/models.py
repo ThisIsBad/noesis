@@ -17,19 +17,21 @@ from typing import Any
 # Connective enum
 # ---------------------------------------------------------------------------
 
+
 class Connective(Enum):
     """Logical connectives supported by the framework."""
 
     AND = "AND"
     OR = "OR"
-    NOT = "NOT"           # unary — only uses `left`
-    IMPLIES = "IMPLIES"   # left → right
-    IFF = "IFF"           # left ↔ right
+    NOT = "NOT"  # unary — only uses `left`
+    IMPLIES = "IMPLIES"  # left → right
+    IFF = "IFF"  # left ↔ right
 
 
 # ---------------------------------------------------------------------------
 # Core expression tree
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class Proposition:
@@ -63,9 +65,7 @@ class LogicalExpression:
                 raise ValueError("NOT is unary — 'right' must be None.")
         else:
             if self.right is None:
-                raise ValueError(
-                    f"{self.connective.value} is binary — 'right' is required."
-                )
+                raise ValueError(f"{self.connective.value} is binary — 'right' is required.")
 
     def __str__(self) -> str:
         if self.connective is Connective.NOT:
@@ -82,6 +82,7 @@ class LogicalExpression:
 # ---------------------------------------------------------------------------
 # Argument = premises + conclusion
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class Argument:
@@ -109,6 +110,7 @@ class Argument:
 # ---------------------------------------------------------------------------
 # Verification result
 # ---------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
 class VerificationResult:

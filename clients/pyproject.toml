@@ -3,6 +3,7 @@ name = "noesis-clients"
 version = "0.1.0"
 description = "Shared Python clients for cross-service calls in the Noesis stack"
 requires-python = ">=3.11"
+license = "Apache-2.0"
 dependencies = [
     "noesis-schemas>=0.1.0,<0.2",
     "mcp>=1.0",

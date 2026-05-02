@@ -3,7 +3,7 @@
   "checkpoints": [
     {
       "at_count": 50,
-      "elapsed_seconds": 0.058794,
+      "elapsed_seconds": 0.068831,
       "stats": {
         "by_claim_type": {
           "propositional": 50
@@ -18,7 +18,7 @@
     },
     {
       "at_count": 100,
-      "elapsed_seconds": 0.111288,
+      "elapsed_seconds": 0.13583,
       "stats": {
         "by_claim_type": {
           "propositional": 100
@@ -33,7 +33,7 @@
     },
     {
       "at_count": 150,
-      "elapsed_seconds": 0.162542,
+      "elapsed_seconds": 0.202559,
       "stats": {
         "by_claim_type": {
           "propositional": 150
@@ -48,7 +48,7 @@
     },
     {
       "at_count": 200,
-      "elapsed_seconds": 0.217376,
+      "elapsed_seconds": 0.277978,
       "stats": {
         "by_claim_type": {
           "propositional": 200
@@ -63,7 +63,7 @@
     },
     {
       "at_count": 250,
-      "elapsed_seconds": 0.271043,
+      "elapsed_seconds": 0.347632,
       "stats": {
         "by_claim_type": {
           "propositional": 250
@@ -78,7 +78,7 @@
     },
     {
       "at_count": 300,
-      "elapsed_seconds": 0.323525,
+      "elapsed_seconds": 0.41758,
       "stats": {
         "by_claim_type": {
           "propositional": 300
@@ -93,7 +93,7 @@
     },
     {
       "at_count": 350,
-      "elapsed_seconds": 0.379013,
+      "elapsed_seconds": 0.487882,
       "stats": {
         "by_claim_type": {
           "propositional": 350
@@ -108,7 +108,7 @@
     },
     {
       "at_count": 400,
-      "elapsed_seconds": 0.439019,
+      "elapsed_seconds": 0.561306,
       "stats": {
         "by_claim_type": {
           "propositional": 400
@@ -123,7 +123,7 @@
     },
     {
       "at_count": 450,
-      "elapsed_seconds": 0.497552,
+      "elapsed_seconds": 0.634539,
       "stats": {
         "by_claim_type": {
           "propositional": 450
@@ -138,7 +138,7 @@
     },
     {
       "at_count": 500,
-      "elapsed_seconds": 0.552694,
+      "elapsed_seconds": 0.721824,
       "stats": {
         "by_claim_type": {
           "propositional": 500
@@ -154,5 +154,5 @@
   ],
   "experiment": "memory_consistency_scale",
   "unique_count": 500,
-  "wall_time_seconds": 0.55284
+  "wall_time_seconds": 0.722052
 }

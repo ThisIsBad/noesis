@@ -6,6 +6,7 @@ That's the only shape a real Claude agent can occupy — upfront plans
 don't survive contact with a stochastic env and aren't how tool-using
 agents actually operate.
 """
+
 from __future__ import annotations
 
 import time

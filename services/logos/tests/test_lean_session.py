@@ -7,10 +7,7 @@ from logos.lean_session import LeanSession, TacticResult, is_lean_available
 
 
 # Skip all tests if Lean is not available
-pytestmark = pytest.mark.skipif(
-    not is_lean_available(),
-    reason="Lean 4 not installed"
-)
+pytestmark = pytest.mark.skipif(not is_lean_available(), reason="Lean 4 not installed")
 
 
 class TestLeanSessionBasic:
@@ -188,10 +185,7 @@ class TestTacticResult:
 
     def test_tactic_result_fields(self):
         result = TacticResult(
-            success=True,
-            goals=["⊢ True"],
-            proof_so_far="theorem test : True := by",
-            error_message=None
+            success=True, goals=["⊢ True"], proof_so_far="theorem test : True := by", error_message=None
         )
 
         assert result.success
@@ -200,12 +194,7 @@ class TestTacticResult:
         assert result.error_message is None
 
     def test_tactic_result_with_error(self):
-        result = TacticResult(
-            success=False,
-            goals=[],
-            proof_so_far="",
-            error_message="unknown tactic"
-        )
+        result = TacticResult(success=False, goals=[], proof_so_far="", error_message="unknown tactic")
 
         assert not result.success
         assert result.error_message == "unknown tactic"

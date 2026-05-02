@@ -14,6 +14,7 @@ contract so these benchmarks prove the heuristic meets the roadmap's
 numeric thresholds — and will surface regressions if the semantics
 drift.
 """
+
 from __future__ import annotations
 
 import random
@@ -118,9 +119,7 @@ def test_false_positive_rate_under_10_percent_on_200_aligned_actions() -> None:
             false_positives += 1
 
     fp_rate = false_positives / 200
-    assert fp_rate <= 0.1, (
-        f"False-positive rate {fp_rate:.2%} above 10% threshold"
-    )
+    assert fp_rate <= 0.1, f"False-positive rate {fp_rate:.2%} above 10% threshold"
 
 
 @pytest.mark.acceptance

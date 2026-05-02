@@ -16,6 +16,7 @@ def core(tmp_path):
 
 # ── Basic plan lifecycle ───────────────────────────────────────────────────────
 
+
 def test_decompose_creates_plan(core):
     plan = core.decompose("Deploy service")
     assert plan.goal == "Deploy service"
@@ -26,8 +27,13 @@ def test_decompose_creates_plan(core):
 def test_add_sequential_steps(core):
     plan = core.decompose("Write and test code")
     s1 = core.add_step(plan.plan_id, "Write code", tool_call="editor", risk_score=0.1)
-    s2 = core.add_step(plan.plan_id, "Run tests", tool_call="pytest", risk_score=0.1,
-                       parent_step_id=s1.step_id)
+    s2 = core.add_step(
+        plan.plan_id,
+        "Run tests",
+        tool_call="pytest",
+        risk_score=0.1,
+        parent_step_id=s1.step_id,
+    )
     retrieved = core.get_plan(plan.plan_id)
     # best_path returns s1 → s2
     assert [s.step_id for s in retrieved.steps] == [s1.step_id, s2.step_id]
@@ -65,14 +71,21 @@ def test_add_step_unknown_parent_raises(core):
 
 # ── Tree-of-Thoughts: branching & beam search ─────────────────────────────────
 
+
 def test_best_path_picks_lower_risk(core):
     """Two alternative first steps; best_path should pick the lower-risk one."""
     plan = core.decompose("Solve problem")
     safe = core.add_step(
-        plan.plan_id, "Safe approach", tool_call="tool_a", risk_score=0.1,
+        plan.plan_id,
+        "Safe approach",
+        tool_call="tool_a",
+        risk_score=0.1,
     )
     core.add_step(
-        plan.plan_id, "Risky approach", tool_call="tool_b", risk_score=0.7,
+        plan.plan_id,
+        "Risky approach",
+        tool_call="tool_b",
+        risk_score=0.7,
     )
     paths = core.best_path(plan.plan_id, k=1)
     assert paths[0][0].step_id == safe.step_id
@@ -109,6 +122,7 @@ def test_beam_score_ordering(core):
 
 # ── Backtracking ──────────────────────────────────────────────────────────────
 
+
 def test_backtrack_returns_sibling(core):
     """Fail branch A; backtrack should return sibling B."""
     plan = core.decompose("Try alternatives")
@@ -139,6 +153,7 @@ def test_backtrack_no_siblings_returns_empty(core):
 
 
 # ── get_next_step ─────────────────────────────────────────────────────────────
+
 
 def test_get_next_step_first_pending(core):
     plan = core.decompose("Sequential")
@@ -173,6 +188,7 @@ def test_get_next_step_empty_plan(core):
 
 # ── Plan verification ─────────────────────────────────────────────────────────
 
+
 def test_verify_plan_passes(core):
     plan = core.decompose("Safe plan")
     core.add_step(plan.plan_id, "Safe step", risk_score=0.2)
@@ -196,6 +212,7 @@ def test_verify_plan_rejects_empty(core):
 
 
 # ── Persistence ───────────────────────────────────────────────────────────────
+
 
 def test_persistence_survives_restart(tmp_path):
     db = str(tmp_path / "praxis.db")
@@ -265,12 +282,12 @@ def test_verify_plan_local_high_risk_skips_logos(tmp_path):
     ok, msg = core.verify_plan(plan.plan_id)
     assert ok is False
     assert "high-risk" in msg.lower()
-    assert fake.calls == []   # no Logos round-trip
+    assert fake.calls == []  # no Logos round-trip
 
 
 def test_verify_plan_no_client_preserves_legacy_behavior(tmp_path):
     """Default constructor (no client) returns the original local verdict."""
-    core = PraxisCore(db_path=str(tmp_path / "logos.db"))   # no client
+    core = PraxisCore(db_path=str(tmp_path / "logos.db"))  # no client
     plan = core.decompose("Plain plan")
     core.add_step(plan.plan_id, "easy step", risk_score=0.1)
 

@@ -17,6 +17,7 @@ in a loop. A single batched ChromaDB query amortises tokenisation and
 ONNX inference across all inputs, keeping CI wall-clock under a minute
 even at the 500-pair scale.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,17 +31,53 @@ from mneme.core import MnemeCore
 
 # 25 adjectives × 20 subjects = 500 unique (adjective, subject) pairs.
 _ADJECTIVES = [
-    "ancient", "azure", "brilliant", "crimson", "dazzling",
-    "emerald", "frosty", "glistening", "hidden", "iridescent",
-    "jagged", "luminous", "majestic", "obsidian", "petrified",
-    "quiescent", "resonant", "serene", "translucent", "undulating",
-    "verdant", "whispering", "xenolithic", "yawning", "zealous",
+    "ancient",
+    "azure",
+    "brilliant",
+    "crimson",
+    "dazzling",
+    "emerald",
+    "frosty",
+    "glistening",
+    "hidden",
+    "iridescent",
+    "jagged",
+    "luminous",
+    "majestic",
+    "obsidian",
+    "petrified",
+    "quiescent",
+    "resonant",
+    "serene",
+    "translucent",
+    "undulating",
+    "verdant",
+    "whispering",
+    "xenolithic",
+    "yawning",
+    "zealous",
 ]
 _SUBJECTS = [
-    "river", "mountain", "forest", "desert", "island",
-    "cavern", "lake", "valley", "meadow", "glacier",
-    "temple", "observatory", "library", "citadel", "harbor",
-    "lighthouse", "monastery", "catacomb", "amphitheater", "fortress",
+    "river",
+    "mountain",
+    "forest",
+    "desert",
+    "island",
+    "cavern",
+    "lake",
+    "valley",
+    "meadow",
+    "glacier",
+    "temple",
+    "observatory",
+    "library",
+    "citadel",
+    "harbor",
+    "lighthouse",
+    "monastery",
+    "catacomb",
+    "amphitheater",
+    "fortress",
 ]
 
 
@@ -54,7 +91,8 @@ def _pairs() -> Iterator[tuple[str, str]]:
 def _make_core(tmp_path: Path) -> MnemeCore:
     client = chromadb.PersistentClient(path=str(tmp_path / "chroma"))
     return MnemeCore(
-        db_path=str(tmp_path / "mneme.db"), _chroma_client=client,
+        db_path=str(tmp_path / "mneme.db"),
+        _chroma_client=client,
     )
 
 
@@ -74,7 +112,11 @@ def test_recall_at_10_above_0_80_on_500_pairs(tmp_path: Path) -> None:
     items = [
         (
             f"The {adj} {subj} is renowned for its distinctive character.",
-            MemoryType.SEMANTIC, 0.5, None, None, None,
+            MemoryType.SEMANTIC,
+            0.5,
+            None,
+            None,
+            None,
         )
         for adj, subj in _pairs()
     ]
@@ -128,7 +170,11 @@ def test_consolidation_reduces_duplicates_without_recall_loss(
     base_items = [
         (
             f"The {adj} {subj} is renowned for its distinctive character.",
-            MemoryType.SEMANTIC, 0.9, None, None, None,
+            MemoryType.SEMANTIC,
+            0.9,
+            None,
+            None,
+            None,
         )
         for adj, subj in bases
     ]
@@ -141,7 +187,11 @@ def test_consolidation_reduces_duplicates_without_recall_loss(
     duplicate_items = [
         (
             f"A {adj} {subj} is known for its distinctive nature.",
-            MemoryType.SEMANTIC, 0.4, None, None, None,
+            MemoryType.SEMANTIC,
+            0.4,
+            None,
+            None,
+            None,
         )
         for adj, subj in bases
     ]

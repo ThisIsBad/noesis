@@ -13,6 +13,7 @@ The similarity function is pluggable via the ``SimilarityFn`` protocol
 so a sentence-transformer (or cross-service Mneme retrieval) can
 replace the lexical default without changing the MCP surface.
 """
+
 from __future__ import annotations
 
 import re
@@ -28,14 +29,66 @@ _NEGATION_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 
-_STOPWORDS = frozenset({
-    "a", "an", "the", "to", "of", "in", "on", "at", "for", "with", "and", "or",
-    "is", "are", "was", "were", "be", "been", "being", "that", "this", "it",
-    "from", "by", "as", "into", "onto", "out", "up", "down", "over", "under",
-    "will", "shall", "should", "would", "could", "may", "might", "can",
-    "i", "you", "he", "she", "we", "they", "me", "them", "us", "my", "your",
-    "his", "her", "our", "their", "its",
-})
+_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "to",
+        "of",
+        "in",
+        "on",
+        "at",
+        "for",
+        "with",
+        "and",
+        "or",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "that",
+        "this",
+        "it",
+        "from",
+        "by",
+        "as",
+        "into",
+        "onto",
+        "out",
+        "up",
+        "down",
+        "over",
+        "under",
+        "will",
+        "shall",
+        "should",
+        "would",
+        "could",
+        "may",
+        "might",
+        "can",
+        "i",
+        "you",
+        "he",
+        "she",
+        "we",
+        "they",
+        "me",
+        "them",
+        "us",
+        "my",
+        "your",
+        "his",
+        "her",
+        "our",
+        "their",
+        "its",
+    }
+)
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9']+", flags=re.IGNORECASE)
 
@@ -53,8 +106,7 @@ class SimilarityFn(Protocol):
 
 def _tokens(text: str) -> set[str]:
     return {
-        t.lower() for t in _TOKEN_PATTERN.findall(text)
-        if t.lower() not in _STOPWORDS
+        t.lower() for t in _TOKEN_PATTERN.findall(text) if t.lower() not in _STOPWORDS
     }
 
 
@@ -142,7 +194,7 @@ class TelosCore:
 
     @staticmethod
     def _format_reason(
-        conflicts: list[tuple[GoalContract, GoalConstraint, float]]
+        conflicts: list[tuple[GoalContract, GoalConstraint, float]],
     ) -> str | None:
         if not conflicts:
             return None

@@ -23,6 +23,7 @@ Runtime-level behaviour we pin here:
   that isn't in the query task's own observation. That's the
   load-bearing property of "memory-favouring".
 """
+
 from __future__ import annotations
 
 import pytest
@@ -140,8 +141,7 @@ def test_oracle_with_plant_plans_only_fails_every_query() -> None:
     is. Memory (and only memory) bridges the gap."""
     suite = build_memory_suite()
     plant_plans = {
-        t.goal: list(t.canonical_plan)
-        for t in suite if "_plant_" in t.task_id
+        t.goal: list(t.canonical_plan) for t in suite if "_plant_" in t.task_id
     }
     results = run_suite(suite, OracleAgent(plans=plant_plans))
     plant_successes = [
@@ -162,5 +162,6 @@ def test_cli_knows_the_memory_suite() -> None:
     that ``memory`` is wired in so the canonical invocation in the
     runbook keeps working."""
     from noesis_eval.ab.cli import SUITES
+
     assert "memory" in SUITES
     assert SUITES["memory"] is build_memory_suite

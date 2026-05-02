@@ -18,6 +18,7 @@ A ``Skill`` carries:
   ``record_use``; success rate lifts a skill's ranking inside
   ``retrieve`` so proven-good skills surface first.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -121,9 +122,7 @@ class TechneCore:
             raise KeyError(skill_id)
         total = skill.use_count + 1
         delta = 1.0 if success else 0.0
-        skill.success_rate = (
-            skill.success_rate * skill.use_count + delta
-        ) / total
+        skill.success_rate = (skill.success_rate * skill.use_count + delta) / total
         skill.use_count = total
         self._conn.execute(
             "UPDATE skills "

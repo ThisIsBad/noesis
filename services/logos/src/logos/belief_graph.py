@@ -88,11 +88,7 @@ class ContradictionCheckResult:
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, ContradictionCheckResult):
-            return (
-                self.pairs == other.pairs
-                and self.status is other.status
-                and self.reason == other.reason
-            )
+            return self.pairs == other.pairs and self.status is other.status and self.reason == other.reason
         if isinstance(other, tuple):
             return self.pairs == other
         return False
@@ -181,9 +177,7 @@ class BeliefGraph:
             seen.add(current)
 
             parents = [
-                edge.source_id
-                for edge in self._edges
-                if edge.target_id == current and edge.edge_type in support_types
+                edge.source_id for edge in self._edges if edge.target_id == current and edge.edge_type in support_types
             ]
             if not parents:
                 roots.add(current)
@@ -197,11 +191,7 @@ class BeliefGraph:
         """Return stale dependencies that still support/derive other beliefs."""
         now = at_time or datetime.now(timezone.utc)
         support_types = {BeliefEdgeType.SUPPORTS, BeliefEdgeType.DERIVED_FROM}
-        candidates = {
-            edge.source_id
-            for edge in self._edges
-            if edge.edge_type in support_types
-        }
+        candidates = {edge.source_id for edge in self._edges if edge.edge_type in support_types}
 
         stale = [belief_id for belief_id in candidates if self._is_stale(self._nodes[belief_id], now)]
         return tuple(sorted(stale))
@@ -341,8 +331,10 @@ class BeliefGraph:
                 elif result.satisfiable is None and unknown_reason is None:
                     unknown_reason = result.reason
 
-        status = ContradictionStatus.UNKNOWN if unknown_reason is not None else (
-            ContradictionStatus.CONTRADICTION if found else ContradictionStatus.CONSISTENT
+        status = (
+            ContradictionStatus.UNKNOWN
+            if unknown_reason is not None
+            else (ContradictionStatus.CONTRADICTION if found else ContradictionStatus.CONSISTENT)
         )
         return ContradictionCheckResult(tuple(sorted(found)), status=status, reason=unknown_reason)
 
