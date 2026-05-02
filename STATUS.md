@@ -11,14 +11,14 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
-| **empiria** | Experience accumulation and lesson extraction for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/empiria.yml) | 242 | 242 | 4 | 2026-04-29 |
-| **episteme** | Metacognition and uncertainty calibration for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/episteme.yml) | 345 | 424 | 5 | 2026-04-29 |
-| **kosmos** | Causal world model with Do-calculus for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/kosmos.yml) | 205 | 241 | 4 | 2026-04-29 |
-| **logos** | LLM x Deterministic Logic Verifier — exploiting the P!=NP asymmetry | ✓ | ✓ | ✓ | [✓](.github/workflows/logos.yml) | 11,894 | 10,012 | 74 | 2026-04-21 |
-| **mneme** | Persistent episodic and semantic memory for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/mneme.yml) | 592 | 809 | 6 | 2026-04-24 |
-| **praxis** | Hierarchical planning and Tree-of-Thoughts search for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/praxis.yml) | 683 | 830 | 6 | 2026-04-24 |
-| **techne** | Verified skill library and strategy reuse for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/techne.yml) | 406 | 403 | 4 | 2026-04-24 |
-| **telos** | Goal stability monitoring and drift detection for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/telos.yml) | 340 | 517 | 5 | 2026-04-29 |
+| **empiria** | Experience accumulation and lesson extraction for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/empiria.yml) | 242 | 242 | 4 | 2026-05-02 |
+| **episteme** | Metacognition and uncertainty calibration for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/episteme.yml) | 345 | 424 | 5 | 2026-05-02 |
+| **kosmos** | Causal world model with Do-calculus for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/kosmos.yml) | 205 | 241 | 4 | 2026-05-02 |
+| **logos** | LLM x Deterministic Logic Verifier — exploiting the P!=NP asymmetry | ✓ | ✓ | ✓ | [✓](.github/workflows/logos.yml) | 11,894 | 10,012 | 74 | 2026-05-02 |
+| **mneme** | Persistent episodic and semantic memory for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/mneme.yml) | 592 | 809 | 6 | 2026-05-02 |
+| **praxis** | Hierarchical planning and Tree-of-Thoughts search for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/praxis.yml) | 683 | 830 | 6 | 2026-05-02 |
+| **techne** | Verified skill library and strategy reuse for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/techne.yml) | 406 | 403 | 4 | 2026-05-02 |
+| **telos** | Goal stability monitoring and drift detection for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/telos.yml) | 340 | 517 | 5 | 2026-05-02 |
 
 ## Cross-cutting packages
 
@@ -33,7 +33,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
-| **theoria** | Decision-logic visualization UI for the Noesis ecosystem | ✓ | ✓ | — | [✓](.github/workflows/theoria.yml) | 4,123 | 2,549 | 14 | 2026-04-24 |
+| **theoria** | Decision-logic visualization UI for the Noesis ecosystem | ✓ | ✓ | — | [✓](.github/workflows/theoria.yml) | 4,123 | 2,549 | 14 | 2026-05-02 |
 
 ## Legend
 
