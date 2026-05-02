@@ -458,6 +458,14 @@ async def test_empiria_record_and_retrieve(
 
 # ── Techne ────────────────────────────────────────────────────────────────────
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "techne#98 — retrieve_skill misses just-stored entry when many sibling "
+        "skills tie on success_rate=1.0. Remove this marker once core.retrieve "
+        "tiebreaks by created_at desc."
+    ),
+)
 @retry_on_transient_mcp_error()
 async def test_techne_store_and_retrieve_skill(
     techne_url: str, techne_secret: str
