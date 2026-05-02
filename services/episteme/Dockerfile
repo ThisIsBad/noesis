@@ -29,5 +29,5 @@ RUN sed -i \
  && pip install .
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
-EXPOSE 8000
+EXPOSE 8080
 CMD python -m episteme.mcp_server_http

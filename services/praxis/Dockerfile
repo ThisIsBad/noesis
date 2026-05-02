@@ -29,5 +29,5 @@ RUN sed -i \
 # ── Runtime ───────────────────────────────────────────────────────────────────
 RUN mkdir -p /data
 ENV PRAXIS_DATA_DIR=/data
-EXPOSE 8000
+EXPOSE 8080
 CMD python -m praxis.mcp_server_http

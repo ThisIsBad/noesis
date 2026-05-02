@@ -131,6 +131,13 @@ jobs:
         working-directory: schemas
         run: pip install -e .
 
+      - name: Install clients
+        # eval/tests/test_phase1_inprocess.py imports noesis_clients.testing
+        # at module top, so collection fails without clients installed even
+        # though that test isn't marked @pytest.mark.integration.
+        working-directory: clients
+        run: pip install -e .
+
       - name: Install eval
         working-directory: eval
         run: pip install -e .

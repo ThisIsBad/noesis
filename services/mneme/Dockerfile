@@ -35,5 +35,5 @@ RUN sed -i \
 # ── Runtime ───────────────────────────────────────────────────────────────────
 RUN mkdir -p /data
 ENV MNEME_DATA_DIR=/data
-EXPOSE 8000
+EXPOSE 8080
 CMD python -m mneme.mcp_server_http

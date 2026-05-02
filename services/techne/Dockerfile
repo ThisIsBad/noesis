@@ -29,5 +29,5 @@ RUN sed -i 's|noesis-schemas @ file://[^"]*|noesis-schemas|g' pyproject.toml && 
 # volume at $TECHNE_DATA_DIR (default /data) for persistence across deploys;
 # alternatively set TECHNE_DATABASE_URL=sqlite:///<path> to override the
 # SQLite location (Chroma still uses <TECHNE_DATA_DIR>/techne_chroma).
-EXPOSE 8000
+EXPOSE 8080
 CMD python -m techne.mcp_server_http
