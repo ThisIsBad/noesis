@@ -459,10 +459,13 @@ async def test_empiria_record_and_retrieve(
 # ── Techne ────────────────────────────────────────────────────────────────────
 
 @pytest.mark.xfail(
-    strict=True,
+    strict=False,
     reason=(
-        "techne#98 — retrieve_skill misses just-stored entry when many sibling "
-        "skills tie on success_rate=1.0. Remove this marker once core.retrieve "
+        "techne#98 — retrieve_skill is flaky on accumulated state: when many "
+        "sibling skills tie on success_rate=1.0, the just-stored skill loses "
+        "the post-Chroma tiebreak. Right after a fresh /data volume mount the "
+        "test passes (no siblings); after a few days of test runs it fails. "
+        "strict=False so neither outcome breaks CI until core.retrieve "
         "tiebreaks by created_at desc."
     ),
 )
