@@ -21,5 +21,5 @@ RUN pip install .
 # THEORIA_SECRET: if set, bearer-token auth is required on every non-health,
 #                 non-static, non-stream request. Leave unset for local dev.
 ENV THEORIA_HOST=0.0.0.0
-EXPOSE 8000
+EXPOSE 8080
 CMD ["sh", "-c", "theoria serve --host 0.0.0.0 --port ${PORT:-8000}"]

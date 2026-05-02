@@ -19,5 +19,5 @@ COPY services/logos/src/ src/
 RUN pip install ".[http]"
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
-EXPOSE 8000
+EXPOSE 8080
 CMD ["python", "-m", "logos.mcp_server_http"]
