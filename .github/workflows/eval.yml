@@ -131,6 +131,23 @@ jobs:
         working-directory: schemas
         run: pip install -e .
 
+      - name: Install kairos
+        working-directory: kairos
+        run: pip install -e .
+
+      - name: Install noesis-clients
+        # ``test_phase1_inprocess.py`` imports ``noesis_clients.testing``
+        # at module scope, so even ``pytest -m integration`` (which
+        # de-selects it) crashes during collection without this install.
+        working-directory: clients
+        run: pip install -e .
+
+      - name: Install praxis
+        # The in-process E2E tests import ``praxis.core``; collecting
+        # them in the integration job needs praxis on the path.
+        working-directory: services/praxis
+        run: pip install -e .
+
       - name: Install eval
         working-directory: eval
         run: pip install -e .
