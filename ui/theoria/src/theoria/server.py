@@ -63,7 +63,15 @@ class TheoriaHandler(BaseHTTPRequestHandler):
 
     store: TraceStore
     kairos: KairosClient             # bound per-server; see make_handler()
-    secret: str | None = None        # bound per-server; None = auth disabled
+    # Tuple of accepted bearer tokens. Empty = auth disabled (open mode,
+    # local-dev). Multiple entries enable zero-downtime secret rotation:
+    # the active ``THEORIA_SECRET`` and the previous ``THEORIA_SECRET_PREV``
+    # both pass during the rotation window. Mirrors the
+    # ``noesis_clients.auth.bearer_middleware`` rotation contract used by
+    # the eight ASGI services — Theoria stays stdlib-only on purpose
+    # (the visualization launches without ``pip install``), so it can't
+    # share the middleware code itself.
+    secrets: tuple[str, ...] = ()
     server_version = "Theoria/0.1"
 
     # Silence default stderr access logging; re-route through logging module.
@@ -105,24 +113,27 @@ class TheoriaHandler(BaseHTTPRequestHandler):
     # ---- auth --------------------------------------------------------
 
     def _check_auth(self, path: str) -> bool:
-        """Enforce bearer-token auth if ``self.secret`` is set.
+        """Enforce bearer-token auth if ``self.secrets`` is non-empty.
 
         Returns True when the request may proceed. When False, a 401 has
         already been written to the wire.
+
+        Accepts any token in ``self.secrets`` so a rotation deploy
+        (``THEORIA_SECRET`` flipped, ``THEORIA_SECRET_PREV`` still set)
+        keeps in-flight clients working until they pick up the new value.
 
         /health, /, /index.html, /static/* and the SSE stream are always
         public — a browser fetches them before the user can authenticate
         and monitors need /health to work.
         """
-        if not self.secret:
+        if not self.secrets:
             return True
         if path in _AUTH_EXEMPT_PATHS or any(
             path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES
         ):
             return True
         header = self.headers.get("Authorization", "") or ""
-        expected = f"Bearer {self.secret}"
-        if header != expected:
+        if not any(header == f"Bearer {s}" for s in self.secrets):
             body = _json_error("unauthorized")
             self.send_response(int(HTTPStatus.UNAUTHORIZED))
             self.send_header("Content-Type", "application/json")
@@ -442,15 +453,23 @@ def make_handler(
     store: TraceStore,
     *,
     secret: str | None = None,
+    previous_secret: str | None = None,
     kairos: KairosClient | None = None,
 ) -> type[TheoriaHandler]:
-    """Return a ``TheoriaHandler`` subclass bound to ``store``, ``secret``, ``kairos``."""
+    """Return a ``TheoriaHandler`` subclass bound to ``store`` + auth + ``kairos``.
+
+    ``secret`` is the active bearer token (``None`` = open mode).
+    ``previous_secret`` keeps the old token valid during rotation so a
+    live deploy doesn't 401 in-flight clients before they pick up the
+    new value.
+    """
+    secrets = tuple(s for s in (secret, previous_secret) if s)
     return type(
         "BoundTheoriaHandler",
         (TheoriaHandler,),
         {
             "store": store,
-            "secret": secret,
+            "secrets": secrets,
             "kairos": kairos if kairos is not None else KairosClient(),
         },
     )
@@ -461,21 +480,36 @@ def make_server(
     port: int = 8765,
     store: TraceStore | None = None,
     secret: str | None = None,
+    previous_secret: str | None = None,
     kairos: KairosClient | None = None,
 ) -> tuple[ThreadingHTTPServer, TraceStore]:
     """Build (but don't start) a ``ThreadingHTTPServer`` plus its store.
 
     When ``secret`` is set (or the ``THEORIA_SECRET`` env var is set and
     the caller doesn't override), all non-public endpoints require
-    ``Authorization: Bearer <secret>``. ``kairos`` defaults to a
-    client pointed at ``$KAIROS_URL`` (or localhost).
+    ``Authorization: Bearer <secret>``. During rotation, set
+    ``THEORIA_SECRET_PREV`` (or pass ``previous_secret``) — both tokens
+    pass until the rotation window closes. Mirrors the
+    ``noesis_clients.auth.bearer_middleware`` rotation contract used by
+    the eight ASGI services. ``kairos`` defaults to a client pointed at
+    ``$KAIROS_URL`` (or localhost).
     """
     import os as _os
     # NB: use `is None` — an empty TraceStore is falsy because __len__ returns 0.
     resolved_store = TraceStore() if store is None else store
-    resolved_secret = secret if secret is not None else _os.environ.get("THEORIA_SECRET") or None
+    resolved_secret = (
+        secret if secret is not None
+        else _os.environ.get("THEORIA_SECRET") or None
+    )
+    resolved_prev = (
+        previous_secret if previous_secret is not None
+        else _os.environ.get("THEORIA_SECRET_PREV") or None
+    )
     handler_cls = make_handler(
-        resolved_store, secret=resolved_secret, kairos=kairos,
+        resolved_store,
+        secret=resolved_secret,
+        previous_secret=resolved_prev,
+        kairos=kairos,
     )
     server = ThreadingHTTPServer((host, port), handler_cls)
     return server, resolved_store
@@ -487,15 +521,27 @@ def serve(
     store: TraceStore | None = None,
     load_samples: bool = True,
     secret: str | None = None,
+    previous_secret: str | None = None,
     kairos: KairosClient | None = None,
 ) -> None:
     """Run the Theoria server until SIGINT."""
     server, resolved_store = make_server(
-        host=host, port=port, store=store, secret=secret, kairos=kairos,
+        host=host,
+        port=port,
+        store=store,
+        secret=secret,
+        previous_secret=previous_secret,
+        kairos=kairos,
     )
     if load_samples and len(resolved_store) == 0:
         resolved_store.put_many(build_samples())
-    auth_note = "auth=on" if server.RequestHandlerClass.secret else "auth=off"  # type: ignore[attr-defined]
+    bound_secrets = server.RequestHandlerClass.secrets  # type: ignore[attr-defined]
+    if not bound_secrets:
+        auth_note = "auth=off"
+    elif len(bound_secrets) > 1:
+        auth_note = f"auth=on (rotation: {len(bound_secrets)} valid tokens)"
+    else:
+        auth_note = "auth=on"
     logger.info(
         "Theoria listening on http://%s:%d (traces=%d, %s)",
         host, port, len(resolved_store), auth_note,
