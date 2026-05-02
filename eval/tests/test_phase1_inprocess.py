@@ -158,7 +158,7 @@ def test_phase1_logos_refutation_blocks_commit(tmp_path) -> None:
 
 
 def test_phase1_drift_detection_catches_forbidden_action(cores) -> None:
-    """Telos.check_alignment must flag actions that violate forbidding postconditions."""
+    """Telos.check_alignment must flag actions violating forbidding postconditions."""
     telos, _praxis, _mneme, _logos = cores
 
     telos.register(GoalContract(
