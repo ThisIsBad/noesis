@@ -1,8 +1,12 @@
-# Hegemonikon — interactive chat surface for the full Noesis stack
+# Hegemonikon — central command faculty for the full Noesis stack
 
-`services/hegemonikon/` is the third orchestration surface, alongside
-direct Claude Code (developer dev loop) and `eval/` (batch A/B
-benchmark). It's a Starlette app that:
+`services/hegemonikon/` runs **two surfaces inside one Starlette
+process** — same bearer (`HEGEMONIKON_SECRET`), same deploy unit, same
+backend wiring, distinct URL prefixes:
+
+## 1. Chat surface (browser-facing)
+
+The original Phase-1 thing. A Starlette app that:
 
 1. accepts a chat prompt over `POST /api/chat`,
 2. spawns a Claude session with all eight Noesis MCP servers wired,
@@ -19,6 +23,44 @@ step. Browser hits `http://localhost:8010/`, types a prompt, watches
 the trace build node-by-node as Claude calls Logos / Mneme / Praxis /
 Telos / Episteme / Kosmos / Empiria / Techne in whatever sequence it
 chooses.
+
+## 2. Gateway (machine-facing MCP-aggregator)
+
+`GET /gateway/sse` exposes a single MCP endpoint that proxies tool
+calls to all eight backend services. Clients (Claude Code on the web,
+other agents, future services) hold one bearer
+(`HEGEMONIKON_SECRET`); per-service bearers
+(`NOESIS_<SVC>_SECRET`) stay server-side as Railway env vars and
+never travel to the client.
+
+Tool naming is `<service>__<tool>`: the gateway calls each backend's
+`tools/list` at first connection, namespaces every tool name with the
+backend prefix (`mneme__store_memory`, `telos__list_goals`, …), caches
+the merged manifest, and dispatches incoming `tools/call` to the
+matched backend. Backends that fail to respond at discovery are
+logged and skipped — the gateway stays usable with whatever subset is
+reachable. Restart Hegemonikon to refresh the manifest.
+
+`.mcp.json` example (one entry replaces the previous eight):
+
+```json
+{
+  "mcpServers": {
+    "hegemonikon": {
+      "type": "sse",
+      "url": "https://<your-hegemonikon-host>/gateway/sse",
+      "headers": {
+        "Authorization": "Bearer ${NOESIS_HEGEMONIKON_SECRET}"
+      }
+    }
+  }
+}
+```
+
+Both surfaces coexist under the same auth gate, so an existing
+chat-surface deploy turns into a gateway-providing deploy without any
+config beyond what it already needed (`NOESIS_<SVC>_URL` / `_SECRET`
+for each backend).
 
 ## Required env vars
 
