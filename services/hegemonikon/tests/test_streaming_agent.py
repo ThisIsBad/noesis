@@ -17,7 +17,7 @@ from typing import Any, AsyncIterator
 
 import pytest
 
-from console.streaming_agent import (
+from hegemonikon.streaming_agent import (
     NOESIS_SERVICE_NAMES,
     StreamingMCPAgent,
     noesis_mcp_servers_from_env,

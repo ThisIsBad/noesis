@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Probe each Noesis service's /health (and Console at :8010 if up).
+# Probe each Noesis service's /health (and Hegemonikon at :8010 if up).
 # Equivalent of tools/probe_live_stack.py for the local-bare-metal stack.
 
 declare -A names=(
   [8001]=logos [8002]=mneme [8003]=praxis [8004]=telos
   [8005]=episteme [8006]=kosmos [8007]=empiria [8008]=techne
-  [8009]=kairos [8010]=console
+  [8009]=kairos [8010]=hegemonikon
 )
 all_ok=true
 for port in 8001 8002 8003 8004 8005 8006 8007 8008 8009 8010; do

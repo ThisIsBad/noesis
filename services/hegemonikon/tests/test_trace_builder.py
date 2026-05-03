@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from console.trace_builder import (
+from hegemonikon.trace_builder import (
     TraceBuilder,
     _service_from_tool,
     _short_input_detail,
@@ -100,7 +100,7 @@ def test_builder_seeds_root_question_step() -> None:
     assert root.kind.value == "question"
     assert root.detail == "hello world"
     assert trace.root == root.id
-    assert trace.source == "console"
+    assert trace.source == "hegemonikon"
     assert trace.kind == "chat"
 
 
@@ -285,7 +285,7 @@ def test_to_dict_returns_serialisable_trace() -> None:
         )
     )
     d = b.to_dict()
-    assert d["source"] == "console"
+    assert d["source"] == "hegemonikon"
     assert d["kind"] == "chat"
     assert d["question"] == "hi"
     assert isinstance(d["steps"], list) and len(d["steps"]) == 2
@@ -297,7 +297,7 @@ def test_start_event_carries_session_and_trace_ids() -> None:
     e = b.start_event()
     assert e["type"] == "session.start"
     assert e["session_id"] == "abc123"
-    assert e["trace_id"] == "console-abc123"
+    assert e["trace_id"] == "hegemonikon-abc123"
 
 
 # ── pure helpers ──────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ Three nested loops, each cheaper and faster than the next one out.
 ## Inner loop — single test
 
 ```bash
-cd <pkg>           # e.g. services/console
+cd <pkg>           # e.g. services/hegemonikon
 pytest -q -k <name>
 ```
 
@@ -16,7 +16,7 @@ Used while debugging a single failure. Sub-second. Done.
 ```bash
 bash scripts/check-local.sh           # full gate
 bash scripts/check-local.sh --fast    # skip mypy + cov
-bash scripts/check-local.sh --component console
+bash scripts/check-local.sh --component hegemonikon
 ```
 
 Iterates the 14 packages (`schemas`, `kairos`, `clients`, 8 services,
@@ -35,22 +35,22 @@ edge cases.
 bash scripts/sandbox-smoke.sh
 ```
 
-Boots the 8-service stack + Console + drives the full HTTP/SSE flow
+Boots the 8-service stack + Hegemonikon + drives the full HTTP/SSE flow
 with a canned prompt, validates the resulting `DecisionTrace` end-to-
 end, then tears everything down. Self-contained: no leftover processes,
 no leftover ports.
 
-By default runs in **fake-query mode** (`CONSOLE_FAKE_QUERY=1`) — Console
-returns the canned scripted iterator from `console._fake_query`,
+By default runs in **fake-query mode** (`HEGEMONIKON_FAKE_QUERY=1`) — Hegemonikon
+returns the canned scripted iterator from `hegemonikon._fake_query`,
 matching the canonical sequence the in-process test
-`eval/tests/test_console_inprocess.py` uses. That keeps the smoke
+`eval/tests/test_hegemonikon_inprocess.py` uses. That keeps the smoke
 deterministic and runnable with no Anthropic dependency.
 
 To drive Claude for real (occasional regression check, requires
 logged-in `claude` CLI on PATH):
 
 ```bash
-CONSOLE_USE_REAL_CLAUDE=1 bash scripts/sandbox-smoke.sh
+HEGEMONIKON_USE_REAL_CLAUDE=1 bash scripts/sandbox-smoke.sh
 ```
 
 ## What runs where
@@ -77,5 +77,5 @@ are fully covered by the sandbox loop.
 | `check-local` red on `mypy` only | new strict-mode error | fix the type, or add a narrow `[[tool.mypy.overrides]]` in that pkg's `pyproject.toml` |
 | `check-local` red on `STATUS.md drift` | added/removed file | `python tools/generate_status.py` to regenerate |
 | `sandbox-smoke` red at step 2/4 | a service crashed at boot | `tail .run/logs/<svc>.log`; usually missing dep — `bash scripts/bootstrap.sh` |
-| `sandbox-smoke` red at step 4/4 with `session.error` | TraceBuilder regression or fake-query mismatch | run `pytest eval/tests/test_console_inprocess.py -x` first; if green, the regression is in HTTP/SSE wiring |
+| `sandbox-smoke` red at step 4/4 with `session.error` | TraceBuilder regression or fake-query mismatch | run `pytest eval/tests/test_hegemonikon_inprocess.py -x` first; if green, the regression is in HTTP/SSE wiring |
 | GH CI red but `check-local` green | runner-specific (often `chromadb` wheel mismatch) | check the failed-step log on GH; usually a version-pin update fixes it |

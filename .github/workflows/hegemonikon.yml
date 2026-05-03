@@ -1,42 +1,42 @@
-name: console
+name: hegemonikon
 
 on:
   push:
     branches: [master]
     paths:
-      - "services/console/**"
-      - "ui/console/**"
+      - "services/hegemonikon/**"
+      - "ui/hegemonikon/**"
       - "schemas/**"
       - "kairos/**"
       - "clients/**"
       - "ui/theoria/**"
       - ".github/workflows/_python-component.yml"
-      - ".github/workflows/console.yml"
+      - ".github/workflows/hegemonikon.yml"
   pull_request:
     paths:
-      - "services/console/**"
-      - "ui/console/**"
+      - "services/hegemonikon/**"
+      - "ui/hegemonikon/**"
       - "schemas/**"
       - "kairos/**"
       - "clients/**"
       - "ui/theoria/**"
       - ".github/workflows/_python-component.yml"
-      - ".github/workflows/console.yml"
+      - ".github/workflows/hegemonikon.yml"
 
 jobs:
   ci:
     uses: ./.github/workflows/_python-component.yml
     with:
-      service-path: services/console
-      service-name: console
-      # mcp_server_http is exercised by eval/tests/test_console_inprocess.py
+      service-path: services/hegemonikon
+      service-name: hegemonikon
+      # mcp_server_http is exercised by eval/tests/test_hegemonikon_inprocess.py
       # (HTTP layer round-trip via httpx.AsyncClient + ASGITransport), not
-      # by Console's own unit suite — the unit suite covers
+      # by Hegemonikon's own unit suite — the unit suite covers
       # streaming_agent, trace_builder, sessions, and auth wiring.
-      coverage-args: "--cov=console.streaming_agent --cov=console.trace_builder --cov=console.sessions"
+      coverage-args: "--cov=hegemonikon.streaming_agent --cov=hegemonikon.trace_builder --cov=hegemonikon.sessions"
       needs-clients: true
-      # Console imports theoria.models for the DecisionTrace schema.
+      # Hegemonikon imports theoria.models for the DecisionTrace schema.
       # The other services don't, so this isn't in the reusable workflow's
-      # default install list — Console pulls Theoria's source onto the
+      # default install list — Hegemonikon pulls Theoria's source onto the
       # PYTHONPATH explicitly via its pyproject.toml [tool.pytest.ini_options].
       pytest-extra: ""

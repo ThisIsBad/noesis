@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Probe each Noesis service's /health (and Console too if running).
+  Probe each Noesis service's /health (and Hegemonikon too if running).
   Windows-native equivalent of `tools/probe_live_stack.py`.
 #>
 
@@ -11,7 +11,7 @@ param(
 $names = @{
   8001 = 'logos'; 8002 = 'mneme'; 8003 = 'praxis'; 8004 = 'telos'
   8005 = 'episteme'; 8006 = 'kosmos'; 8007 = 'empiria'; 8008 = 'techne'
-  8009 = 'kairos'; 8010 = 'console'
+  8009 = 'kairos'; 8010 = 'hegemonikon'
 }
 
 $all_ok = $true

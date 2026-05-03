@@ -1,8 +1,8 @@
 """Scripted SDK message iterator for live-stack smoke tests.
 
-Used when ``CONSOLE_FAKE_QUERY=1`` is set on the Console process. The
+Used when ``HEGEMONIKON_FAKE_QUERY=1`` is set on the Hegemonikon process. The
 iterator emits the same canonical sequence the in-process test
-``eval/tests/test_console_inprocess.py`` uses — register goal →
+``eval/tests/test_hegemonikon_inprocess.py`` uses — register goal →
 decompose plan → result — without spawning the ``claude`` CLI or
 calling Anthropic. That makes ``scripts/sandbox-smoke.sh`` fully
 reproducible and runnable in any environment that has Python.

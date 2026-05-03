@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot install of every Python dep Console + the 8 services need to
+# One-shot install of every Python dep Hegemonikon + the 8 services need to
 # boot locally. Idempotent. Tolerates per-service install failures —
 # reports them and keeps going. Most common breakage is chromadb / hnswlib
 # (used by Mneme, Techne, Empiria); the rest of the stack runs fine without.
@@ -42,7 +42,7 @@ try_install "services/empiria (lessons)"         "services/empiria"
 try_install "services/mneme (memory; chromadb)"  "services/mneme"
 try_install "services/techne (skills; chromadb)" "services/techne"
 
-try_install "services/console (chat surface)"  "services/console" "dev"
+try_install "services/hegemonikon (chat surface)"  "services/hegemonikon" "dev"
 try_install "eval (A/B harness)"               "eval"
 
 echo
@@ -66,5 +66,5 @@ echo
 echo "Next steps:"
 echo "  1. Boot the stack:    bash scripts/run-stack.sh"
 echo "  2. Probe everything:  bash scripts/probe-stack.sh"
-echo "  3. Boot Console:      bash scripts/run-console.sh"
-echo "  4. Open browser:      http://127.0.0.1:8010/  (bearer = dev-console-secret)"
+echo "  3. Boot Hegemonikon:      bash scripts/run-hegemonikon.sh"
+echo "  4. Open browser:      http://127.0.0.1:8010/  (bearer = dev-hegemonikon-secret)"

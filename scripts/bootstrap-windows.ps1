@@ -1,19 +1,19 @@
 <#
 .SYNOPSIS
-  One-shot install of every Python dep Console + the 8 services need
+  One-shot install of every Python dep Hegemonikon + the 8 services need
   to boot locally on Windows. Idempotent (safe to re-run).
 
 .DESCRIPTION
   Walks the monorepo's pyprojects in dependency order — schemas first
   (everyone needs the contract types), then kairos + clients (every
   service uses tracing + bearer middleware), then each service, then
-  Console.
+  Hegemonikon.
 
   Tolerates per-service install failures: reports them at the end and
   keeps going. Most common breakage on Windows is ``chromadb`` /
   ``hnswlib`` failing to build; that affects Mneme, Techne, Empiria.
   The rest of the stack (Logos, Praxis, Telos, Episteme, Kosmos,
-  Console) runs without ChromaDB. Console silently skips services
+  Hegemonikon) runs without ChromaDB. Hegemonikon silently skips services
   whose URL is unreachable, so a partial-stack run is still useful
   for a smoke test.
 
@@ -24,7 +24,7 @@
   pwsh scripts/bootstrap-windows.ps1
   # When done, run:
   #   pwsh scripts/run-stack.ps1
-  #   pwsh scripts/run-console.ps1
+  #   pwsh scripts/run-hegemonikon.ps1
 #>
 
 param(
@@ -74,8 +74,8 @@ Try-Install "services/empiria (lessons)"           "services/empiria"
 Try-Install "services/mneme (memory; chromadb)"    "services/mneme"
 Try-Install "services/techne (skills; chromadb)"   "services/techne"
 
-# ── Console + the eval harness (gives you the in-process E2E suite too) ────
-Try-Install "services/console (chat surface)"  "services/console" "dev"
+# ── Hegemonikon + the eval harness (gives you the in-process E2E suite too) ────
+Try-Install "services/hegemonikon (chat surface)"  "services/hegemonikon" "dev"
 Try-Install "eval (A/B harness)"               "eval"
 
 Write-Host ""
@@ -94,7 +94,7 @@ if ($failures.Count -gt 0) {
   Write-Host "  chromadb / hnswlib failed to build (needs C++ build tools)." -ForegroundColor Yellow
   Write-Host "  Mneme + Techne + Empiria need it; everyone else doesn't." -ForegroundColor Yellow
   Write-Host "  Cheapest fix: pip install chromadb --only-binary=:all:" -ForegroundColor Yellow
-  Write-Host "  Or skip those three services for the smoke test — Console" -ForegroundColor Yellow
+  Write-Host "  Or skip those three services for the smoke test — Hegemonikon" -ForegroundColor Yellow
   Write-Host "  silently drops services whose URL is unreachable." -ForegroundColor Yellow
 }
 
@@ -102,6 +102,6 @@ Write-Host ""
 Write-Host "Next steps:" -ForegroundColor White
 Write-Host "  1. Boot the stack:    pwsh scripts/run-stack.ps1"
 Write-Host "  2. Probe everything:  pwsh scripts/probe-stack.ps1"
-Write-Host "  3. Boot Console:      pwsh scripts/run-console.ps1"
+Write-Host "  3. Boot Hegemonikon:      pwsh scripts/run-hegemonikon.ps1"
 Write-Host "  4. Open browser:      http://127.0.0.1:8010/"
-Write-Host "                        bearer = dev-console-secret"
+Write-Host "                        bearer = dev-hegemonikon-secret"

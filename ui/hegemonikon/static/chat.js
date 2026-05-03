@@ -1,4 +1,4 @@
-// Console chat — thin glue between the textarea + the Console backend.
+// Hegemonikon chat — thin glue between the textarea + the Hegemonikon backend.
 //
 // Flow:
 //   1. user types prompt + clicks Send
@@ -21,7 +21,7 @@ const authInput = document.getElementById("auth-input");
 
 // Persist the bearer token across reloads (browser-local; the secret
 // already lives client-side anyway in the SSE connection).
-const SECRET_KEY = "noesis_console_secret";
+const SECRET_KEY = "noesis_hegemonikon_secret";
 authInput.value = localStorage.getItem(SECRET_KEY) || "";
 authInput.addEventListener("change", () =>
   localStorage.setItem(SECRET_KEY, authInput.value)
@@ -70,9 +70,9 @@ form.addEventListener("submit", async (ev) => {
 
 function openStream(sessionId) {
   // EventSource doesn't allow custom headers, so the bearer must come
-  // through a query param on /api/stream when CONSOLE_SECRET is set.
+  // through a query param on /api/stream when HEGEMONIKON_SECRET is set.
   // Phase-1 simplification: same-origin behind a localhost-only deploy
-  // means we can skip that. When CONSOLE_SECRET is enforced for the
+  // means we can skip that. When HEGEMONIKON_SECRET is enforced for the
   // SSE endpoint, a future revision will switch to fetch + ReadableStream.
   const url = `/api/stream?session_id=${encodeURIComponent(sessionId)}`;
   const es = new EventSource(url);
@@ -162,7 +162,7 @@ function handleEvent(ev) {
       setSending(false);
       break;
     default:
-      // Unknown event types are silently ignored — Console can add new
+      // Unknown event types are silently ignored — Hegemonikon can add new
       // ones over time without breaking older clients.
       break;
   }

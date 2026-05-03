@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Boot Console (port 8010) connected to the local 8-service stack.
+  Boot Hegemonikon (port 8010) connected to the local 8-service stack.
 
 .DESCRIPTION
-  Console drives Claude via ``claude-agent-sdk``, which spawns the
+  Hegemonikon drives Claude via ``claude-agent-sdk``, which spawns the
   ``claude`` CLI as a subprocess. The CLI authenticates via the same
   credentials your Claude Code uses (Pro / Max OAuth in ``~/.claude/``,
   or a raw ANTHROPIC_API_KEY env var, in that order). **You do NOT
@@ -11,17 +11,17 @@
 
   Sets all NOESIS_<SVC>_URL + NOESIS_<SVC>_SECRET pairs to the dev
   defaults that scripts/run-stack.ps1 uses, plus
-  CONSOLE_SECRET=dev-console-secret. Runs Console in the FOREGROUND
+  HEGEMONIKON_SECRET=dev-hegemonikon-secret. Runs Hegemonikon in the FOREGROUND
   (Ctrl+C cleanly stops it).
 
 .EXAMPLE
-  pwsh scripts/run-console.ps1
-  # then open http://127.0.0.1:8010/  ->  bearer = dev-console-secret
+  pwsh scripts/run-hegemonikon.ps1
+  # then open http://127.0.0.1:8010/  ->  bearer = dev-hegemonikon-secret
 
 .EXAMPLE
   # Override with a raw API key if you don't want to use your CLI session:
   $env:ANTHROPIC_API_KEY = 'sk-ant-...'
-  pwsh scripts/run-console.ps1
+  pwsh scripts/run-hegemonikon.ps1
 #>
 
 param(
@@ -37,7 +37,7 @@ $claudeCmd = Get-Command claude -ErrorAction SilentlyContinue
 if (-not $claudeCmd) {
   Write-Host ""
   Write-Warning "``claude`` CLI not found on PATH."
-  Write-Host  "Console drives Claude via the claude-agent-sdk, which spawns the"
+  Write-Host  "Hegemonikon drives Claude via the claude-agent-sdk, which spawns the"
   Write-Host  "``claude`` CLI as a subprocess. Install Claude Code first, then"
   Write-Host  "log in with your Pro/Max account:"
   Write-Host  "  https://docs.claude.com/en/docs/claude-code/quickstart"
@@ -55,12 +55,12 @@ $env:PYTHONPATH = @(
   Join-Path $Repo 'kairos/src'
   Join-Path $Repo 'clients/src'
   Join-Path $Repo 'ui/theoria/src'
-  Join-Path $Repo 'services/console/src'
+  Join-Path $Repo 'services/hegemonikon/src'
 ) -join $Sep
 
 $env:PORT                    = '8010'
-$env:CONSOLE_SECRET          = 'dev-console-secret'
-$env:CONSOLE_MAX_BUDGET_USD  = '0.25'
+$env:HEGEMONIKON_SECRET          = 'dev-hegemonikon-secret'
+$env:HEGEMONIKON_MAX_BUDGET_USD  = '0.25'
 
 $env:NOESIS_LOGOS_URL        = 'http://127.0.0.1:8001'
 $env:NOESIS_LOGOS_SECRET     = 'dev-logos-secret'
@@ -79,9 +79,9 @@ $env:NOESIS_EMPIRIA_SECRET   = 'dev-empiria-secret'
 $env:NOESIS_TECHNE_URL       = 'http://127.0.0.1:8008'
 $env:NOESIS_TECHNE_SECRET    = 'dev-techne-secret'
 
-Write-Host "Starting Console on http://127.0.0.1:8010/"
-Write-Host "Open the page, paste 'dev-console-secret' in the Bearer field,"
+Write-Host "Starting Hegemonikon on http://127.0.0.1:8010/"
+Write-Host "Open the page, paste 'dev-hegemonikon-secret' in the Bearer field,"
 Write-Host "then send a prompt. Ctrl+C here when done."
 Write-Host ""
 
-python -m console.mcp_server_http
+python -m hegemonikon.mcp_server_http

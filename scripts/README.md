@@ -8,8 +8,8 @@ the same scripts work on Windows-native, WSL, Linux, and macOS.
 scripts/
 ├── run-stack.ps1     # Windows-native: boots 8 services + Kairos
 ├── run-stack.sh      # bash equivalent
-├── run-console.ps1   # boots Console on :8010, prompts for ANTHROPIC_API_KEY
-├── run-console.sh    # bash equivalent
+├── run-hegemonikon.ps1   # boots Hegemonikon on :8010, prompts for ANTHROPIC_API_KEY
+├── run-hegemonikon.sh    # bash equivalent
 ├── probe-stack.ps1   # /health checks per service
 ├── probe-stack.sh    # bash equivalent
 └── stop-stack.{ps1,sh}
@@ -29,13 +29,13 @@ State lives in `<repo>/.run/`:
 
 # In a new window:
 $env:ANTHROPIC_API_KEY = 'sk-ant-...'
-.\scripts\run-console.ps1                 # foreground; Ctrl+C to stop
+.\scripts\run-hegemonikon.ps1                 # foreground; Ctrl+C to stop
 
 # Back in the first window when you're done:
 .\scripts\stop-stack.ps1
 ```
 
-Open <http://127.0.0.1:8010/>, paste `dev-console-secret` in the Bearer
+Open <http://127.0.0.1:8010/>, paste `dev-hegemonikon-secret` in the Bearer
 field, send a prompt.
 
 ## Linux / WSL / macOS quickstart
@@ -46,7 +46,7 @@ scripts/run-stack.sh
 scripts/probe-stack.sh
 
 # new shell
-ANTHROPIC_API_KEY='sk-ant-...' scripts/run-console.sh
+ANTHROPIC_API_KEY='sk-ant-...' scripts/run-hegemonikon.sh
 
 # done
 scripts/stop-stack.sh
@@ -67,21 +67,21 @@ scripts/stop-stack.sh
   fix is `pip install chromadb --only-binary=:all:`. Or skip those
   three services for the first chat-only smoke and accept the missing
   tools in the trace.
-* **Console boots but `mcp_servers: []`** — none of the
+* **Hegemonikon boots but `mcp_servers: []`** — none of the
   `NOESIS_<SVC>_URL` env vars resolved at boot. Confirm
   `scripts/probe-stack.{ps1,sh}` shows the services as `200` first.
 * **Browser shows the chat shell but `Send` does nothing** — open
   DevTools → Network tab. If `POST /api/chat` returns 401, the
-  Bearer field doesn't match `CONSOLE_SECRET`. If it returns 202 but
+  Bearer field doesn't match `HEGEMONIKON_SECRET`. If it returns 202 but
   `GET /api/stream` never delivers events, the SDK couldn't reach
-  Anthropic — check `.run/logs/console.log` for the actual error.
+  Anthropic — check `.run/logs/hegemonikon.log` for the actual error.
 
 ## Why bare-metal scripts at all when we have docker-compose?
 
 Three reasons:
 
-1. **Faster iteration.** `python -m console.mcp_server_http` boots in
-   under a second; `docker compose up --build console` is 30 s+ on a
+1. **Faster iteration.** `python -m hegemonikon.mcp_server_http` boots in
+   under a second; `docker compose up --build hegemonikon` is 30 s+ on a
    fresh layer. For dev loops where you're tweaking trace_builder
    message-handlers, the speed difference matters.
 2. **Native debugger.** PyCharm/VS Code attach to a `python` process

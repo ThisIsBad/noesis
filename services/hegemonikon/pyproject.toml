@@ -1,5 +1,5 @@
 [project]
-name = "console"
+name = "hegemonikon"
 version = "0.1.0"
 description = "Interactive recorded chat surface for the Noesis AGI stack"
 requires-python = ">=3.11"
@@ -23,7 +23,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/console"]
+packages = ["src/hegemonikon"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -37,11 +37,11 @@ pythonpath = [
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["console"]
-# mcp_server_http is exercised by the eval harness's test_console_inprocess
+source = ["hegemonikon"]
+# mcp_server_http is exercised by the eval harness's test_hegemonikon_inprocess
 # integration test, not the unit suite. Keeping it in the unit-coverage gate
 # would require a heavy fake-Starlette setup that adds no signal.
-omit = ["src/console/mcp_server_http.py"]
+omit = ["src/hegemonikon/mcp_server_http.py"]
 
 [tool.coverage.report]
 fail_under = 80
@@ -63,7 +63,7 @@ ignore_missing_imports = true
 follow_imports = "skip"
 
 [[tool.mypy.overrides]]
-module = ["console.mcp_server_http"]
+module = ["hegemonikon.mcp_server_http"]
 disable_error_code = ["no-any-return"]
 
 [tool.ruff.lint]

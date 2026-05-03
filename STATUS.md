@@ -11,7 +11,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
-| **console** | Interactive recorded chat surface for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/console.yml) | 1,214 | 601 | 3 | 2026-05-02 |
+| **hegemonikon** | Interactive recorded chat surface for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/hegemonikon.yml) | 1,214 | 601 | 3 | 2026-05-02 |
 | **empiria** | Experience accumulation and lesson extraction for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/empiria.yml) | 241 | 246 | 4 | 2026-05-02 |
 | **episteme** | Metacognition and uncertainty calibration for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/episteme.yml) | 341 | 428 | 5 | 2026-05-02 |
 | **kosmos** | Causal world model with Do-calculus for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/kosmos.yml) | 206 | 240 | 4 | 2026-05-02 |
@@ -34,7 +34,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 
 | Name | Description | Docker | Railway | MCP | CI | src LOC | test LOC | tests | Last commit |
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
-| **console-ui** | — | — | — | — | — | — | — | — | 2026-05-02 |
+| **hegemonikon-ui** | — | — | — | — | — | — | — | — | 2026-05-02 |
 | **theoria** | Decision-logic visualization UI for the Noesis ecosystem | ✓ | ✓ | — | [✓](.github/workflows/theoria.yml) | 4,161 | 2,672 | 14 | 2026-05-02 |
 
 ## Legend

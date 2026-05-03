@@ -12,7 +12,7 @@ Please include:
 - A description of the vulnerability and its potential impact
 - Steps to reproduce (proof-of-concept code is welcome)
 - The affected component (`schemas`, `kairos`, `clients`, one of the eight
-  services in `services/`, the `eval` harness, or the `ui/console` /
+  services in `services/`, the `eval` harness, or the `ui/hegemonikon` /
   `ui/theoria` surfaces)
 - The commit SHA or version you tested against
 
@@ -29,7 +29,7 @@ release tag receive security fixes.
 In scope:
 
 - Authentication and authorization gaps in any service's HTTP surface
-- Injection or sandbox-escape via the Console agent loop
+- Injection or sandbox-escape via the Hegemonikon agent loop
 - Data leakage between sessions, services, or persistence backends
 - Supply-chain issues in declared dependencies (`pyproject.toml`)
 
