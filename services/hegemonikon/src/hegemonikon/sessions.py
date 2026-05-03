@@ -3,7 +3,7 @@
 A ``Session`` ties together one running Claude conversation with the
 asyncio task driving it, the SSE event queue, and the in-flight
 ``DecisionTrace``. This is intentionally a single-process registry —
-Console's MVP scope is "interactive recorded sessions on one box,"
+Hegemonikon's MVP scope is "interactive recorded sessions on one box,"
 not "horizontally scaled chat backend." When the second use case
 matters, swap this for Mneme or Redis.
 

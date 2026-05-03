@@ -7,7 +7,7 @@ is partial — the items below live in the dashboard only.
 Run through this list once per service when onboarding, and again after
 any major reconfiguration. The 8 cognitive services are: `logos`, `mneme`,
 `praxis`, `telos`, `episteme`, `kosmos`, `empiria`, `techne`. Plus
-`console` (orchestration UI) and `theoria` (browse UI).
+`hegemonikon` (orchestration UI) and `theoria` (browse UI).
 
 ## Per-service checklist
 
@@ -65,7 +65,7 @@ port).
 | `episteme` | no | — |
 | `kosmos` | no | — |
 | `empiria` | no (chromadb declared but not yet wired) | — |
-| `console` | no | — |
+| `hegemonikon` | no | — |
 | `theoria` | yes (snapshot store) | `/data` |
 
 5 GB is a sane starting size. SQLite + ChromaDB embeddings stay

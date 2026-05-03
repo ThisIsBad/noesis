@@ -1,19 +1,19 @@
-"""Console HTTP-layer integration test.
+"""Hegemonikon HTTP-layer integration test.
 
-Drives ``services.console.mcp_server_http.app`` via Starlette's
+Drives ``services.hegemonikon.mcp_server_http.app`` via Starlette's
 TestClient with a scripted ``query_fn`` injected into the
 ``StreamingMCPAgent``, so the test runs without spawning the Claude
 CLI subprocess and without any deployed MCP services. The point of
-this test is to pin the **HTTP / SSE wire format** Console emits, not
+this test is to pin the **HTTP / SSE wire format** Hegemonikon emits, not
 to re-test the trace builder logic (covered in
-``services/console/tests/test_trace_builder.py``).
+``services/hegemonikon/tests/test_trace_builder.py``).
 
 Specifically this asserts:
 
 * ``POST /api/chat`` with a valid bearer returns ``202`` and a
   ``session_id``.
 * ``GET /api/stream?session_id=...`` streams typed SSE events whose
-  ``event:`` lines match the dispatcher in ``ui/console/static/chat.js``.
+  ``event:`` lines match the dispatcher in ``ui/hegemonikon/static/chat.js``.
 * The full sequence (``session.start`` → tool events → ``session.done``)
   shows up in order.
 * The finalised ``DecisionTrace`` carries the user's prompt as the
@@ -34,29 +34,29 @@ from typing import Any
 import httpx
 import pytest
 
-# Drop any host-side CONSOLE_SECRET before the bearer middleware reads it
+# Drop any host-side HEGEMONIKON_SECRET before the bearer middleware reads it
 # at server-module import time. The auth-specific test below re-imports
-# the module with CONSOLE_SECRET set to verify the gating path; every
+# the module with HEGEMONIKON_SECRET set to verify the gating path; every
 # other test wants the open-mode default so it can POST without a token.
-os.environ.pop("CONSOLE_SECRET", None)
-os.environ.pop("CONSOLE_SECRET_PREV", None)
+os.environ.pop("HEGEMONIKON_SECRET", None)
+os.environ.pop("HEGEMONIKON_SECRET_PREV", None)
 
 pytest.importorskip(
-    "console.mcp_server_http",
-    reason="services/console not on pythonpath",
+    "hegemonikon.mcp_server_http",
+    reason="services/hegemonikon not on pythonpath",
 )
 
-from console import mcp_server_http as server_mod  # noqa: E402
-from console.streaming_agent import StreamingMCPAgent  # noqa: E402
+from hegemonikon import mcp_server_http as server_mod  # noqa: E402
+from hegemonikon.streaming_agent import StreamingMCPAgent  # noqa: E402
 
-# Console runs orchestration in background asyncio.create_task() — Starlette's
+# Hegemonikon runs orchestration in background asyncio.create_task() — Starlette's
 # sync TestClient doesn't keep a loop alive across requests, so the background
 # task strands after POST /api/chat and the SSE stream stays empty. We use
 # httpx.AsyncClient + ASGITransport which holds one loop for the whole test.
 ASGITransport = httpx.ASGITransport
 
 
-# ── SDK-shaped fakes (mirrors services/console/tests/test_trace_builder.py) ───
+# ── SDK-shaped fakes (mirrors services/hegemonikon/tests/test_trace_builder.py) ───
 
 
 # Class names mirror the real SDK types exactly because TraceBuilder
@@ -176,7 +176,7 @@ def patched_agent(monkeypatch):
 
     monkeypatch.setattr(StreamingMCPAgent, "__init__", patched_init)
 
-    # Console's process-global registry is reset between tests so leftover
+    # Hegemonikon's process-global registry is reset between tests so leftover
     # sessions from a previous test don't leak into the next.
     server_mod._REGISTRY = type(server_mod._REGISTRY)(  # type: ignore[misc]
         max_age_s=server_mod._SESSION_MAX_AGE_S,
@@ -222,7 +222,7 @@ def _async_client() -> httpx.AsyncClient:
     and the GET /api/stream call (which consumes that task's queue)."""
     return httpx.AsyncClient(
         transport=ASGITransport(app=server_mod.app),
-        base_url="http://console.test",
+        base_url="http://hegemonikon.test",
         timeout=30.0,
     )
 
@@ -232,7 +232,7 @@ async def test_health_is_unauth(patched_agent) -> None:
         resp = await client.get("/health")
         assert resp.status_code == 200
         body = resp.json()
-        assert body["service"] == "console"
+        assert body["service"] == "hegemonikon"
         assert "active_sessions" in body
         assert "mcp_servers" in body
 
@@ -249,7 +249,7 @@ async def test_chat_post_returns_session_id_and_streams_full_sequence(
         body = resp.json()
         session_id = body["session_id"]
         trace_id = body["trace_id"]
-        assert session_id and trace_id == f"console-{session_id}"
+        assert session_id and trace_id == f"hegemonikon-{session_id}"
 
         async with client.stream(
             "GET",
@@ -276,7 +276,7 @@ async def test_chat_post_returns_session_id_and_streams_full_sequence(
     # Last trace.update should carry the finalised structure.
     final_trace_event = [e for e in events if e["type"] == "trace.update"][-1]
     trace = final_trace_event["trace"]
-    assert trace["source"] == "console"
+    assert trace["source"] == "hegemonikon"
     assert trace["question"] == "Refactor auth and verify the plan."
     # 1 root QUESTION + 2 INFERENCE (tool_use) + 2 OBSERVATION (tool_result)
     # = 5 steps minimum (no thinking / system events in this canned run).
@@ -305,7 +305,7 @@ async def test_chat_post_returns_session_id_and_streams_full_sequence(
 
 
 async def test_chat_requires_bearer_when_secret_set(monkeypatch) -> None:
-    monkeypatch.setenv("CONSOLE_SECRET", "live-secret")
+    monkeypatch.setenv("HEGEMONIKON_SECRET", "live-secret")
 
     # The bearer middleware was bound at import time; rebuild a fresh
     # module so it sees the env override.
@@ -350,10 +350,10 @@ async def test_chat_requires_bearer_when_secret_set(monkeypatch) -> None:
             )
             assert resp.status_code == 202
     finally:
-        # Reload the module again with CONSOLE_SECRET cleared so subsequent
+        # Reload the module again with HEGEMONIKON_SECRET cleared so subsequent
         # tests in the file (and other files in the eval suite) don't
         # inherit the live-secret middleware that this reload baked in.
-        monkeypatch.delenv("CONSOLE_SECRET", raising=False)
+        monkeypatch.delenv("HEGEMONIKON_SECRET", raising=False)
         importlib.reload(server_mod)
 
 
@@ -377,7 +377,7 @@ async def test_session_error_event_emitted_on_sdk_failure(monkeypatch) -> None:
     on a Claude-side crash; the chat-status pill would never re-enable
     Send.
     """
-    monkeypatch.delenv("CONSOLE_SECRET", raising=False)
+    monkeypatch.delenv("HEGEMONIKON_SECRET", raising=False)
 
     async def crashing_query(*, prompt: str, options: Any):
         # Yield one event so the session.start path runs, then blow up.

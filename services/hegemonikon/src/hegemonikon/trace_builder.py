@@ -40,7 +40,7 @@ have real session traces to measure against):
 The trace's root is always a synthetic QUESTION step holding the
 user's original prompt — that's the natural anchor for the DAG.
 
-The TraceBuilder is also the source of every SSE event Console emits:
+The TraceBuilder is also the source of every SSE event Hegemonikon emits:
 
     {"type": "session.start", "session_id": "..."}
     {"type": "assistant.text", "text": "..."}
@@ -105,15 +105,15 @@ class TraceBuilder:
             status=StepStatus.INFO,
         )
         self._trace = DecisionTrace(
-            id=f"console-{self.session_id}",
+            id=f"hegemonikon-{self.session_id}",
             title=_short_title(self.user_prompt),
             question=self.user_prompt,
-            source="console",
+            source="hegemonikon",
             kind="chat",
             root=self._root_id,
             steps=[root_step],
             edges=[],
-            tags=["console", "phase1"],
+            tags=["hegemonikon", "phase1"],
             meta={"session_id": self.session_id},
         )
         self._last_step_id = self._root_id

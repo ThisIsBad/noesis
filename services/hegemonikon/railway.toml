@@ -2,5 +2,5 @@
 builder = "dockerfile"
 
 [deploy]
-startCommand = "python -m console.mcp_server_http"
+startCommand = "python -m hegemonikon.mcp_server_http"
 healthcheckPath = "/health"

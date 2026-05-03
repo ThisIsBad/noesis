@@ -1,9 +1,9 @@
 /*
-  Console UI — vanilla CSS, no build step.
+  Hegemonikon UI — vanilla CSS, no build step.
   Layout mirrors Theoria's three-pane shape (chat | trace | health strip)
   but with a wider trace pane because the live DAG is the main feature.
   Colour palette is intentionally close to Theoria's so a session that
-  bounces from Console → Theoria for browse/diff feels like one product.
+  bounces from Hegemonikon → Theoria for browse/diff feels like one product.
 */
 
 :root {

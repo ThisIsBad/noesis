@@ -92,7 +92,7 @@ check_component "kosmos"           "services/kosmos"
 check_component "empiria"          "services/empiria"
 check_component "mneme"            "services/mneme"
 check_component "techne"           "services/techne"
-check_component "console"          "services/console"
+check_component "hegemonikon"          "services/hegemonikon"
 check_component "eval"             "eval"
 check_component "theoria"          "ui/theoria"
 

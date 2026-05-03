@@ -12,7 +12,7 @@ a subclass. It:
 
 * binds the same ClaudeAgentOptions surface (model, mcp_servers,
   max_turns, max_budget_usd) the harness uses;
-* skips the harness's ``emit_action`` mechanism — Console doesn't
+* skips the harness's ``emit_action`` mechanism — Hegemonikon doesn't
   need a single emitted action; it consumes the whole stream;
 * yields each ``Message`` from ``claude_agent_sdk.query()`` directly
   to the caller, which turns the orchestration into an async iterator.
@@ -34,7 +34,7 @@ from claude_agent_sdk.types import (
 )
 
 DEFAULT_MAX_TURNS = 12
-"""Higher than the eval harness's 8 because Console runs are
+"""Higher than the eval harness's 8 because Hegemonikon runs are
 multi-step orchestration scenarios (register goal → decompose →
 verify → commit → store → calibrate → …) where 8 turns is tight."""
 
@@ -91,7 +91,7 @@ class StreamingMCPAgent:
     async def chat(self, prompt: str) -> AsyncIterator[Any]:
         """Drive Claude with the configured MCP servers; yield each SDK message.
 
-        The caller owns the loop — Console's session task consumes this
+        The caller owns the loop — Hegemonikon's session task consumes this
         async-iterator and translates each message into trace + SSE events.
         Yielding instead of returning keeps the streaming-UX latency low:
         the first text chunk hits the browser before Claude has finished
@@ -121,7 +121,7 @@ def _sse_config(url: str, secret: str) -> McpSSEServerConfig:
     Mirror of the helper in ``eval/src/noesis_eval/ab/mcp_agent.py``;
     duplicated here rather than imported because eval is a peer
     package, not a dependency, and we don't want to drag the harness
-    into the Console install.
+    into the Hegemonikon install.
     """
     config: dict[str, Any] = {"type": "sse", "url": f"{url}/sse"}
     if secret:
@@ -129,10 +129,10 @@ def _sse_config(url: str, secret: str) -> McpSSEServerConfig:
     return cast(McpSSEServerConfig, config)
 
 
-# Phase-1 surface: every Noesis service Console knows about. Each
+# Phase-1 surface: every Noesis service Hegemonikon knows about. Each
 # entry becomes an SSE-MCP wiring iff its NOESIS_<NAME>_URL env var
 # is set; unset URLs are silently skipped so a partial deploy still
-# yields a working Console (just with fewer tools).
+# yields a working Hegemonikon (just with fewer tools).
 NOESIS_SERVICE_NAMES: tuple[str, ...] = (
     "logos",
     "mneme",

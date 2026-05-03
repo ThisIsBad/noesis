@@ -1,25 +1,25 @@
-"""End-to-end smoke probe against a live Console.
+"""End-to-end smoke probe against a live Hegemonikon.
 
 Drives ``http://127.0.0.1:$PORT`` with a canned prompt, consumes the
 SSE stream until ``session.done`` (or ``session.error``), and validates
 the resulting ``DecisionTrace`` in the trailing ``trace.update`` event.
 
-The validation mirrors what ``test_console_inprocess.py`` checks at the
-in-process layer, but against a *real* Console process — so this
+The validation mirrors what ``test_hegemonikon_inprocess.py`` checks at the
+in-process layer, but against a *real* Hegemonikon process — so this
 covers ASGI bootstrap, bearer middleware, MCP env wiring, and TraceBuilder
 end-to-end.
 
-Default mode runs against ``CONSOLE_FAKE_QUERY=1`` (Console returns the
-canned scripted iterator from ``console._fake_query``) so the probe is
-deterministic. Set ``--real`` to drive Claude for real (the Console
-process must be booted with ``CONSOLE_FAKE_QUERY`` unset and a
+Default mode runs against ``HEGEMONIKON_FAKE_QUERY=1`` (Hegemonikon returns the
+canned scripted iterator from ``hegemonikon._fake_query``) so the probe is
+deterministic. Set ``--real`` to drive Claude for real (the Hegemonikon
+process must be booted with ``HEGEMONIKON_FAKE_QUERY`` unset and a
 logged-in ``claude`` CLI on PATH).
 
 Exit codes:
   0  — full session: session.start → tool events → session.done with
        Outcome.complete and ≥5 trace steps.
   1  — protocol mismatch (missing event, bad order, wrong shape).
-  2  — Console unreachable / non-2xx status / SSE never finished.
+  2  — Hegemonikon unreachable / non-2xx status / SSE never finished.
 """
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ async def run(
         try:
             health = await client.get("/health")
         except httpx.HTTPError as exc:
-            print(f"E2E-PROBE: console unreachable: {exc}", file=sys.stderr)
+            print(f"E2E-PROBE: hegemonikon unreachable: {exc}", file=sys.stderr)
             return 2
         if health.status_code != 200:
             print(
@@ -176,7 +176,7 @@ async def run(
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--base-url", default="http://127.0.0.1:8010")
-    p.add_argument("--bearer", default="dev-console-secret")
+    p.add_argument("--bearer", default="dev-hegemonikon-secret")
     p.add_argument(
         "--prompt",
         default=(

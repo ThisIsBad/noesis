@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Stop the Noesis stack started by run-stack.ps1 (and run-console.ps1
+  Stop the Noesis stack started by run-stack.ps1 (and run-hegemonikon.ps1
   if it's been backgrounded).
 
 .DESCRIPTION
@@ -18,7 +18,7 @@ if (-not (Test-Path $RunDir)) {
   exit 0
 }
 
-$names = @('console','kairos','logos','mneme','praxis','telos','episteme','kosmos','empiria','techne')
+$names = @('hegemonikon','kairos','logos','mneme','praxis','telos','episteme','kosmos','empiria','techne')
 foreach ($name in $names) {
   $PidPath = Join-Path $RunDir "$name.pid"
   if (-not (Test-Path $PidPath)) { continue }

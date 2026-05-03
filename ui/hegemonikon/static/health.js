@@ -9,7 +9,7 @@
 // a custom build for your deploy.
 
 const DEFAULT_URLS = {
-  console:  window.location.origin,        // self
+  hegemonikon:  window.location.origin,        // self
   logos:    "http://localhost:8001",
   mneme:    "http://localhost:8002",
   praxis:   "http://localhost:8003",

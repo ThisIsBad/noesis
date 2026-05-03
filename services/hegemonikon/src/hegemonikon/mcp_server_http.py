@@ -1,4 +1,4 @@
-"""Console HTTP server.
+"""Hegemonikon HTTP server.
 
 Two endpoints + /health:
 
@@ -9,7 +9,7 @@ Two endpoints + /health:
                           Each event is a JSON-encoded dict produced by
                           TraceBuilder; see trace_builder.py for shapes.
 
-The Console is intentionally NOT a FastMCP server — it doesn't expose
+The Hegemonikon is intentionally NOT a FastMCP server — it doesn't expose
 tools to other Claude sessions. It's an *orchestrator-and-recorder*:
 it accepts a prompt over HTTP, runs Claude with all eight Noesis MCP
 servers wired in, captures the resulting DecisionTrace, and pushes it
@@ -51,26 +51,26 @@ from .streaming_agent import StreamingMCPAgent, noesis_mcp_servers_from_env
 from .trace_builder import TraceBuilder
 
 logging.basicConfig(
-    level=os.getenv("CONSOLE_LOG_LEVEL", "INFO"),
+    level=os.getenv("HEGEMONIKON_LOG_LEVEL", "INFO"),
     format="%(asctime)s %(levelname)s %(name)s | %(message)s",
     stream=sys.stdout,
 )
-log = logging.getLogger("console")
+log = logging.getLogger("hegemonikon")
 
 # ── boot config ─────────────────────────────────────────────────────────────
 
-_MAX_BUDGET_USD = float(os.getenv("CONSOLE_MAX_BUDGET_USD", "0.25"))
-_MODEL = os.getenv("CONSOLE_MODEL", "claude-sonnet-4-6")
-_MAX_TURNS = int(os.getenv("CONSOLE_MAX_TURNS", "12"))
+_MAX_BUDGET_USD = float(os.getenv("HEGEMONIKON_MAX_BUDGET_USD", "0.25"))
+_MODEL = os.getenv("HEGEMONIKON_MODEL", "claude-sonnet-4-6")
+_MAX_TURNS = int(os.getenv("HEGEMONIKON_MAX_TURNS", "12"))
 _THEORIA_URL = os.getenv("THEORIA_URL", "")  # empty = don't post finals
 _THEORIA_SECRET = os.getenv("THEORIA_SECRET", "")
-_SESSION_MAX_AGE_S = float(os.getenv("CONSOLE_SESSION_MAX_AGE_S", "3600"))
+_SESSION_MAX_AGE_S = float(os.getenv("HEGEMONIKON_SESSION_MAX_AGE_S", "3600"))
 
-_secret_set = bool(os.getenv("CONSOLE_SECRET"))
+_secret_set = bool(os.getenv("HEGEMONIKON_SECRET"))
 _anthropic_set = bool(os.getenv("ANTHROPIC_API_KEY"))
-_fake_query_on = os.getenv("CONSOLE_FAKE_QUERY") == "1"
+_fake_query_on = os.getenv("HEGEMONIKON_FAKE_QUERY") == "1"
 log.info(
-    "console boot: port=%s secret_set=%s anthropic_key_set=%s "
+    "hegemonikon boot: port=%s secret_set=%s anthropic_key_set=%s "
     "max_budget_usd=%s theoria_url_set=%s fake_query=%s",
     os.getenv("PORT", "8000"),
     _secret_set,
@@ -82,7 +82,7 @@ log.info(
 
 _SERVICES_AT_BOOT = noesis_mcp_servers_from_env()
 log.info(
-    "console mcp servers at boot: %s",
+    "hegemonikon mcp servers at boot: %s",
     sorted(_SERVICES_AT_BOOT.keys()) or "(none)",
 )
 
@@ -90,20 +90,20 @@ _REGISTRY = SessionRegistry(max_age_s=_SESSION_MAX_AGE_S)
 
 # ── UI assets path ──────────────────────────────────────────────────────────
 
-# Where the UI lives. In Docker we COPY ui/console/ to /app/ui/console/;
-# locally the layout is /home/user/noesis/ui/console/. The CONSOLE_UI_DIR
+# Where the UI lives. In Docker we COPY ui/hegemonikon/ to /app/ui/hegemonikon/;
+# locally the layout is /home/user/noesis/ui/hegemonikon/. The HEGEMONIKON_UI_DIR
 # env var lets you override (useful for dev or for shipping the
-# Console-server without the UI assets).
+# Hegemonikon-server without the UI assets).
 _DEFAULT_UI_DIRS = (
-    Path("/app/ui/console"),
-    Path(__file__).resolve().parent.parent.parent.parent.parent / "ui" / "console",
+    Path("/app/ui/hegemonikon"),
+    Path(__file__).resolve().parent.parent.parent.parent.parent / "ui" / "hegemonikon",
 )
-_UI_DIR_OVERRIDE = os.getenv("CONSOLE_UI_DIR")
+_UI_DIR_OVERRIDE = os.getenv("HEGEMONIKON_UI_DIR")
 if _UI_DIR_OVERRIDE:
     _UI_DIR: Path | None = Path(_UI_DIR_OVERRIDE)
 else:
     _UI_DIR = next((p for p in _DEFAULT_UI_DIRS if p.exists()), None)
-log.info("console ui dir: %s", _UI_DIR or "(none — chat UI disabled)")
+log.info("hegemonikon ui dir: %s", _UI_DIR or "(none — chat UI disabled)")
 
 
 # ── HTTP handlers ───────────────────────────────────────────────────────────
@@ -113,7 +113,7 @@ async def health(_: Request) -> JSONResponse:
     return JSONResponse(
         {
             "status": "ok",
-            "service": "console",
+            "service": "hegemonikon",
             "active_sessions": _REGISTRY.size,
             "mcp_servers": sorted(_SERVICES_AT_BOOT.keys()),
         }
@@ -123,7 +123,7 @@ async def health(_: Request) -> JSONResponse:
 async def index(_: Request) -> Response:
     if _UI_DIR is None:
         return JSONResponse(
-            {"error": "ui not bundled; set CONSOLE_UI_DIR to enable"},
+            {"error": "ui not bundled; set HEGEMONIKON_UI_DIR to enable"},
             status_code=404,
         )
     index_path = _UI_DIR / "index.html"
@@ -151,7 +151,7 @@ async def chat(request: Request) -> JSONResponse:
 
     session = await _REGISTRY.create(prompt=prompt)
     log.info(
-        "console session started: %s prompt_len=%d budget_usd=%s",
+        "hegemonikon session started: %s prompt_len=%d budget_usd=%s",
         session.session_id,
         len(prompt),
         budget,
@@ -161,7 +161,7 @@ async def chat(request: Request) -> JSONResponse:
     # so a service URL that came online late picks up automatically.
     servers = noesis_mcp_servers_from_env()
     # Only pass query_fn when fake-query mode is on. Passing query_fn=None
-    # would override the monkeypatched default in test_console_inprocess.
+    # would override the monkeypatched default in test_hegemonikon_inprocess.
     extra: dict[str, Any] = {}
     if _fake_query_on:
         from ._fake_query import fake_query
@@ -177,7 +177,7 @@ async def chat(request: Request) -> JSONResponse:
     builder = TraceBuilder(session_id=session.session_id, user_prompt=prompt)
     session.task = asyncio.create_task(
         _run_session(session, agent, builder),
-        name=f"console-session-{session.session_id}",
+        name=f"hegemonikon-session-{session.session_id}",
     )
     return JSONResponse(
         {"session_id": session.session_id, "trace_id": builder.trace.id},
@@ -219,11 +219,11 @@ async def stream(request: Request) -> Response:
                 if event.get("type") in {"session.done", "session.error"}:
                     break
         except Exception:
-            log.exception("console sse generator crashed: %s", session_id)
+            log.exception("hegemonikon sse generator crashed: %s", session_id)
             raise
         finally:
             log.info(
-                "console sse stream closed: %s (emitted=%d)",
+                "hegemonikon sse stream closed: %s (emitted=%d)",
                 session_id,
                 emitted,
             )
@@ -263,7 +263,7 @@ async def _run_session(
         await session.queue.put({"type": "session.error", "error": "cancelled"})
         raise
     except Exception as exc:
-        log.exception("console session crashed: %s", session.session_id)
+        log.exception("hegemonikon session crashed: %s", session.session_id)
         session.error = f"{type(exc).__name__}: {exc}"
         await session.queue.put({"type": "session.error", "error": session.error})
     finally:
@@ -290,14 +290,14 @@ def _post_to_theoria(trace: dict[str, Any], theoria_url: str, secret: str) -> No
         with contextlib.closing(urllib.request.urlopen(req, timeout=10.0)) as resp:
             if resp.status >= 400:
                 log.warning(
-                    "console: theoria refused trace (%s): %s",
+                    "hegemonikon: theoria refused trace (%s): %s",
                     resp.status,
                     resp.read()[:200],
                 )
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
         # Don't crash the session if Theoria is down; the trace is still
         # in the SSE stream the browser already consumed.
-        log.warning("console: theoria post failed: %s", exc)
+        log.warning("hegemonikon: theoria post failed: %s", exc)
 
 
 # ── app + CLI entry ─────────────────────────────────────────────────────────
@@ -319,12 +319,12 @@ if _UI_DIR is not None:
         routes.append(Mount("/static", app=StaticFiles(directory=str(static_dir))))
 
 app = Starlette(routes=routes)
-# Bearer-token gate — reads CONSOLE_SECRET + CONSOLE_SECRET_PREV for
+# Bearer-token gate — reads HEGEMONIKON_SECRET + HEGEMONIKON_SECRET_PREV for
 # rotation. /health, /, /index.html, /static/* are exempt; the chat
 # and stream APIs require auth.
 app.add_middleware(
     bearer_middleware(
-        "CONSOLE_SECRET",
+        "HEGEMONIKON_SECRET",
         exempt_paths={"/health", "/", "/index.html"},
         exempt_prefixes=("/static/",),
     )
