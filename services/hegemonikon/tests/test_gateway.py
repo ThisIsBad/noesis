@@ -222,6 +222,33 @@ def test_gateway_routes_default_prefix() -> None:
     assert "/gateway/messages" in paths
 
 
+# ── transport security from env ─────────────────────────────────────────────
+
+
+def test_transport_security_from_env_disables_protection_when_unset() -> None:
+    s = gw.transport_security_from_env(env={})
+    assert s.enable_dns_rebinding_protection is False
+    # Localhost hosts always present so dev workflows still work.
+    assert "127.0.0.1:*" in s.allowed_hosts
+
+
+def test_transport_security_from_env_enables_when_hosts_listed() -> None:
+    env = {"HEGEMONIKON_ALLOWED_HOSTS": "noesis-hegemonikon.up.railway.app"}
+    s = gw.transport_security_from_env(env=env)
+    assert s.enable_dns_rebinding_protection is True
+    assert "noesis-hegemonikon.up.railway.app" in s.allowed_hosts
+    assert "https://noesis-hegemonikon.up.railway.app" in s.allowed_origins
+
+
+def test_transport_security_from_env_strips_and_splits_on_commas() -> None:
+    env = {"HEGEMONIKON_ALLOWED_HOSTS": " host-a.example.com , host-b.example.com ,"}
+    s = gw.transport_security_from_env(env=env)
+    assert "host-a.example.com" in s.allowed_hosts
+    assert "host-b.example.com" in s.allowed_hosts
+    # Empty trailing comma element should be dropped.
+    assert "" not in s.allowed_hosts
+
+
 # ── _list_remote_tools error path (no real SSE server) ─────────────────────
 
 
