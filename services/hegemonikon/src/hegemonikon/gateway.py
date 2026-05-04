@@ -62,6 +62,7 @@ from mcp import ClientSession, types
 from mcp.client.sse import sse_client
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.responses import Response
 from starlette.routing import Mount, Route
 from starlette.types import Receive, Scope, Send
@@ -245,8 +246,41 @@ def build_gateway(backends: Sequence[BackendConfig]) -> Server:
     return server
 
 
+def transport_security_from_env(
+    env: dict[str, str] | None = None,
+) -> TransportSecuritySettings:
+    """Build SSE transport-security settings from ``HEGEMONIKON_ALLOWED_HOSTS``.
+
+    Mirrors the env-var convention every backend service uses
+    (``MNEME_ALLOWED_HOSTS`` etc.). The default ``TransportSecuritySettings``
+    enables DNS-rebinding protection with an empty allowlist — which means
+    *every* request from a non-localhost host is rejected. Behind Railway's
+    edge that's a 500 (the underlying ``ValueError`` raised by
+    ``connect_sse`` after the protection trips). This helper turns the
+    protection OFF when no allowed-hosts env is set (auth is bearer-based
+    anyway, DNS-rebinding is belt-and-braces) and ON when one or more hosts
+    are listed.
+
+    Set ``HEGEMONIKON_ALLOWED_HOSTS=noesis-hegemonikon.up.railway.app`` (or
+    a comma-separated list) on the deployment to harden against rebinding."""
+    import os
+
+    em = env if env is not None else dict(os.environ)
+    raw = em.get("HEGEMONIKON_ALLOWED_HOSTS", "")
+    allowed = [h.strip() for h in raw.split(",") if h.strip()]
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=bool(allowed),
+        allowed_hosts=allowed + ["127.0.0.1:*", "localhost:*", "[::1]:*"],
+        allowed_origins=[f"https://{h}" for h in allowed]
+        + ["http://127.0.0.1:*", "http://localhost:*", "http://[::1]:*"],
+    )
+
+
 def gateway_routes(
-    server: Server, mount_prefix: str = "/gateway"
+    server: Server,
+    mount_prefix: str = "/gateway",
+    *,
+    security_settings: TransportSecuritySettings | None = None,
 ) -> list[Route | Mount]:
     """Build Starlette routes that mount the gateway under ``mount_prefix``.
 
@@ -256,8 +290,17 @@ def gateway_routes(
 
     The bearer middleware on the parent app gates both — clients must supply
     ``Authorization: Bearer $HEGEMONIKON_SECRET``. Per-backend bearers stay
-    inside the gateway process, never on the wire to the client."""
-    sse = SseServerTransport(f"{mount_prefix}/messages/")
+    inside the gateway process, never on the wire to the client.
+
+    ``security_settings`` controls DNS-rebinding protection on the SSE
+    transport. Defaults to ``transport_security_from_env()`` which derives
+    settings from the ``HEGEMONIKON_ALLOWED_HOSTS`` env var. Pass an
+    explicit ``TransportSecuritySettings`` for tests or to override."""
+    if security_settings is None:
+        security_settings = transport_security_from_env()
+    sse = SseServerTransport(
+        f"{mount_prefix}/messages/", security_settings=security_settings
+    )
 
     async def handle_sse(scope: Scope, receive: Receive, send: Send) -> Response:
         async with sse.connect_sse(scope, receive, send) as streams:
