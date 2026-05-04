@@ -1,59 +1,10 @@
 {
   "mcpServers": {
-    "logos": {
+    "hegemonikon": {
       "type": "sse",
-      "url": "https://noesis-logos.up.railway.app/sse",
+      "url": "https://noesis-hegemonikon.up.railway.app/gateway/sse",
       "headers": {
-        "Authorization": "Bearer ${NOESIS_LOGOS_SECRET}"
-      }
-    },
-    "mneme": {
-      "type": "sse",
-      "url": "https://noesis-mneme.up.railway.app/sse",
-      "headers": {
-        "Authorization": "Bearer ${NOESIS_MNEME_SECRET}"
-      }
-    },
-    "praxis": {
-      "type": "sse",
-      "url": "https://noesis-praxis.up.railway.app/sse",
-      "headers": {
-        "Authorization": "Bearer ${NOESIS_PRAXIS_SECRET}"
-      }
-    },
-    "telos": {
-      "type": "sse",
-      "url": "https://noesis-telos.up.railway.app/sse",
-      "headers": {
-        "Authorization": "Bearer ${NOESIS_TELOS_SECRET}"
-      }
-    },
-    "episteme": {
-      "type": "sse",
-      "url": "https://noesis-episteme.up.railway.app/sse",
-      "headers": {
-        "Authorization": "Bearer ${NOESIS_EPISTEME_SECRET}"
-      }
-    },
-    "kosmos": {
-      "type": "sse",
-      "url": "https://noesis-kosmos.up.railway.app/sse",
-      "headers": {
-        "Authorization": "Bearer ${NOESIS_KOSMOS_SECRET}"
-      }
-    },
-    "empiria": {
-      "type": "sse",
-      "url": "https://noesis-empiria.up.railway.app/sse",
-      "headers": {
-        "Authorization": "Bearer ${NOESIS_EMPIRIA_SECRET}"
-      }
-    },
-    "techne": {
-      "type": "sse",
-      "url": "https://noesis-techne.up.railway.app/sse",
-      "headers": {
-        "Authorization": "Bearer ${NOESIS_TECHNE_SECRET}"
+        "Authorization": "Bearer ${NOESIS_HEGEMONIKON_SECRET}"
       }
     }
   }
