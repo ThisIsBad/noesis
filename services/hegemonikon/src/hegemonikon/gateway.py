@@ -63,6 +63,7 @@ from mcp.client.sse import sse_client
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from mcp.server.transport_security import TransportSecuritySettings
+from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Mount, Route
 from starlette.types import Receive, Scope, Send
@@ -302,7 +303,7 @@ def gateway_routes(
         f"{mount_prefix}/messages/", security_settings=security_settings
     )
 
-    async def handle_sse(scope: Scope, receive: Receive, send: Send) -> Response:
+    async def handle_sse_asgi(scope: Scope, receive: Receive, send: Send) -> Response:
         async with sse.connect_sse(scope, receive, send) as streams:
             await server.run(
                 streams[0],
@@ -311,7 +312,17 @@ def gateway_routes(
             )
         return Response()
 
+    # Starlette's Route wraps endpoints as ``func(request) -> response`` via
+    # ``request_response``. Our actual handler is raw ASGI
+    # (``(scope, receive, send)``), so we need a thin adapter that unpacks the
+    # Request back into ASGI primitives. This mirrors FastMCP's no-auth path
+    # — see ``mcp.server.fastmcp.server.FastMCP.sse_app``.
+    async def sse_endpoint(request: Request) -> Response:
+        return await handle_sse_asgi(
+            request.scope, request.receive, request._send
+        )
+
     return [
-        Route(f"{mount_prefix}/sse", endpoint=handle_sse, methods=["GET"]),
+        Route(f"{mount_prefix}/sse", endpoint=sse_endpoint, methods=["GET"]),
         Mount(f"{mount_prefix}/messages/", app=sse.handle_post_message),
     ]

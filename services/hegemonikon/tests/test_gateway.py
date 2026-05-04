@@ -249,6 +249,30 @@ def test_transport_security_from_env_strips_and_splits_on_commas() -> None:
     assert "" not in s.allowed_hosts
 
 
+def test_sse_route_endpoint_takes_request_not_raw_asgi() -> None:
+    """Regression for: TypeError: handle_sse() missing 2 required positional
+    arguments: 'receive' and 'send'.
+
+    Starlette's ``Route`` wraps endpoint callables as ``func(request)`` via
+    ``request_response``. If the endpoint is raw ASGI (``(scope, receive,
+    send)``), the wrapping breaks at request time with a TypeError. The
+    gateway route must use a thin Request → ASGI adapter so Route's wrapper
+    sees a single-arg endpoint."""
+    import inspect
+
+    from starlette.routing import Route
+
+    server = gw.build_gateway([])
+    routes = gw.gateway_routes(server)
+    sse_route = next(r for r in routes if isinstance(r, Route))
+    sig = inspect.signature(sse_route.endpoint)
+    assert len(sig.parameters) == 1, (
+        f"Route endpoint must take exactly 1 arg (Request), got "
+        f"{list(sig.parameters)}. Raw-ASGI signature here causes a 500 at "
+        f"request time, not at boot — see PR-#102 follow-up."
+    )
+
+
 # ── _list_remote_tools error path (no real SSE server) ─────────────────────
 
 
