@@ -13,7 +13,7 @@ See [`docs/architect-review-2026-04-23.md`](docs/architect-review-2026-04-23.md)
 |------|-------------|:------:|:-------:|:---:|:--:|--------:|---------:|------:|-------------|
 | **empiria** | Experience accumulation and lesson extraction for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/empiria.yml) | 241 | 246 | 4 | 2026-05-02 |
 | **episteme** | Metacognition and uncertainty calibration for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/episteme.yml) | 341 | 428 | 5 | 2026-05-02 |
-| **hegemonikon** | Interactive recorded chat surface for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/hegemonikon.yml) | 1,513 | 834 | 4 | 2026-05-03 |
+| **hegemonikon** | Interactive recorded chat surface for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/hegemonikon.yml) | 1,513 | 834 | 4 | 2026-05-04 |
 | **kosmos** | Causal world model with Do-calculus for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/kosmos.yml) | 206 | 240 | 4 | 2026-05-02 |
 | **logos** | LLM x Deterministic Logic Verifier — exploiting the P!=NP asymmetry | ✓ | ✓ | ✓ | [✓](.github/workflows/logos.yml) | 11,756 | 9,978 | 74 | 2026-05-02 |
 | **mneme** | Persistent episodic and semantic memory for the Noesis AGI stack | ✓ | ✓ | ✓ | [✓](.github/workflows/mneme.yml) | 611 | 867 | 6 | 2026-05-02 |
