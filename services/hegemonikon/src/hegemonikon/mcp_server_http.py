@@ -1,6 +1,8 @@
 """Hegemonikon HTTP server.
 
-Two endpoints + /health:
+Two surfaces share one process and one bearer:
+
+1. **Chat surface** (browser-facing, the original Phase-1 thing) ::
 
     POST /api/chat        accepts {prompt} (and optional {max_budget_usd})
                           returns {session_id} immediately; the actual
@@ -9,15 +11,23 @@ Two endpoints + /health:
                           Each event is a JSON-encoded dict produced by
                           TraceBuilder; see trace_builder.py for shapes.
 
-The Hegemonikon is intentionally NOT a FastMCP server — it doesn't expose
-tools to other Claude sessions. It's an *orchestrator-and-recorder*:
-it accepts a prompt over HTTP, runs Claude with all eight Noesis MCP
-servers wired in, captures the resulting DecisionTrace, and pushes it
-to Theoria's existing /api/traces endpoint when the session ends.
+2. **Gateway** (machine-facing, the aggregator MCP server) ::
+
+    GET  /gateway/sse        MCP SSE handshake for upstream clients
+                             (Claude Code, other agents). Tool list is
+                             the union of all eight cognitive backends'
+                             tools, namespaced ``<service>__<tool>``.
+    POST /gateway/messages/* MCP client-to-server message channel.
+
+The chat surface still drives Claude via ``claude-agent-sdk`` and posts
+finished traces to Theoria. The gateway proxies tool calls to the
+backends with per-service bearers held in env vars — see ``gateway.py``
+for the full envelope.
 
 Security: bearer-middleware-gated like every other Noesis service.
-``/health`` is exempt; ``/`` and ``/static/*`` are exempt so a browser
-can fetch the chat shell before authenticating.
+``/health``, ``/``, ``/index.html`` and ``/static/*`` are exempt so a
+browser can fetch the chat shell before authenticating; everything
+else (chat API, stream, gateway) requires ``HEGEMONIKON_SECRET``.
 """
 
 from __future__ import annotations
@@ -46,6 +56,7 @@ from starlette.responses import (
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from .gateway import backends_from_env, build_gateway, gateway_routes
 from .sessions import SessionRegistry
 from .streaming_agent import StreamingMCPAgent, noesis_mcp_servers_from_env
 from .trace_builder import TraceBuilder
@@ -87,6 +98,19 @@ log.info(
 )
 
 _REGISTRY = SessionRegistry(max_age_s=_SESSION_MAX_AGE_S)
+
+# ── gateway: aggregator MCP server for the 8 cognitive backends ─────────────
+# Lives alongside the chat surface — same process, same bearer
+# (HEGEMONIKON_SECRET), separate URL prefix (/gateway). Tool discovery is
+# lazy (first /gateway/sse client triggers it) so server startup doesn't
+# block on slow backends.
+_GATEWAY_BACKENDS = backends_from_env()
+_GATEWAY_SERVER = build_gateway(_GATEWAY_BACKENDS)
+log.info(
+    "hegemonikon gateway configured: %d backends (%s)",
+    len(_GATEWAY_BACKENDS),
+    sorted(b.name for b in _GATEWAY_BACKENDS),
+)
 
 # ── UI assets path ──────────────────────────────────────────────────────────
 
@@ -309,6 +333,7 @@ routes: list[Any] = [
     Route("/", index, methods=["GET"]),
     Route("/index.html", index, methods=["GET"]),
 ]
+routes.extend(gateway_routes(_GATEWAY_SERVER))
 if _UI_DIR is not None:
     static_dir = _UI_DIR / "static"
     if static_dir.exists():

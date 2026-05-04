@@ -13,6 +13,9 @@ dependencies = [
     "httpx>=0.27",
     "pydantic>=2.0",
     "claude-agent-sdk>=0.1.64,<0.2",
+    # Direct dep so the gateway's mcp.{client,server,types} usage doesn't
+    # rely on claude-agent-sdk's transitive pin.
+    "mcp>=1.0,<2",
 ]
 
 [project.optional-dependencies]
@@ -58,6 +61,8 @@ module = [
     "claude_agent_sdk.*",
     "theoria",
     "theoria.*",
+    "mcp",
+    "mcp.*",
 ]
 ignore_missing_imports = true
 follow_imports = "skip"
@@ -65,6 +70,14 @@ follow_imports = "skip"
 [[tool.mypy.overrides]]
 module = ["hegemonikon.mcp_server_http"]
 disable_error_code = ["no-any-return"]
+
+# The gateway uses mcp's lower-level Server decorators which are typed
+# as untyped from our perspective (follow_imports=skip on the mcp module
+# above). Suppress the resulting "untyped decorator" / "untyped call"
+# noise on this file only.
+[[tool.mypy.overrides]]
+module = ["hegemonikon.gateway"]
+disable_error_code = ["untyped-decorator", "no-untyped-call"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]

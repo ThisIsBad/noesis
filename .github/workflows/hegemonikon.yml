@@ -32,8 +32,8 @@ jobs:
       # mcp_server_http is exercised by eval/tests/test_hegemonikon_inprocess.py
       # (HTTP layer round-trip via httpx.AsyncClient + ASGITransport), not
       # by Hegemonikon's own unit suite — the unit suite covers
-      # streaming_agent, trace_builder, sessions, and auth wiring.
-      coverage-args: "--cov=hegemonikon.streaming_agent --cov=hegemonikon.trace_builder --cov=hegemonikon.sessions"
+      # streaming_agent, trace_builder, sessions, auth wiring, and gateway.
+      coverage-args: "--cov=hegemonikon.streaming_agent --cov=hegemonikon.trace_builder --cov=hegemonikon.sessions --cov=hegemonikon.gateway"
       needs-clients: true
       # Hegemonikon imports theoria.models for the DecisionTrace schema.
       # The other services don't, so this isn't in the reusable workflow's
