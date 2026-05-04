@@ -41,19 +41,19 @@ for the most recent architecture review.
 |---------|----------|-----------|--------|
 | **Logos** | Formal verification (Z3/Lean 4), assumption management, goal contracts | Stage 2–3 | ✅ Deployed |
 | **Mneme** | Persistent episodic + semantic memory, verified belief storage | Stage 3–4 | ✅ Deployed |
-| **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🟡 MVP (Logos sidecar WIP) |
+| **Praxis** | Hierarchical planning, Tree-of-Thoughts search, backtracking | Stage 3 | 🟡 MVP (Logos sidecar wired) |
 | **Telos** | Goal stability monitoring, drift detection, alignment checks | Stage 3 | 🟡 MVP |
 | **Episteme** | Metacognition, uncertainty calibration, competence mapping | Stage 3 | 🟡 MVP |
-| **Kosmos** | Causal world model, Do-calculus, interventional reasoning | Stage 3–4 | 🟡 MVP (thin) |
-| **Empiria** | Experience accumulation, lesson extraction, pattern mining | Stage 4 | 🟡 MVP (thin) |
-| **Techne** | Verified skill library, strategy reuse across sessions | Stage 4 | 🟡 MVP (thin) |
+| **Kosmos** | Causal world model, Do-calculus, interventional reasoning | Stage 3–4 | 🟡 MVP (thin — speculative until there's a consumer) |
+| **Empiria** | Experience accumulation, lesson extraction, pattern mining | Stage 4 | 🟡 MVP (SQLite + ChromaDB; Mneme-shape persistence) |
+| **Techne** | Verified skill library, strategy reuse across sessions | Stage 4 | 🟡 MVP (SQLite + ChromaDB + `ProofCertificate` hook) |
 
 ### Cross-cutting
 
 | Component | Function | Status |
 |-----------|----------|--------|
 | **schemas/** | Shared contracts: `ProofCertificate`, `GoalContract`, `Memory`, `Plan`, `Skill`, `Lesson`, `TraceSpan` | ✅ Defined |
-| **kairos/** | Cross-service tracing via OpenTelemetry | 🟡 MVP (no dedicated CI) |
+| **kairos/** | Cross-service tracing via OpenTelemetry | 🟡 MVP (CI green; Dockerfile + railway.toml ready) |
 | **clients/** | Shared HTTP clients (`LogosClient`, ...) | 🟡 MVP |
 | **eval/** | Reproducible benchmarks + A/B harness (ALFWorld, Mneme recall, MCP agent) | 🟡 MVP |
 | **ui/theoria/** | Decision-logic visualizer (UI client, not a service) | 🟡 MVP |
@@ -75,6 +75,8 @@ See:
 - [docs/ROADMAP.md](docs/ROADMAP.md) — stage-by-stage roadmap with acceptance criteria
 - [docs/orchestration.md](docs/orchestration.md) — orchestrator's guide (what to call when, per-service MCP-tool index, canonical patterns)
 - [docs/architect-review-2026-04-23.md](docs/architect-review-2026-04-23.md) — most recent repo-wide architecture review + action checklist
+- [docs/operations/local-stack.md](docs/operations/local-stack.md) — local docker-compose stack (8 services + Kairos + Theoria)
+- [docs/operations/deploy-runbook.md](docs/operations/deploy-runbook.md) — Monday Railway deploy click-by-click
 - [STATUS.md](STATUS.md) — auto-generated per-component status (Dockerfile / Railway / MCP / CI / LOC)
 
 ## Getting Started
