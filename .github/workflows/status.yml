@@ -8,7 +8,7 @@ name: status
 #
 # ``fetch-depth: 0`` is load-bearing: the generator runs
 # ``git log -1 --format=%cs -- <path>`` to populate the "Last commit"
-# column. actions/checkout@v4 defaults to fetch-depth: 1 (shallow),
+# column. actions/checkout@v6 defaults to fetch-depth: 1 (shallow),
 # which leaves path-history empty and silently produces a diff against
 # the committed STATUS.md. Full history is cheap at this repo size.
 
@@ -23,10 +23,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Run generator in check mode
@@ -39,12 +39,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
